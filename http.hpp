@@ -6,7 +6,15 @@
 typedef struct Request
 {
 	/*
-		
+		GET /redirect HTTP/1.1
+		Host: localhost
+		content-length: 79
+		connection : close
+
+		hello world
+		this is message body
+		all newline characters
+		replaced by crlf
 	*/
 	std::string method;			// GET, POST, DELETE
 	std::string URL;			// 요청 URL (/, /www...) 
@@ -22,7 +30,20 @@ typedef struct Request
 typedef struct Reponse 
 {
 	/*
-		
+		HTTP/1.1 301 Moved Permanently
+		Date: Thu, 13 Oct 2022 12:21:38 GMT
+		Location: /
+		Server: webserv
+
+		HTTP/1.1 200 OK
+		Connection: close
+		Content-Length: 15
+		Content-Type: text/html
+		Date: Thu, 13 Oct 2022 12:21:38 GMT
+		Server: webserv
+
+		<html>
+		</html>
 	*/
 	std::string protocol;		// HTTP 버전 (HTTP/1.1)
 	std::string statusCode;		// 상태 코드 (200, 404)

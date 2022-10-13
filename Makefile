@@ -2,9 +2,12 @@ NAME		= webserv
 CXX			= c++
 CXXFLAGS	= #-std=c++98 -Wall -Wextra -Werror
 
-SRCS		= server.cpp
+SRC			= server.cpp
+SRCDIR		= src/
+
+SRCS		= $(addprefix $(SRCDIR), $(SRC))
 OBJS		= $(SRCS:.cpp=.o)
-INC			= .
+INC			= inc/
 
 all : $(NAME)
 

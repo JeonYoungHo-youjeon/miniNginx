@@ -19,6 +19,8 @@ public:
 	typedef ServerBlock::val_type				val_type;
 	typedef std::map<key_type, val_type>		map_type;
 	typedef std::size_t							size_type;
+	typedef map_type::iterator					iterator;
+	typedef map_type::const_iterator			const_iterator;
 
 public:
 	void add_server(const key_type& k, const val_type& v);

@@ -5,32 +5,32 @@
 
 /**
  * @class Config
- * @brief server key(ip + port)와 server value(ServerBlock)을 갖는 map
+ * @brief server key(ip + port)와 server value(ServerBlock)을 갖는 class
  * 
  * @key_type ip + port - std::string
  * @val_type ServerBlock
  */
 class Config
 {
-	typedef std::string							server_key;
-	typedef ServerBlock							server_val;
-	typedef server_key							key_type;
-	typedef std::map<server_key, server_val> 	val_type;
+public:
+	typedef ServerBlock::key_type				key_type;
+	typedef ServerBlock::val_type				val_type;
+	typedef std::map<key_type, val_type>		map_type;
+	typedef std::size_t							size_type;
 
 public:
-	void push_server(const server_key& key, const server_val& val);
-	const val_type& get_val(const key_type& key) const;
+	void add_server(const key_type& k, const val_type& v);
+	const val_type& get_server(const key_type& k);
+	const map_type& get_map() const;
 
 	Config();
+	Config(const Config& c);
 	~Config();
 
-private:
-	Config(const Config& c);
 	Config& operator=(const Config& c);
-	
-private:
-	std::map<key_type, val_type> config;	
 
+private:
+	map_type config;
 };
 
 #endif 

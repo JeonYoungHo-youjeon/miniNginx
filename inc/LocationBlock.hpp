@@ -9,34 +9,39 @@
 
 /**
  * @class LocationBlock
- * @brief pattern을 key로 갖고, directive 클래스를 value로 갖는 pair
+ * @brief pattern을 key로 갖고, directive 클래스를 value로 갖는 class
  * 
  * @key_type pattern - std::string
  * @val_type directive map - std::map<directive_key, directive_val>
  */
 class LocationBlock
 {
-	typedef std::string											directive_key;
-	typedef Directive											directive_val;
+public:
+	typedef Directive::key_type									directive_key;
+	typedef Directive::val_type									directive_val;
 	typedef std::string 										key_type;
 	typedef std::map<directive_key, directive_val>				val_type;
+	typedef std::size_t											size_type;
 
 public:
-	void set_key(const key_type& pattern);
-	void push_directive(key_type& k, val_type& v);
+	void set_key(const key_type& k);
+	void set_value(const val_type& v);
+	void set_location_block(const key_type& k, const val_type& v);
+	void add_value_elem(const directive_key& k, const directive_val& v);
 	const key_type& get_key() const;
-	const val_type& get_val() const;
+	const val_type& get_value() const;
 
 	LocationBlock();
-	LocationBlock(const key_type& pattern);
+	LocationBlock(const LocationBlock& loc);
+	LocationBlock(const key_type& k, const val_type& v);
 	~LocationBlock();
 
-private:
-	LocationBlock(const LocationBlock& l);
-	LocationBlock& operator=(const LocationBlock& d);
+	LocationBlock& operator=(const LocationBlock& loc);
+	size_type value_size() const;
 
 private:
-	std::pair<key_type, val_type> location;
+	key_type key;
+	val_type val;
 };
 
 #endif 

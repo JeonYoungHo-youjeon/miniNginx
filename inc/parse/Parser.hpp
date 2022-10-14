@@ -57,16 +57,26 @@ public:
 		}
         mStringBuf = remover(mStringBuf, '\t');
 
-		std::stringstream	ss(mStringBuf);
-		char				buf;
+		std::stringstream			ss(mStringBuf);
+		char						buf;
 		std::vector<std::string>	stk;
-		std::string bufferString = "";
+		std::string					bufferString = "";
 		int					cnt = 0;
 
 		while ((buf = ss.get()) != -1)
 		{
-			if (buf == '{') ++cnt;
-			if (buf == '}')
+			if (buf == ';')
+			{
+				stk.push_back("");
+				while (!bufferString.empty() && bufferString.back() != '{')
+				{
+					stk.back() += bufferString.back();
+					bufferString.pop_back();
+				}
+				std::reverse(stk.back().begin(), stk.back().end());
+			}
+			else if (buf == '{') ++cnt;
+			else if (buf == '}')
 			{
 				stk.push_back("");
 				while (!bufferString.empty() && bufferString.back() != '{')
@@ -88,20 +98,6 @@ public:
 					stk.push_back(bufferString);
 					bufferString = "";
 				}
-				/*
-				{
-					//std::cout << bufferString << std::endl;
-					//bufferString = "";
-					//std::cout << "========================" << std::endl;
-					while (!stk.empty())
-					{
-						std::cout << stk.back() << std::endl;
-						stk.pop_back();
-					}
-					std::cout << "========================\n" << std::endl;
-					stk.clear();
-				}
-				*/
 			}
 			else
 			{
@@ -113,8 +109,6 @@ public:
 			std::cout << stk.back() << std::endl;
 			stk.pop_back();
 		}
-		//stk.push_back(bufferString);
-		//for (int i = 0; i < stk.size(); ++i) std::cout << stk[i] << std::endl;
 		std::cout << std::endl;
     }
 protected:

@@ -1,6 +1,8 @@
 #ifndef CONFIG_HPP
 # define CONFIG_HPP
 
+#include <iterator>
+
 #include "ServerBlock.hpp"
 
 /**
@@ -28,6 +30,11 @@ public:
 	~Config();
 
 	Config& operator=(const Config& c);
+	map_type::iterator begin();
+	map_type::const_iterator begin() const;
+	map_type::iterator end();
+	map_type::const_iterator end() const;
+
 
 private:
 	map_type config;

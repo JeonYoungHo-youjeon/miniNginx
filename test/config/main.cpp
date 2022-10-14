@@ -5,7 +5,7 @@
 #include <utility>
 #include "../../inc/Config.hpp"
 
-typedef const std::vector<std::pair<std::string, std::vector<std::string>>> directive_type;
+typedef const std::vector<std::pair<std::string, std::vector<std::string> > > directive_type;
 
 
 static const directive_type locationDirective {
@@ -23,7 +23,7 @@ void print_config(Config& config)
 {
 	std::map<int, int> m;
 
-	for (auto& pr : config.get_map())
+	for (auto& pr : config)
 	{
 		std::cout << "[ server block ]" << std::endl;
 		std::cout << "server key : " << pr.first << std::endl;

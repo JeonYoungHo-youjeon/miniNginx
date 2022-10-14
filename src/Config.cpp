@@ -42,3 +42,23 @@ Config& Config::operator=(const Config& c)
 	}
 	return *this;
 }
+
+Config::map_type::iterator Config::begin()
+{
+	return config.begin();
+}
+
+Config::map_type::const_iterator Config::begin() const
+{
+	return config.begin();
+}
+
+Config::map_type::iterator Config::end()
+{
+	return config.end();
+}
+
+Config::map_type::const_iterator Config::end() const
+{
+	return config.end();
+}

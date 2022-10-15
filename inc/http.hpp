@@ -34,15 +34,31 @@ struct Request
 
 	int callCount;
 
+	/**
+	 * @brief 전체 리퀘스트가 하나의 문자열로 들어올때 처리. 테스트 용도로 따로 에러처리는 하지 않음
+	 *
+	 * @param str 리퀘스트를 통으로 담고있는 문자열
+	 */
 	Request(string str)
 	{
 	}
 
-	void setRequest(Request& req, string str)
+	/**
+	* @brief 받아온 리퀘스트 구조체에 한줄씩 들어오는 문자열을 상황에 맞게 처리해서 저장, 에러는 throw 함
+	* 
+	* @param reqRef 문자열을 해석해서 저장할 리퀘스트 참조자
+	* @param str 한줄씩 들어오는 실제 문자열
+	*/
+	void setRequest(Request& reqRef, string str)
 	{
 	}
 
-	void printRequest(Request& req)
+	/**
+	 * @brief 현재 리퀘스트 구조체의 내용 전체를 출력. 빈 변수는 출력하지 않음
+	 * 
+	 * @param reqRef 출력할 구조체
+	 */
+	void printRequest(Request& reqRef)
 	{
 	}
 };
@@ -66,14 +82,24 @@ struct Response
 
 	string body;
 
-	string getResponse(Response &res)
+	/**
+	 * @brief 리스폰스 참조자를 전송할 문자열로 변환하여 반환함
+	 * 
+	 * @param resRef 전송 데이터로 변환할 리스폰스 구조체
+	 * @return string 전송 데이터로 변환된 문자열
+	 */
+	string getResponse(Response &resRef)
 	{
 	}
 
-	void printResponse(Response& res)
+	/**
+	 * @brief 현재 리스폰스 구조체의 내용 전체를 출력. 디폴트 값이 있는 데이터는 해당 값으로 출력
+	 * 
+	 * @param resRef 출력할 구조체
+	 */
+	void printResponse(Response& resRef)
 	{
 	}
-
 };
 
 #endif

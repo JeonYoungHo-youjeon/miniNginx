@@ -1,0 +1,25 @@
+CXX			= c++
+# CXXFLAGS	= -std=c++98 -Wall -Wextra -Werror
+CXXFLAGS	= -std=c++11 -Wall -Wextra -Werror
+INC			= inc/config/
+
+CONFIG_TEST_NAME	= config_test
+CONFIG_SRC	= Config.cpp Directive.cpp LocationBlock.cpp ServerBlock.cpp 
+SRCDIR		= src/config/
+
+CONFIG_SRCS	:= $(addprefix $(SRCDIR), $(CONFIG_SRC)) test/config/main.cpp
+CONFIG_OBJS	= $(CONFIG_SRCS:.cpp=.o)
+
+
+config	: $(CONFIG_OBJS)
+	$(CXX) $(CXXFLAGS) $(CONFIG_OBJS) -I$(INC) -o $(CONFIG_TEST_NAME)
+
+clean	:
+	@rm -rf $(CONFIG_OBJS)
+
+fclean	: clean
+	@rm -rf $(CONFIG_TEST_NAME)
+
+re		: fclean all
+
+.PHONY	: config fclean re

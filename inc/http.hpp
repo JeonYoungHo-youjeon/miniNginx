@@ -49,7 +49,7 @@ struct Request
 	* @param reqRef 문자열을 해석해서 저장할 리퀘스트 참조자
 	* @param str 한줄씩 들어오는 실제 문자열
 	*/
-	void setRequest(Request& reqRef, string str)
+	void set_request(Request& reqRef, string str)
 	{
 	}
 
@@ -58,8 +58,9 @@ struct Request
 	 * 
 	 * @param reqRef 출력할 구조체
 	 */
-	void printRequest(Request& reqRef)
+	void print_request(Request& reqRef)
 	{
+		
 	}
 };
 
@@ -88,7 +89,7 @@ struct Response
 	 * @param resRef 전송 데이터로 변환할 리스폰스 구조체
 	 * @return string 전송 데이터로 변환된 문자열
 	 */
-	string getResponse(Response &resRef)
+	string get_response(Response &resRef)
 	{
 	}
 
@@ -97,7 +98,7 @@ struct Response
 	 * 
 	 * @param resRef 출력할 구조체
 	 */
-	void printResponse(Response& resRef)
+	void print_response(Response& resRef)
 	{
 	}
 };

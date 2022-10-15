@@ -39,30 +39,26 @@ struct Request
 	int callCount;
 
 	/**
-	 * @brief 전체 리퀘스트가 하나의 문자열로 들어올때 처리. 테스트 용도로 에러처리는 하지 않음
-	 *
-	 * @param str 리퀘스트를 통으로 담고있는 문자열
-	 */
+	* 전체 리퀘스트가 하나의 문자열로 들어올때 처리. 테스트 용도로 에러처리는 하지 않음
+	*
+	*/
 	Request(string str)
 	{
 	}
 
 	/**
-	* @brief 받아온 리퀘스트 구조체에 한줄씩 들어오는 문자열을 상황에 맞게 처리해서 저장. 에러는 throw 함
+	* 받아온 리퀘스트 구조체에 한줄씩 들어오는 문자열을 상황에 맞게 처리해서 저장. 에러는 throw 함
 	* 
-	* @param reqRef 문자열을 해석해서 저장할 리퀘스트 참조자
-	* @param str 한줄씩 들어오는 실제 문자열
 	*/
-	void set_request(Request& reqRef, string str)
+	void set_request(string str)
 	{
 	}
 
 	/**
-	 * @brief 현재 리퀘스트 구조체의 내용 전체를 출력. 빈 변수는 출력하지 않음
-	 * 
-	 * @param reqRef 출력할 구조체
-	 */
-	void print_request(Request& reqRef)
+	*  현재 리퀘스트 구조체의 내용 전체를 출력. 빈 변수는 출력하지 않음
+	* 
+	*/
+	void print_request()
 	{
 
 	}

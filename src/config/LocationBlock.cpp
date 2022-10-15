@@ -1,4 +1,4 @@
-#include "../inc/LocationBlock.hpp"
+#include "../../inc/config/LocationBlock.hpp"
 
 void LocationBlock::set_key(const key_type& k)
 {

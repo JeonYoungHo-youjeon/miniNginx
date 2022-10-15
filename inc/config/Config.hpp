@@ -37,7 +37,6 @@ public:
 	map_type::iterator end();
 	map_type::const_iterator end() const;
 
-
 private:
 	map_type config;
 };

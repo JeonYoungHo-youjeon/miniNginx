@@ -1,6 +1,6 @@
 #include <utility>
 
-#include "../inc/Config.hpp"
+#include "../../inc/config/Config.hpp"
 
 void Config::add_server(const key_type& k, const val_type& v)
 {

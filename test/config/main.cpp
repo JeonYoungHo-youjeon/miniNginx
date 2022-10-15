@@ -3,7 +3,7 @@
 #include <iostream>
 #include <map>
 #include <utility>
-#include "../../inc/Config.hpp"
+#include "../../inc/config/Config.hpp"
 
 typedef const std::vector<std::pair<std::string, std::vector<std::string> > > directive_type;
 

@@ -1,4 +1,4 @@
-#include "../inc/Directive.hpp"
+#include "../../inc/config/Directive.hpp"
 
 void Directive::set_key(const key_type& k)
 {

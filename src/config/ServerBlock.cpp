@@ -1,4 +1,4 @@
-#include "../inc/ServerBlock.hpp"
+#include "../../inc/config/ServerBlock.hpp"
 
 void ServerBlock::set_key(const key_type& k)
 {

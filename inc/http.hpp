@@ -1,10 +1,14 @@
 #ifndef HTTP_HPP
 # define HTTP_HPP
 
+# include <algorithm>
+# include <cctype>
 # include <iostream>
 # include <string>
 # include <cstdlib>
 # include <sys/time.h>
+
+# include "./parse/Util.hpp"
 
 # define BODY -1
 
@@ -39,19 +43,97 @@ struct Request
 	int callCount;
 
 	/**
-	* 전체 리퀘스트가 하나의 문자열로 들어올때 처리. 테스트 용도로 에러처리는 하지 않음
+	* 전체 리퀘스트가 하나의 문자열로 들어올때 처리. 따로 에러처리는 하지 않음
 	*
 	*/
 	Request(string str)
 	{
+		std::vector<string> splited = Util::split(str, '\n');
+
+		for (int i = 0; i < splited.size(); i++)
+		{
+			set_request(splited[i]);
+		}
 	}
 
 	/**
-	* 받아온 리퀘스트 구조체에 한줄씩 들어오는 문자열을 상황에 맞게 처리해서 저장. 에러는 throw 함
+	* 받아온 리퀘스트 구조체에 한줄씩 들어오는 문자열을 상황에 맞게 처리해서 저장. 
 	* 
+	* TODO: 에러는 throw 하는걸로 생각중인데, 우선 출력만 해놓고 에러 처리 방식 정해지면 다시 구현.
 	*/
 	void set_request(string str)
 	{
+		// callCount 가 0 일때 = 처음 호출됨 = 메소드, url, 프로토콜 저장
+		// callCount 가 -1(BODY)일때 = body 구간. 입력되는 만큼 body에 계속 저장함.
+		// callCount 가 0 보다 클때 = 헤더 필드 구간. 공백이 나오면 callCount 를 BODY 로 바꾸고, 그렇지 않으면 구조체에 필드 저장
+		
+		
+		if (callCount == 0)
+		{
+			std::vector<string> splited = Util::split(str, ' ');
+			callCount++;
+			if (splited.size() != 3)
+				cout << "set_request ERROR 1" << endl;
+
+			if (splited[0] == "GET" || splited[0] == "POST" || splited[0] == "DELETE")
+				method = splited[0];
+			else
+				cout << "set_request ERROR 2" << endl;
+
+			url = splited[1];
+
+			if (splited[2] == "HTTP/1.1")
+				protocol = splited[2];
+			else
+				cout << "set_request ERROR 3" << endl;
+		}
+		else if (callCount == BODY)
+		{
+			body += str + "\n";
+		}
+		else
+		{
+			std::vector<string> splited = Util::split(str, ':');
+			string lower = splited[0];
+
+			std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+			if (str == "\n")
+			{
+				callCount = BODY;
+				return ;
+			}
+
+			if (lower == "connention")
+			{
+				connention = splited[1];
+				connention.erase(connention[0]);
+				return ;
+			}
+
+			if (lower == "encoding")
+			{
+				encoding = splited[1];
+				encoding.erase(encoding[0]);
+				return ;
+			}
+
+			if (lower == "connention")
+			{
+				host = splited[1];
+				host.erase(host[0]);
+				return ;
+			}
+
+			if (lower == "connention")
+			{
+				contentLength = splited[1];
+				contentLength.erase(contentLength[0]);
+				return ;
+			}
+
+			cout << "set_request ERROR 4" << endl;
+		}
+
 	}
 
 	/**
@@ -60,7 +142,15 @@ struct Request
 	*/
 	void print_request()
 	{
-
+		cout << "method : <" 		<< method 			<< ">" << endl;
+		cout << "url : <" 			<< url 				<< ">" << endl;
+		cout << "protocol : <" 		<< protocol 		<< ">" << endl;
+		cout << "connention : <"	<< connention 		<< ">" << endl;
+		cout << "encoding : <" 		<< encoding 		<< ">" << endl;
+		cout << "host : <" 			<< host 			<< ">" << endl;
+		cout << "contentLength : <" << contentLength	<< ">" << endl;
+		cout << "body : <" 			<< body 			<< ">" << endl;
+		
 	}
 };
 
@@ -80,7 +170,7 @@ struct Response
 			500 Internal Server Error
 		</h1>
 		</html>
-
+		-------------------------------------
 		HTTP/1.1 404 Not Found
 		Content-Length: 64
 		Content-Type: text/html
@@ -93,7 +183,7 @@ struct Response
 			404 Not Found
 		</h1>
 		</html>
-	
+		-------------------------------------
 		HTTP/1.1 301 Moved Permanently
 		Date: Sat, 15 Oct 2022 14:32:57 GMT
 		Location: /
@@ -137,8 +227,9 @@ struct Response
 			
 		if (get_connection() != "")
 			ret += "connection: " + get_connection() + "\n";
-		ret += "server: " + get_server() + "\n";
 		
+		ret += "server: " + get_server() + "\n";
+
 		if (get_location() != "") 
 			ret += "location: " + get_location() + "\n";
 		
@@ -173,8 +264,8 @@ struct Response
 	 */
 	string get_protocol()
 	{
-		if (this->protocol != "")
-			return this->protocol;
+		if (protocol != "")
+			return protocol;
 		
 		return ("HTTP/1.1");
 	}
@@ -185,7 +276,7 @@ struct Response
 	 */
 	string get_statusCode()
 	{
-		return this->statusCode;
+		return statusCode;
 	}
 
 	/**
@@ -194,13 +285,13 @@ struct Response
 	 */
 	string get_reasonPhrase()
 	{
-		if (this->reasonPhrase != "")
-			return this->reasonPhrase;
+		if (reasonPhrase != "")
+			return reasonPhrase;
 		
-		if (this->statusCode == "")
+		if (statusCode == "")
 			return "";
 		
-		switch (std::atoi(this->statusCode.c_str())) 
+		switch (std::atoi(statusCode.c_str())) 
 		{
 			case 200:
 				return "OK";
@@ -225,9 +316,9 @@ struct Response
 		time(&rawtime);
 		timeinfo = gmtime(&rawtime);
 		strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S GMT", timeinfo);
-		this->date = buf;
+		date = buf;
 
-		return this->date;
+		return date;
 	}
 
 	/**
@@ -236,11 +327,11 @@ struct Response
 	 */
 	string get_contentLength()
 	{
-		if (this->encoding == "")
+		if (encoding == "")
 			return ("");
-		if (this->contentLength == "")
+		if (contentLength == "")
 			return ("0");
-		return this->contentLength;
+		return contentLength;
 	}
 
 	/**
@@ -249,9 +340,9 @@ struct Response
 	 */
 	string get_contentType()
 	{
-		if (this->contentType == "")
+		if (contentType == "")
 			return ("application/octet-stream");
-		return this->contentType;
+		return contentType;
 	}
 
 	/**
@@ -260,7 +351,7 @@ struct Response
 	 */
 	string get_encoding()
 	{
-		return this->encoding;
+		return encoding;
 	}
 
 	/**
@@ -269,7 +360,7 @@ struct Response
 	 */
 	string get_connection()
 	{
-		return this->connection;
+		return connection;
 	}
 
 	/**
@@ -278,9 +369,9 @@ struct Response
 	 */
 	string get_server()
 	{
-		if (this->server == "")
+		if (server == "")
 			return ("miniNginx 1.0");
-		return this->server;
+		return server;
 	}
 
 	/**
@@ -289,7 +380,7 @@ struct Response
 	 */
 	string get_location()
 	{
-		return this->location;
+		return location;
 	}
 
 	/**
@@ -298,7 +389,7 @@ struct Response
 	 */
 	string get_body()
 	{
-		return this->body;
+		return body;
 	}
 
 };

@@ -42,6 +42,8 @@ struct Request
 
 	int callCount;
 
+	Request();
+
 	/**
 	* 전체 리퀘스트가 하나의 문자열로 들어올때 처리. 따로 에러처리는 하지 않음
 	*
@@ -50,7 +52,7 @@ struct Request
 	{
 		std::vector<string> splited = Util::split(str, '\n');
 
-		for (int i = 0; i < splited.size(); i++)
+		for (std::vector<string>::size_type i = 0; i < splited.size(); i++)
 		{
 			set_request(splited[i]);
 		}
@@ -117,14 +119,14 @@ struct Request
 				return ;
 			}
 
-			if (lower == "connention")
+			if (lower == "host")
 			{
 				host = splited[1];
 				host.erase(host[0]);
 				return ;
 			}
 
-			if (lower == "connention")
+			if (lower == "Content-Length")
 			{
 				contentLength = splited[1];
 				contentLength.erase(contentLength[0]);

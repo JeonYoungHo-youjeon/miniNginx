@@ -4,7 +4,7 @@
 #include <iostream>
 # include "Cgi.hpp"
 # include "File.hpp"
-# include "../parse/Parser.hpp"
+# include "../parse/Config.hpp"
 //# include "../parse/Config.hpp"
 
 /*

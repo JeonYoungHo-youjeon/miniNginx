@@ -13,7 +13,7 @@ class Parser
 public:
     
 	const std::string getStringBuf() const ;
-	const std::map<std::string, Server> getServer() const ;
+	const std::map<std::string, Server> getServers() const ;
 	
 
 	Parser() {};
@@ -130,7 +130,7 @@ void	Parser::preprocess()
     mStringBuf = Util::remover(mStringBuf, '\t');
 }
 
-const std::map<std::string, Server> Parser::getServer() const 
+const std::map<std::string, Server> Parser::getServers() const 
 {
 	return mServers;
 }

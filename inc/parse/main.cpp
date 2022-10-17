@@ -3,9 +3,7 @@
 #include <vector>
 #include <map>
 
-#include "Parser.hpp"
-#include "Server.hpp"
-#include "Location.hpp"
+#include "Config.hpp"
 
 using namespace std;
 

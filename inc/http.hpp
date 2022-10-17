@@ -48,7 +48,7 @@ struct Request
 	* 전체 리퀘스트가 하나의 문자열로 들어올때 처리. 따로 에러처리는 하지 않음
 	*
 	*/
-	Request(string str)
+	Request(string& str)
 	{
 		std::vector<string> splited = Util::split(str, '\n');
 
@@ -58,10 +58,10 @@ struct Request
 		}
 	}
 
+	// FIXME: 에러는 throw 하는걸로 생각중인데, 우선 출력만 해놓고 에러 처리 방식 정해지면 다시 구현.
 	/**
 	* 받아온 리퀘스트 구조체에 한줄씩 들어오는 문자열을 상황에 맞게 처리해서 저장. 
 	* 
-	* TODO: 에러는 throw 하는걸로 생각중인데, 우선 출력만 해놓고 에러 처리 방식 정해지면 다시 구현.
 	*/
 	void set_request(string str)
 	{
@@ -91,7 +91,7 @@ struct Request
 		}
 		else if (callCount == BODY)
 		{
-			body += str + "\n";
+			body += str;
 		}
 		else
 		{
@@ -108,28 +108,28 @@ struct Request
 			if (lower == "connention")
 			{
 				connention = splited[1];
-				connention.erase(connention[0]);
+				Util::remover(connention, ' ');
 				return ;
 			}
 
 			if (lower == "encoding")
 			{
 				encoding = splited[1];
-				encoding.erase(encoding[0]);
+				Util::remover(encoding, ' ');
 				return ;
 			}
 
 			if (lower == "host")
 			{
 				host = splited[1];
-				host.erase(host[0]);
+				Util::remover(host, ' ');
 				return ;
 			}
 
 			if (lower == "Content-Length")
 			{
 				contentLength = splited[1];
-				contentLength.erase(contentLength[0]);
+				Util::remover(contentLength, ' ');
 				return ;
 			}
 

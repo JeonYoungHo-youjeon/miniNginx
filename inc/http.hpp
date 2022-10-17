@@ -108,28 +108,28 @@ struct Request
 			if (lower == "connention")
 			{
 				connention = splited[1];
-				connention.erase(connention[0]);
+				Util::remover(connention, ' ');
 				return ;
 			}
 
 			if (lower == "encoding")
 			{
 				encoding = splited[1];
-				encoding.erase(encoding[0]);
+				Util::remover(encoding, ' ');
 				return ;
 			}
 
 			if (lower == "host")
 			{
 				host = splited[1];
-				host.erase(host[0]);
+				Util::remover(host, ' ');
 				return ;
 			}
 
 			if (lower == "Content-Length")
 			{
 				contentLength = splited[1];
-				contentLength.erase(contentLength[0]);
+				Util::remover(contentLength, ' ');
 				return ;
 			}
 

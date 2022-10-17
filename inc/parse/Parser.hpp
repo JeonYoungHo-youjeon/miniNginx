@@ -2,7 +2,6 @@
 # define PARSE_PARSER_HPP
 
 # include <fstream>
-//# include <sstream>
 # include <algorithm>
 # include <stdexcept>
 
@@ -14,6 +13,8 @@ class Parser
 public:
     
 	const std::string getStringBuf() const ;
+	const std::map<std::string, Server> getServer() const ;
+	
 
 	Parser() {};
     Parser(const char* filepath) : mIfs(filepath)
@@ -127,6 +128,11 @@ void	Parser::preprocess()
 		mStringBuf += Util::strip(tmp);
 	}
     mStringBuf = Util::remover(mStringBuf, '\t');
+}
+
+const std::map<std::string, Server> Parser::getServer() const 
+{
+	return mServers;
 }
 
 

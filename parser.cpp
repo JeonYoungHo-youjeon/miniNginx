@@ -8,7 +8,7 @@
 using namespace std;
 
 int main() {
-	Parser parse("default.conf");
-	std::cout << parse.getStringBuf() << std::endl;
+	Config parse("default.conf");
+	std::cout << parse.str(0) << std::endl;
 	return 0;
 }

@@ -1,5 +1,5 @@
-#ifndef PARSE_PARSER_HPP
-# define PARSE_PARSER_HPP
+#ifndef PARSE_CONFIG_HPP
+# define PARSE_CONFIG_HPP
 
 # include <fstream>
 # include <algorithm>
@@ -8,21 +8,14 @@
 # include "Util.hpp"
 # include "Server.hpp"
 
-class Parser
+class Config
 {
 public:
-    
-	const std::string getStringBuf() const ;
-	const std::map<std::string, Server> getServers() const ;
-	
-
-	Parser() {};
-    Parser(const char* filepath) : mIfs(filepath)
+	Config() {};
+    Config(const char* filepath) : mIfs(filepath)
     {
 		if (!mIfs.is_open())
-		{
 			throw std::runtime_error(filepath);
-		}
 
 		preprocess();
 
@@ -38,11 +31,10 @@ public:
 			{
 				key += buf;
 				while ((buf = ss.get()) != -1 && buf != '{')
-				{
 					key += buf;
-				}
 			}
-			if (buf == '}') cnt--;
+			if (buf == '}')
+				cnt--;
 			if (cnt)
 				value += buf;
 			if (buf == '{') cnt++;
@@ -59,18 +51,14 @@ public:
 					throw std::bad_exception();
 				}
 				if (key != "server")
-				{
 					std::cerr << "'server' Directive Error" << std::endl;
-				}
+				
 				Server	tmp(value);
+				
 				if (mServers.find(tmp.id()) != mServers.end())
-				{
 					std::cerr << "Parse Map Collision" << std::endl;
-				}
 				else
-				{
 					mServers[tmp.id()] = tmp;
-				}
 				key.clear();
 				value.clear();
 			}
@@ -86,9 +74,7 @@ public:
 		for (map<string, Server>::iterator it = mServers.begin(); it != mServers.end(); ++it)
 		{
 			for (size_t i = 0; i < tab_size; ++i)
-			{
 				tmp += '\t';
-			}
 			tmp += "[ ";
 			tmp += it->first;
 			tmp += " ]\n";
@@ -113,27 +99,12 @@ private:
 	std::string						mStringBuf;
 };	//	PARSER
 
-
-
-const std::string Parser::getStringBuf() const
-{
-	return mStringBuf;
-}
-
-void	Parser::preprocess()
+void	Config::preprocess()
 {
 	std::string tmp;		
 	while (std::getline(mIfs, tmp, '\n'))
-	{
 		mStringBuf += Util::strip(tmp);
-	}
     mStringBuf = Util::remover(mStringBuf, '\t');
 }
-
-const std::map<std::string, Server> Parser::getServers() const 
-{
-	return mServers;
-}
-
 
 #endif //   PARSER_HPP

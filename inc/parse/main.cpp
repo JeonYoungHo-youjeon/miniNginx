@@ -11,7 +11,7 @@ using namespace std;
 
 int main() {
 	std::cout << "[ TEST 1 ]===================" << std::endl;
-	Parser parse("../../default.conf");
+	Config parse("../../default.conf");
 	
 	std::cout << parse.str(0) << std::endl;
 

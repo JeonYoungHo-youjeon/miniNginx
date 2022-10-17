@@ -8,9 +8,11 @@ using std::map;
 using std::string;
 using std::vector;
 
-class Server
+struct Server
 {
 public:
+    const map<string, Location>& getLocations() const;
+
     Server(){};
     Server(const string& input)
     {
@@ -27,15 +29,11 @@ public:
             {
                 vector<string> tmp = Util::split(stack, ' ');
                 if (tmp.size() < 2)
-				{
 					std::cerr << "Parsing Error" << std::endl;
-				}
                 else
                 {
                     if (!(mAttr.insert(make_pair(tmp[0], vector<string>(tmp.begin() + 1, tmp.end()))).second))
-                    {
                         std::cerr << "Map Collision" << std::endl;
-                    }
                     else
                         mAttr[tmp[0]] = vector<string>(tmp.begin() + 1, tmp.end());
                 }
@@ -48,9 +46,7 @@ public:
                 if (tmp[0] == "location")
                 {
                     if (mLocation.find(tmp[1]) != mLocation.end())
-                    {
                         std::cerr << "Map Collision" << std::endl;
-                    }
                     else
                         mLocation[tmp[1]] = Location(tmp.begin() + 2, tmp.end());
                 }
@@ -60,10 +56,7 @@ public:
                 stack += *it;
         }
         if (mAttr.find("listen") == mAttr.end())
-        {
             mAttr["listen"] = vector<string>(1, "80");
-        }
-
     }
     ~Server() {};
     
@@ -96,24 +89,17 @@ public:
 		for (map<string, vector<string> >::iterator it = mAttr.begin(); it != mAttr.end(); ++it)
 		{
 			for (size_t i = 0; i < tab_size; ++i)
-            {
             	tmp += '\t';
-            }
             tmp += it->first;
             tmp += " : ";
             for (vector<string>::iterator vit = it->second.begin(); vit != it->second.end(); ++vit)
-            {
-                tmp += *vit;
-                tmp += ' ';
-            }
+                tmp += *vit + ' ';
             tmp += '\n';
 		}
 		for (map<string, Location>::iterator it = mLocation.begin(); it != mLocation.end(); ++it)
 		{
 			for (size_t i = 0; i < tab_size; ++i)
-            {
             	tmp += '\t';
-            }
             tmp += "location '";
             tmp += it->first;
             tmp += "'";
@@ -131,4 +117,10 @@ private:
     map<string, vector<string> >        mAttr;
     map<string, Location>               mLocation;
 };
+
+const map<string, Location>& Server::getLocations() const
+{
+    return mLocation;
+}
+
 #endif  //  PARSE_SERVER_HPP

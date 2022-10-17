@@ -6,8 +6,6 @@
 # include <string>
 # include <map>
 
-# include "../Nil.hpp"
-
 struct Util
 {
     static std::string remover(const std::string& input, const char rmchar);

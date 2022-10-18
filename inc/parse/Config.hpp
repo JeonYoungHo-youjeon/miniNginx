@@ -12,7 +12,7 @@ class Config
 {
 public:
 	Config() {};
-    Config(const char* filepath);
+  Config(const char* filepath);
 	const std::map<std::string, Server>& getServers() const ;
 	string	str(size_t tab_size);
 	Server& operator[](const string& key);
@@ -28,7 +28,6 @@ private:
 	std::map<std::string, Server>	mServers;
 	std::string						mStringBuf;
 };	//	PARSER
-
 
 /*
  *		Config Impliment
@@ -117,4 +116,5 @@ const std::map<std::string, Server>& Config::getServers() const
 {
 	return mServers;
 }
-#endif //   PARSER_HPP
+
+#endif  // PARSE_CONFIG_HPP

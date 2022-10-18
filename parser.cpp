@@ -3,7 +3,7 @@
 #include <vector>
 #include <map>
 
-#include "inc/parse/Parser.hpp"
+#include "inc/parse/Config.hpp"
 
 using namespace std;
 

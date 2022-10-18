@@ -5,8 +5,9 @@
 
 struct Cgi : public Contents
 {
-    Cgi(const std::string& url){
-        
+    Cgi(const std::string& url)
+    {
+		ifstream	ifs(url);
     };
     ~Cgi(){};
 };

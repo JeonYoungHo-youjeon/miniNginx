@@ -2,18 +2,18 @@
 # define FILE_HPP
 
 # include "Contents.hpp"
-# include <iostream>
-# include <fstream>
+
 
 struct File : public Contents
 {
-    File(const std::string& url) {
+    File(const std::string& url)
+    {
         std::ifstream ifs(url);
 
         if (!ifs.is_open())
         {
             std::cerr << "File Open Error" << std::endl;
-            exit(1);
+            throw std::bad_exception();
         }
         std::string buf;
         

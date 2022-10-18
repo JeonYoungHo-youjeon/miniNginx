@@ -42,7 +42,7 @@ struct Request
 
 	int callCount;
 
-	Request();
+	Request() {};
 
 	/**
 	* 전체 리퀘스트가 하나의 문자열로 들어올때 처리. 따로 에러처리는 하지 않음
@@ -58,83 +58,114 @@ struct Request
 		}
 	}
 
+	string remove_crlf(string& str)
+	{
+		string ret;
+
+		ret = Util::strip(str);
+		ret = Util::remover(str, '\r');
+		return ret;
+	}
+
 	// FIXME: 에러는 throw 하는걸로 생각중인데, 우선 출력만 해놓고 에러 처리 방식 정해지면 다시 구현.
 	/**
 	* 받아온 리퀘스트 구조체에 한줄씩 들어오는 문자열을 상황에 맞게 처리해서 저장. 
 	* 
 	*/
-	void set_request(string str)
+	void set_request(string& str)
 	{
 		// callCount 가 0 일때 = 처음 호출됨 = 메소드, url, 프로토콜 저장
 		// callCount 가 -1(BODY)일때 = body 구간. 입력되는 만큼 body에 계속 저장함.
 		// callCount 가 0 보다 클때 = 헤더 필드 구간. 공백이 나오면 callCount 를 BODY 로 바꾸고, 그렇지 않으면 구조체에 필드 저장
+		if (str.empty())
+			throw std::logic_error("TEST");
+		
+		std::vector<string> crlf = Util::split(str, '\n');
+		cout << "<" << crlf[0] << ">" << endl;
+		int i = 0;
+		cout << crlf.size() << endl;
+		for (std::vector<std::string>::iterator it = crlf.begin(); it != crlf.end(); ++it)
+		{
+			*it = Util::remover(*it, '\r');
+			cout << i++ << endl;
+
+			cout << "for <" << *it << ">" << endl;
+			if (callCount == 0)
+			{
+				std::vector<string> splited = Util::split(*it, ' ');
+				if (splited.size() != 3)
+				{
+					cout << "set_request ERROR 1 : <" << str << ">" << endl;
+					throw std::logic_error("TEST");
+				}
+				else
+					callCount++;
+
+
+				if (splited[0] == "GET" || splited[0] == "POST" || splited[0] == "DELETE")
+					method = splited[0];
+				else
+					cout << "set_request ERROR 2 : " << splited[0] << ">" << endl;
+
+				url = splited[1];
+
+				if (splited[2] == "HTTP/1.1")
+				{
+					protocol = remove_crlf(splited[2]);
+				}
+				else
+					cout << "set_request ERROR 3 : " << splited[2] << ">" << endl;
+			}
+			else if (callCount == BODY)
+			{
+				body += *it + "\n";
+				if (*it == "")
+				{
+					throw std::logic_error("TEST");
+				}
+			}
+			else
+			{
+				if (*it == "")
+				{
+					callCount = BODY;
+					cout << "BODY start" << endl;
+					continue ;
+				}
+				std::vector<string> splited = Util::split(*it, ' ');
+				string lower = splited.at(0);
+
+				std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+				std::cout << "lower: " <<*it << std::endl;
+				if (lower == "connention:")
+				{
+					connention = remove_crlf(splited[1]);
+					continue ;
+				}
+
+				if (lower == "encoding:")
+				{
+					encoding = remove_crlf(splited[1]);
+					continue ;
+				}
+
+				if (lower == "host:")
+				{
+					host = remove_crlf(splited[1]);
+					continue ;
+				}
+
+				if (lower == "Content-Length:")
+				{
+					contentLength = remove_crlf(splited[1]);
+					continue ;
+				}
+				cout << "set_request ERROR 4 = <" << *it << ">" <<endl;
+			}
+			
+		}
 		
 		
-		if (callCount == 0)
-		{
-			std::vector<string> splited = Util::split(str, ' ');
-			callCount++;
-			if (splited.size() != 3)
-				cout << "set_request ERROR 1" << endl;
-
-			if (splited[0] == "GET" || splited[0] == "POST" || splited[0] == "DELETE")
-				method = splited[0];
-			else
-				cout << "set_request ERROR 2" << endl;
-
-			url = splited[1];
-
-			if (splited[2] == "HTTP/1.1")
-				protocol = splited[2];
-			else
-				cout << "set_request ERROR 3" << endl;
-		}
-		else if (callCount == BODY)
-		{
-			body += str;
-		}
-		else
-		{
-			std::vector<string> splited = Util::split(str, ':');
-			string lower = splited[0];
-
-			std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
-			if (str == "\n")
-			{
-				callCount = BODY;
-				return ;
-			}
-
-			if (lower == "connention")
-			{
-				connention = splited[1];
-				Util::remover(connention, ' ');
-				return ;
-			}
-
-			if (lower == "encoding")
-			{
-				encoding = splited[1];
-				Util::remover(encoding, ' ');
-				return ;
-			}
-
-			if (lower == "host")
-			{
-				host = splited[1];
-				Util::remover(host, ' ');
-				return ;
-			}
-
-			if (lower == "Content-Length")
-			{
-				contentLength = splited[1];
-				Util::remover(contentLength, ' ');
-				return ;
-			}
-
-			cout << "set_request ERROR 4" << endl;
-		}
 
 	}
 

@@ -1,6 +1,7 @@
 #ifndef PARSE_UTIL_HPP
 # define PARSE_UTIL_HPP
 
+# include <iostream>
 # include <sstream>
 # include <vector>
 # include <string>

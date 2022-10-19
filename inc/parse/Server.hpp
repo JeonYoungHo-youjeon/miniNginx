@@ -61,10 +61,22 @@ public:
     ~Server() {};
     
     //  Access Location
-    Location&    operator[](const string& key)
-    {
-        return  mLocation[key];
+    /*
+     * Location& operator[](const string& key)
+	{
+		std::map<std::string, Location>::iterator it = mLocation.find(key);
+		if (it == mLocation.end())
+			throw LocationNotExist();
+		return it->second;
     }
+     */
+	const Location& operator[](const string& key) const
+	{
+		std::map<std::string, Location>::const_iterator it = mLocation.find(key);
+		if (it == mLocation.end())
+			throw LocationNotExist();
+		return it->second;
+	}
 
     //  Access Attribution
     vector<string>& getAttr(const string& key)
@@ -112,6 +124,14 @@ public:
 protected:
 private:
 public:
+	class LocationNotExist : public std::exception
+	{
+	public:
+		const char* what() const throw()
+		{
+			return "Location is Not Exist";
+		}
+	};
 protected:
 private:
     map<string, vector<string> >        mAttr;

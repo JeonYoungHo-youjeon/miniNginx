@@ -1,1 +1,1 @@
-echo "This is CGI Test"
+echo "This is " $(arg) "Test"

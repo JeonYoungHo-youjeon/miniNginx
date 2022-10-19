@@ -16,12 +16,17 @@ public:
 	const std::map<std::string, Server>& getServers() const ;
 	string	str(size_t tab_size);
 	Server& operator[](const string& key);
-
+	const Server& operator[](const string& key) const;
 protected:
 private:
 	void	preprocess();
 
 public:
+	class ServerNotExist : public std::exception
+	{
+	public:
+		const char* what() const throw();
+	};
 protected:
 private:
 	std::ifstream					mIfs;
@@ -93,9 +98,21 @@ void	Config::preprocess()
     mStringBuf = Util::remover(mStringBuf, '\t');
 }
 
+/*
 Server& Config::operator[](const string& key)
 {
-	return mServers[key];
+	std::map<std::string, Server>::iterator it = mServers.find(key);
+	if (it == mServers.end())
+		throw ServerNotExist();
+	return it->second;
+}
+ */
+const Server& Config::operator[](const string& key) const
+{
+	std::map<std::string, Server>::const_iterator it = mServers.find(key);
+	if (it == mServers.end())
+		throw ServerNotExist();
+	return it->second;
 }
 
 string	Config::str(size_t tab_size)
@@ -115,6 +132,11 @@ string	Config::str(size_t tab_size)
 const std::map<std::string, Server>& Config::getServers() const
 {
 	return mServers;
+}
+
+const char* Config::ServerNotExist::what() const throw()
+{
+	return "Server is Not Exist";
 }
 
 #endif  // PARSE_CONFIG_HPP

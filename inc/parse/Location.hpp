@@ -36,9 +36,12 @@ public:
         }
     }
 
-    vector<string> operator[](const string& key)
+    const vector<string>& operator[](const string& key) const
     {
-        return mAttr[key];
+		std::map<std::string, std::vector<string> >::const_iterator it = mAttr.find(key);
+		if (it == mAttr.end())
+			throw AttrNotExist();
+		return it->second;
     }
     string  str(size_t tab_size)
     {
@@ -58,6 +61,14 @@ public:
     }
 public:
     map<string, vector<string> > mAttr;
+	class AttrNotExist : public std::exception
+	{
+	public:
+		const char* what() const throw()
+		{
+			return "Attribution is Not Exist";
+		}
+	};
 };
 
 #endif  //  PARSE_LOCATION_HPP

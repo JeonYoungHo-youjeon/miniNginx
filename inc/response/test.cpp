@@ -1,5 +1,6 @@
 #include "Response.hpp"
 #include <iostream>
+#include "../parse/Util.hpp"
 # include "../http.hpp"
 # include "../parse/Config.hpp"
 
@@ -7,7 +8,8 @@ using namespace std;
 
 std::string example =
     "GET /cgi-bin/test_cgi.sh"	//METHOD URL
-	//"?name=youngpar&id=qwe"	//PARAM
+	"?name=youngpar&id=qwe&arg=TEST"	//PARAM
+	" "
 	"HTTP/1.1\r\n"				//PROTOCOL
     "Host: localhost:8000\r\n"	//HEADER
     "\r\n"
@@ -21,7 +23,7 @@ int main(int argc, char** argv, char** envp) {
     //cout << "Test end" << endl;
 
 	cout << conf.str(0) << endl;
-    ResponseImpl resp(req);
-    cout << "result : " << resp.str() << endl;
+    ResponseImpl resp(req, conf);
+    //cout << "result : " << resp.str() << endl;
     return 0;
 }

@@ -2,12 +2,13 @@
 # define CGI_HPP
 
 # include "Contents.hpp"
+# include "../parse/Config.hpp"
 
 struct Cgi : public Contents
 {
-    Cgi(const std::string& url)
+    Cgi(const std::string& url, const Config& conf)
     {
-		ifstream	ifs(url);
+		std::ifstream	ifs(url);
     };
     ~Cgi(){};
 };

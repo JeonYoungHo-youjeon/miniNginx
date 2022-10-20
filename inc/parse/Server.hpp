@@ -17,7 +17,7 @@ public:
     ~Server() {};
     
     //  Access Location
-	bool is_exist(const string& key);
+	const bool is_exist(const string& key) const;
 	const Location& operator[](const string& key) const;
 	const map<string, Location>& getLocations() const;
 
@@ -87,7 +87,7 @@ const map<string, Location>& Server::getLocations() const
 	return mLocation;
 }
 
-bool Server::is_exist(const string& key)
+const bool Server::is_exist(const string& key) const
 {
 	return mLocation.find(key) != mLocation.end();
 }

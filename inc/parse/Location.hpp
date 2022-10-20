@@ -13,7 +13,7 @@ public:
     Location() {}
     Location(vector<string>::iterator begin, vector<string>::iterator end);
 
-	bool is_exist(const string& key);
+	const bool is_exist(const string& key) const;
 	const vector<string>& operator[](const string& key) const;
     string  str(size_t tab_size);
 
@@ -47,7 +47,7 @@ Location::Location(vector<string>::iterator begin, vector<string>::iterator end)
 	}
 }
 
-bool Location::is_exist(const string& key)
+const bool Location::is_exist(const string& key) const
 {
 	return mAttr.find(key) != mAttr.end();
 }

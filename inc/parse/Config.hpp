@@ -15,7 +15,7 @@ public:
 	Config(const char* filepath) ;
 	const std::map<std::string, Server>& getServers() const ;
 	string	str(size_t tab_size);
-	bool is_exist(const string& key);
+	const bool is_exist(const string& key) const;
 	const Server& operator[](const string& key) const;
 
 protected:
@@ -99,7 +99,7 @@ void	Config::preprocess()
     mStringBuf = Util::remover(mStringBuf, '\t');
 }
 
-bool Config::is_exist(const string& key)
+const bool Config::is_exist(const string& key) const
 {
 	return mServers.find(key) != mServers.end();
 }

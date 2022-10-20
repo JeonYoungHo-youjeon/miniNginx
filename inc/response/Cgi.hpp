@@ -6,11 +6,17 @@
 
 struct Cgi : public Contents
 {
-    Cgi(const std::string& url, const Config& conf)
+    Cgi(const std::string& url, const std::string& executor)
     {
 		std::ifstream	ifs(url);
     };
     ~Cgi(){};
+
+	void child()
+	{}
+	void parent()
+	{}
+	//std::pair<std::string, std::string> div
 };
 
 #endif  //  CGI_HPP

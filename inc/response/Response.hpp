@@ -25,46 +25,21 @@ public:
 
 		mHost = "*:8000";	//	서버 요청 파싱 필요?
 		parse_query(req.url);
+		std::string::size_type pos = mPath.rfind('.');
+		if (pos != static_cast<std::string::size_type>(-1))
+			mExt = std::string(mPath.begin() + pos, mPath.end());
 
 		std::pair<std::string, std::string>	divpath = Util::divider(mPath, '/');
 
-		std::string goTo;		//	Location
-		std::string ext;		//	확장자
-		std::string executor;	//	실행 바이너리
-
-		while (divpath.first != "" || conf[mHost].is_exist(divpath.first))
-		{
-			try
-			{
-				goTo = conf[mHost][divpath.first]["root"][0] + divpath.second;
-				ext = std::string(divpath.second.begin() + divpath.second.rfind('.'), divpath.second.end());
-				executor = std::string(conf[mHost][divpath.first][ext][0]);
-
-				std::cout << "==== Find Right Path ===" << std::endl;
-				std::cout << "Root + Resource's Path : " << goTo << std::endl;
-				std::cout << "CGI Executer : " << executor << std::endl;
-				std::cout << "=========== = ==========" << std::endl;
-				break ;
-			} catch (std::exception& e)
-			{
-				std::cerr << e.what() << std::endl;
-			}
+		while (divpath.first != "" && !conf[mHost].is_exist(divpath.first))
 			divpath = Util::divider(divpath, '/');
-		}
-
-		//	최종 Location과 root_dir이 합쳐진 root_dir + 파일 경로 존재
-		std::cout << std::endl;
-		std::cout << "location : " << divpath.first << std::endl;
-		std::cout << "resource : " << divpath.second << std::endl;
-
-		if (executor != "")
-		{
-			mContents = new Cgi(goTo, executor);
-		}
-		else
-		{
-			mContents = new File(goTo);
-		}
+		if (divpath.first.empty())
+			divpath.first = "/";
+		mLocation = divpath.first;
+		mResource = divpath.second;
+		std::cout << "Ext : " << mExt<< std::endl;
+		std::cout << "location : " << mLocation << std::endl;
+		std::cout << "resource : " << mResource << std::endl;
 	}
     ~ResponseImpl(){
         if (mContents != nullptr)
@@ -88,8 +63,11 @@ public:
 protected:
 private:
      Contents*    				mContents;	//	Body of Response
-	 std::vector<std::string>	mParams;
-	 std::string 				mPath;
+	 std::vector<std::string>	mParams;	//	parameter
+	 std::string 				mPath;		//	URL without query
+	 std::string 				mLocation;	//	LocationAccessor
+	 std::string 				mResource;	//	ResourceName
+	 std::string 				mExt;		//	Extension
 	 std::string 				mHost;	//	임시 변수
 };
 

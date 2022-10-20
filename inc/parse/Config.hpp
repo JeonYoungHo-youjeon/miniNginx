@@ -11,12 +11,13 @@
 class Config
 {
 public:
-	Config() {};
-  Config(const char* filepath);
+	Config(){};
+	Config(const char* filepath) ;
 	const std::map<std::string, Server>& getServers() const ;
 	string	str(size_t tab_size);
-	Server& operator[](const string& key);
+	bool is_exist(const string& key);
 	const Server& operator[](const string& key) const;
+
 protected:
 private:
 	void	preprocess();
@@ -98,21 +99,14 @@ void	Config::preprocess()
     mStringBuf = Util::remover(mStringBuf, '\t');
 }
 
-/*
-Server& Config::operator[](const string& key)
+bool Config::is_exist(const string& key)
 {
-	std::map<std::string, Server>::iterator it = mServers.find(key);
-	if (it == mServers.end())
-		throw ServerNotExist();
-	return it->second;
+	return mServers.find(key) != mServers.end();
 }
- */
+
 const Server& Config::operator[](const string& key) const
 {
-	std::map<std::string, Server>::const_iterator it = mServers.find(key);
-	if (it == mServers.end())
-		throw ServerNotExist();
-	return it->second;
+	return mServers.find(key)->second;
 }
 
 string	Config::str(size_t tab_size)
@@ -122,9 +116,7 @@ string	Config::str(size_t tab_size)
 	{
 		for (size_t i = 0; i < tab_size; ++i)
 			tmp += '\t';
-		tmp += "[ ";
-		tmp += it->first;
-		tmp += " ]\n";
+		tmp += "[ " + it->first + " ]\n";
 		tmp += it->second.str(tab_size + 1);
 	}
 	return tmp;

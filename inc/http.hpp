@@ -2,8 +2,8 @@
 # define HTTP_HPP
 
 # include <algorithm>
-# include <cctype>
 # include <iostream>
+# include <stdio.h>
 # include <string>
 # include <cstdlib>
 # include <sys/time.h>
@@ -272,6 +272,25 @@ struct Response
 		return ret; 
 	}
 
+
+	string make_errorpage(int code)
+	{
+		std::stringstream ss;
+		ss << code;
+
+		statusCode = ss.str();
+
+		body = 
+		"<!DOCTYPE html>\n"
+		"<html>\n"
+		"  <h1>\n"
+		"    " + statusCode + " " + get_reasonPhrase() + "\n"
+		"  </h1>\n"
+		"</html>\n";
+
+		return get_response();
+	}
+
 	/**
 	 * 현재 리스폰스 구조체의 내용 전체를 출력. 디폴트 값이 있는 데이터는 해당 값으로 출력
 	 *
@@ -355,15 +374,19 @@ struct Response
 	}
 
 	/**
-	 * 엔터티의 길이를 반환. encoding 이 chunked 일때는 공백을 반환
+	 * 엔터티의 길이를 반환. encoding 이 chunked 일때는 공백을 반환. contentLength 가 비어있으면 body의 size 반환.
 	 * 
 	 */
 	string get_contentLength()
 	{
-		if (encoding == "")
+		if (encoding == "chunked")
 			return ("");
 		if (contentLength == "")
-			return ("0");
+		{
+			std::stringstream ss;
+			ss << body.size();
+			contentLength = ss.str();
+		}
 		return contentLength;
 	}
 

@@ -22,10 +22,9 @@ std::string Util::remover(const std::string& input, const char rmchar)
 {
     std::string                 ret;
     std::vector<std::string>    buf = Util::split(input, rmchar);
-    for (std::vector<std::string>::iterator it = buf.begin(); it != buf.end(); ++it)
-    {
+
+	for (std::vector<std::string>::iterator it = buf.begin(); it != buf.end(); ++it)
         ret += *it;
-    }
     return ret;
 }
 
@@ -36,9 +35,7 @@ std::vector<std::string> Util::split(const std::string& input, const char delime
     std::string					tmp;
 
     while (getline(ss, tmp, delimeter))
-    {
         ret.push_back(tmp);
-	}
 
     return ret;
 }
@@ -66,6 +63,7 @@ Util::divider(const std::string& ps, const char delimeter)
 	std::string second(ps.begin() + idx, ps.end());
 	return std::make_pair(first, second);
 }
+
 std::pair<std::string, std::string>
 Util::divider(const std::pair<std::string, std::string>& pss, const char delimeter)
 {

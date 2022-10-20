@@ -26,28 +26,19 @@ public:
 		mHost = "*:8000";	//	서버 요청 파싱 필요?
 		parse_query(req.url);
 
-		std::pair<std::string, std::string>	divpath = Util::divider(path, '/');
+		std::pair<std::string, std::string>	divpath = Util::divider(mPath, '/');
 
 		std::string goTo;		//	Location
 		std::string ext;		//	확장자
 		std::string executor;	//	실행 바이너리
 
-		while (divpath.first != "")
+		while (divpath.first != "" || conf[mHost].is_exist(divpath.first))
 		{
 			try
 			{
-				/*
-				 * 최대한 디테일한 PATH를 찾고 만약 찾았다면 No Exception
-				 * 못 찾았다면 상위 PATH로 이동
-				 * /a/b/c/d.sh가 있다면
-				 * /a/b/c에서 d.sh 실행 시도
-				 * ->	/a/b에서 /c/d.sh 실행 시도
-				 * ->	->	/a에서 /b/c/d.sh 실행 시도
-				 * ->	->	->	/에서 /a/b/c/d.sh 실행 시도
-				 */
-				goTo = conf[host][divpath.first]["root"][0] + divpath.second;
+				goTo = conf[mHost][divpath.first]["root"][0] + divpath.second;
 				ext = std::string(divpath.second.begin() + divpath.second.rfind('.'), divpath.second.end());
-				executor = std::string(conf[host][divpath.first][ext][0]);
+				executor = std::string(conf[mHost][divpath.first][ext][0]);
 
 				std::cout << "==== Find Right Path ===" << std::endl;
 				std::cout << "Root + Resource's Path : " << goTo << std::endl;

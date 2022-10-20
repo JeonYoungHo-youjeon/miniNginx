@@ -28,19 +28,20 @@ public:
 public:
 	void event_loop();
 	
+	Event();
 	Event(const Config& config);
 	~Event();
 
-protected:
-
 private:
-	bool init_kqueue();
+	void init_kqueue();
+	void init_server_socket(const Config& config);
 	void update_event(uintptr_t ident, int16_t filter, \
 					uint16_t flags, uint32_t fflags, intptr_t data, void* udata);
 	void accept_connection(int serverFd);
 	void send_to_client(Client* client);
 	void recv_from_client(Client* client);
 	void disconnection(Client* client);
+
 
 public:
 
@@ -49,6 +50,7 @@ protected:
 private:
 	std::map<int, Socket> mServerSocket;
 	std::map<int, Client*> mClient;
+	std::vector<struct kevent> changeList;
 	int kq;
 	static const int MAX_EVENT = 1024;
 	Logger logger;
@@ -61,14 +63,12 @@ void Event::update_event(uintptr_t ident, int16_t filter, \
 {
 	struct kevent kev;
 	EV_SET(&kev, ident, filter, flags, fflags, data, udata);
-	kevent(kq, &kev, 1, NULL, 0, NULL);
+
+	changeList.push_back(kev);
 }
 
 void Event::event_loop()
 {
-	if (init_kqueue() == false)
-		throw; // FIXME: kqueue error
-
 	logger.info();
 
 	int nEvent, currentFd;
@@ -77,11 +77,12 @@ void Event::event_loop()
 
 	while (true)
 	{
-		nEvent = kevent(kq, NULL, 0, eventList, MAX_EVENT, NULL);
+		nEvent = kevent(kq, &changeList[0], changeList.size(), eventList, MAX_EVENT, NULL);
 
 		if (nEvent == -1)
-			throw; // FIXME
+			throw; // FIXME:
 
+		changeList.clear();
 		for (int i = 0; i < nEvent; ++i)
 		{
 			currentEvent = &eventList[i];
@@ -107,21 +108,19 @@ void Event::event_loop()
 			}
 		}
 	}
+
+	// finish code
 }
 
 void Event::disconnection(Client* client)
-{
+{	
+	logger.disconnection_logging(client, GREEN);
+
 	int fd = client->get_fd();
 
-	update_event(fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
-	update_event(fd, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
-
-	close(fd);
+	delete mClient[fd];
 	mClient.erase(fd);
-	delete(client);
-	logger.logging(client->get_server_fd(), client->get_ip(), \
-					GREEN, DISCONNECTION);
-
+	close(fd);
 }
 
 void Event::send_to_client(Client* client)
@@ -134,7 +133,7 @@ void Event::send_to_client(Client* client)
 	update_event(clientFd, EVFILT_WRITE, EV_DISABLE, 0, 0, NULL);
 }
 
-
+// TODO : EOF 받을 시 DLE(Data Link Escape) 처리
 void Event::recv_from_client(Client* client)
 {
 	char buf[1024] = {};
@@ -149,9 +148,12 @@ void Event::recv_from_client(Client* client)
 	if (recv_len == -1)
 		throw; // FIXME: recv error
 	else if (recv_len == 0)
+	{
 		disconnection(client);
+		return;
+	}
 
-	std::cout << "success recv_from_client : " << buf << std::endl;
+	std::cout << "recv size : " << recv_len << std::endl;
 	update_event(clientFd, EVFILT_READ, EV_DISABLE, 0, 0, NULL);
 	update_event(clientFd, EVFILT_WRITE, EV_ENABLE, 0, 0, NULL);
 }
@@ -163,7 +165,10 @@ void Event::accept_connection(int serverFd)
 	int clientFd = accept(serverFd, (struct sockaddr*)&clientAddr, &clientAddrLen);
 
 	if (clientFd == -1)
+	{
+		// fail to connection
 		return;
+	}
 	
 	fcntl(clientFd, F_SETFL, O_NONBLOCK);
 
@@ -175,40 +180,39 @@ void Event::accept_connection(int serverFd)
 	update_event(clientFd, EVFILT_WRITE, EV_ADD | EV_DISABLE, 0, 0, NULL);
 
 	mClient[clientFd] = client;
-
-	logger.logging(serverFd, client->get_ip(), GREEN, CONNECTION);
+	logger.connection_logging(client, GREEN);
 }
 
 Event::Event(const Config& config)
 {
+	init_server_socket(config); // throw exception
+	init_kqueue(); // throw exception
+}
+
+
+void Event::init_kqueue()
+{
+	kq = kqueue();
+	if (kq == -1)
+		throw; // FIXME:
+	
+	for (std::map<int, Socket>::iterator it = mServerSocket.begin(); it != mServerSocket.end(); ++it)
+		update_event(it->first, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
+}
+
+void Event::init_server_socket(const Config& config)
+{
 	configType servers = config.getServers();
+	
 	for (configType::iterator it = servers.begin(); it != servers.end(); ++it)
 	{
 		std::vector<std::string> temp = Util::split(it->first, ':');
 
-		try
-		{
-			Socket socket = Socket(temp[0], temp[1]);
-			mServerSocket[socket.get_fd()] = socket;
-			logger.add_server(socket.get_fd(), it->first);
-		}
-		catch(const std::exception& e) // FIXME:
-		{
-			throw;
-		}
+		Socket socket = Socket(temp[0], temp[1]); // can occur an exception
+		mServerSocket[socket.get_fd()] = socket;
+
+		logger.add_server(socket.get_fd(), it->first);
 	}
-}
-
-bool Event::init_kqueue()
-{
-	kq = kqueue();
-	if (kq == -1)
-		return false;
-	
-	for (std::map<int, Socket>::iterator it = mServerSocket.begin(); it != mServerSocket.end(); ++it)
-		update_event(it->first, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
-
-	return true;
 }
 
 Event::~Event()
@@ -217,5 +221,7 @@ Event::~Event()
 		delete it->second;
 }
 
+Event::Event()
+{}
 
 #endif

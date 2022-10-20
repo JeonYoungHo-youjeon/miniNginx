@@ -56,27 +56,28 @@ public:
 		std::cout << "Quit the server with CTRL-BREAK." << std::endl;
 	}
 
-	void logging(int serverFd, const std::string& clientIp, \
-				enum eColor color, enum eEvent event)
+	void connection_logging(const Client* client, enum eColor color)
 	{
+		prefix_logMessage(client, color);
+		std::cout << "\tConnection with client(" << client->get_ip() << ")";
+		suffix_logMessage();
+	}
 
+	void disconnection_logging(const Client* client, enum eColor color)
+	{
+		prefix_logMessage(client, color);
+		std::cout << "\tDisconnection with client(" << client->get_ip() << ")";
+		suffix_logMessage();
+	}
+
+	void prefix_logMessage(const Client* client, enum eColor color)
+	{
 		std::cout << COLOR[color] << print_date() \
-				<< print_ip_port(mServer[serverFd]);
+				<< print_ip_port(mServer[client->get_server_fd()]);
+	}
 
-		switch (event)
-		{
-		case CONNECTION:
-			std::cout << "\tConnection with client(" << clientIp << ")";
-			break;
-		case DISCONNECTION:
-			std::cout << "\tDisconnection with client(" << clientIp << ")";
-			break;
-		case REQUEST:
-			break;
-		default:
-			break;
-		}
-
+	void suffix_logMessage()
+	{
 		std::cout << COLOR[END] << std::endl;
 	}
 
@@ -88,7 +89,6 @@ private:
 	{
 		std::string s = "";
 
-		s += "[";
 		s += "[" + ipPort + "]";
 		return s;
 	}

@@ -43,6 +43,7 @@ int main(int argc, char *argv[]){
     while(1){ // 연결 수락시 반복문
         memset(r_buff, 0, 256); // 읽기 버퍼 초기화
         cin >> w_buff; // 쓰기 버퍼에 문자열 입력
+        std::cout << w_buff << std::endl;
         if(strlen(w_buff)>255) break; // 버퍼 오버플로그 방지
         int write_chk = write(sock_client, w_buff, strlen(w_buff)); // 작성 길이만큼 write(전송)
         if(write_chk == -1){

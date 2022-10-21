@@ -107,7 +107,7 @@ string Server::id()
 	vector<string> tmp = Util::split(mAttr["listen"][0], ':');
 	if (tmp.size() > 2)
 		throw std::out_of_range("listen range Error");
-	string  addr = tmp.size() == 1 ? "*" : tmp[0];
+	string  addr = tmp.size() == 1 ? "0.0.0.0" : tmp[0];
 	string  port = tmp.size() == 1 ? tmp[0] : tmp[1];
 	return addr + ":" + port;
 }

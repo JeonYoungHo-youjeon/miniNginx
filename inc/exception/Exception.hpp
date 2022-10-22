@@ -2,6 +2,7 @@
 # define EXCEPTION_HPP
 
 # include <string>
+# include <exception>
 
 static const std::string RED = "\033[91m";
 static const std::string END = "\033[0m";
@@ -11,66 +12,50 @@ static const std::string END = "\033[0m";
 // class YourExceptionName
 // 	: public Exception
 // {
-// public:
-// 	const std::string& what() const
-// 	{
-// 		return msg;
-// 	};
-
 // 	EventLoopException(const std::string& m)
 // 		: Exception("[YourExceptionName] " + m)
 // 	{};
-
-// 	~EventLoopException() {};
-
 // };
 
 class Exception
+	: public std::exception
 {
 public:
-	virtual const std::string& what() const = 0;
+	const char* what() const throw()
+	{
+		return msg.c_str();
+	};
 
 	Exception(const std::string& m)
 	{
 		msg = RED + m + END;
 	};
-	virtual ~Exception() {};
+	virtual ~Exception() throw() = 0;
+
 
 protected:
 	std::string msg;
 };
 
+Exception::~Exception() throw()
+{}
+
 class EventInitException
 	: public Exception
 {
 public:
-	const std::string& what() const
-	{
-		return msg;
-	};
-
 	EventInitException(const std::string& m)
 		: Exception("[EventInitException] " + m)
 	{};
-	~EventInitException() {};
-
 };
 
 class EventLoopException
 	: public Exception
 {
 public:
-	const std::string& what() const
-	{
-		return msg;
-	};
-
 	EventLoopException(const std::string& m)
 		: Exception("[EventLoopException] " + m)
 	{};
-
-	~EventLoopException() {};
-
 };
 
 #endif

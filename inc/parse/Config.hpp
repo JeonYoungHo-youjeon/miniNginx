@@ -20,7 +20,7 @@ public:
 
 protected:
 private:
-	void	preprocess();
+	void	preprocess(std::ifstream& ifs);
 
 public:
 	class ServerNotExist : public std::exception
@@ -30,7 +30,6 @@ public:
 	};
 protected:
 private:
-	std::ifstream					mIfs;
 	std::map<std::string, Server>	mServers;
 	std::string						mStringBuf;
 };	//	PARSER
@@ -39,11 +38,12 @@ private:
  *		Config Impliment
  */
 
-Config::Config(const char* filepath) : mIfs(filepath)
+Config::Config(const char* filepath)
 {
-	if (!mIfs.is_open())
+	std::ifstream	ifs(filepath);
+	if (!ifs.is_open())
 		throw std::runtime_error(filepath);
-	preprocess();
+	preprocess(ifs);
 
 	std::stringstream			ss(mStringBuf);
 	std::string					key = "";
@@ -91,10 +91,11 @@ Config::Config(const char* filepath) : mIfs(filepath)
 		std::cerr << "{ } Error" << std::endl;
 }
 
-void	Config::preprocess()
+void	Config::preprocess(std::ifstream& ifs)
 {
-	std::string tmp;		
-	while (std::getline(mIfs, tmp, '\n'))
+	std::string tmp;
+
+	while (std::getline(ifs, tmp, '\n'))
 		mStringBuf += Util::strip(tmp);
     mStringBuf = Util::remover(mStringBuf, '\t');
 }

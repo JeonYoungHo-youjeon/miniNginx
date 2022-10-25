@@ -11,6 +11,8 @@
 # include "./parse/Util.hpp"
 
 # define BODY -1
+# define BUFFER_SIZE 1024
+# define HEAD 0
 
 using std::string;
 using std::cout;
@@ -41,6 +43,8 @@ struct Request
 	string body;
 
 	int callCount;
+	int remainString;
+	int chunkState;
 
 	Request() {};
 
@@ -67,12 +71,26 @@ struct Request
 		return ret;
 	}
 
+	int set_request(int fd)
+	{
+		char rcvData[BUFFER_SIZE];
+		int byte = recv(fd, &rcvData[0], BUFFER_SIZE, 0);
+		if (byte <= 0)
+		{
+
+		}
+
+		string data = rcvData;
+		return set_request(data);
+	}
+
+
 	// FIXME: 에러는 throw 하는걸로 생각중인데, 우선 출력만 해놓고 에러 처리 방식 정해지면 다시 구현.
 	/**
 	* 받아온 리퀘스트 구조체에 한줄씩 들어오는 문자열을 상황에 맞게 처리해서 저장. 
 	* 
 	*/
-	void set_request(string& str)
+	int set_request(string& str)
 	{
 		// callCount 가 0 일때 = 처음 호출됨 = 메소드, url, 프로토콜 저장
 		// callCount 가 -1(BODY)일때 = body 구간. 입력되는 만큼 body에 계속 저장함.
@@ -107,6 +125,7 @@ struct Request
 				else
 					cout << "set_request ERROR 2 : " << splited[0] << ">" << endl;
 
+				//TODO: config 의 root 반영해서 저장
 				url = splited[1];
 
 				if (splited[2] == "HTTP/1.1")
@@ -118,11 +137,42 @@ struct Request
 			}
 			else if (callCount == BODY)
 			{
-				body += *it + "\n";
-				if (*it == "")
+				if (method != "POST")
+					return 0;
+				if (encoding == "chunked")
 				{
-					throw std::logic_error("TEST");
+					switch (chunkState)
+					{
+							case HEAD:
+								long chunkSize = strtol((*it).c_str(), 0, 16);
+								if (chunkSize == 0)
+									return 0;
+								remainString = chunkSize;
+								chunkState = BODY;
+
+							case BODY:
+								remainString = remainString - (*it).size(); 
+								if (remainString < 0)
+								{
+									*it = (*it).substr(0, remainString);
+									remainString = 0;
+								}
+								body += *it;
+								chunkState = HEAD;
+					}
 				}
+				else
+				{
+					remainString = remainString - (*it).size(); 
+					if (remainString < 0)
+					{
+						*it = (*it).substr(0, remainString);
+						remainString = 0;
+					}
+					body += *it + "\n";
+				}
+				
+				
 			}
 			else
 			{
@@ -158,15 +208,15 @@ struct Request
 				if (lower == "Content-Length:")
 				{
 					contentLength = remove_crlf(splited[1]);
+					remainString = atoi(contentLength.c_str());
+					//TODO: config 에서 client max body size 가지고 와서 비교 후 에러 처리
 					continue ;
 				}
 				cout << "set_request ERROR 4 = <" << *it << ">" <<endl;
 			}
-			
 		}
 		
-		
-
+		return remainString;
 	}
 
 	/**

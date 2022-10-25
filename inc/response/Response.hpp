@@ -13,11 +13,13 @@
  */
 # include "../http.hpp"
 
+extern Config g_conf;
+
 class ResponseImpl : public Response
 {
 public:
-    ResponseImpl(const Config& config) {}
-    ResponseImpl(const Request& req, const Config& conf)
+    ResponseImpl(){};//const Config& config) {}
+    ResponseImpl(const Request& req)//, const Config& conf)
 	: mContents(nullptr)
     {
 		if (req.url.empty())
@@ -31,7 +33,7 @@ public:
 
 		std::pair<std::string, std::string>	divpath = Util::divider(mPath, '/');
 
-		while (divpath.first != "" && !conf[mHost].is_exist(divpath.first))
+		while (divpath.first != "" && !g_conf[mHost].is_exist(divpath.first))
 			divpath = Util::divider(divpath, '/');
 		if (divpath.first.empty())
 			divpath.first = "/";
@@ -41,10 +43,10 @@ public:
 		//std::cout << "location : " << mLocation << std::endl;
 		//std::cout << "resource : " << mResource << std::endl;
 
-		if (!conf[mHost][mLocation].is_exist(mExt))
+		if (!g_conf[mHost][mLocation].is_exist(mExt))
 		{
-			if (conf[mHost][mLocation].is_exist("root"))
-				mLocation = conf[mHost][mLocation]["root"][0];
+			if (g_conf[mHost][mLocation].is_exist("root"))
+				mLocation = g_conf[mHost][mLocation]["root"][0];
 			mContents = new File(mLocation + mResource, req.body);
 		}
 		if (req.method == "GET")

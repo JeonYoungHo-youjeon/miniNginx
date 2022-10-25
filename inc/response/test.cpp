@@ -1,23 +1,50 @@
 #include "Response.hpp"
 #include <iostream>
+#include "../parse/Util.hpp"
 # include "../http.hpp"
+# include "../parse/Config.hpp"
 
 using namespace std;
 
 std::string example =
-    "GET examfile.txt HTTP/1.1\r\n"
-    "Host: localhost:8085\r\n"
+	//"GET /filetest.txt"		//METHOD URL
+	"POST /filetest.txt"		//METHOD URL
+	//"DELETE /filetest.txt"		//METHOD URL
+	//"?name=youngpar&id=qwe&arg=TEST"	//PARAM
+	" "
+	"HTTP/1.1\r\n"				//PROTOCOL
+    "Host: localhost:8000\r\n"	//HEADER
     "\r\n"
-    "Hello world\r\n";
+    "포스트 잘 가나용?\r\n"
+	"총 3줄이 입력될 예정인데\r\n"
+	"잘 되겠지?\r\n";
 
 Request req(example);
+Config conf("../../config/default.conf");
+int main(int argc, char** argv, char** envp) {
+    //cout << "Request Test" << endl;
+    //req.print_request();
+    //cout << "Test end" << endl;
 
-int main() {
-    cout << "Request Test" << endl;
-    req.print_request();
-    cout << "Test end" << endl;
-    
-    ResponseImpl resp(req);
-    cout << "result : " << resp.str() << endl;
+	cout << conf.str(0) << endl;
+    try
+	{
+		ResponseImpl resp(req, conf);
+
+		cout << "---------------------" << endl;
+		try
+		{
+			cout << "response body : " << resp.str() << endl;
+		}
+		catch (Exception & e)
+		{
+			cout << e.what() << endl;
+		}
+		cout << "---------------------" << endl;
+	}
+	catch (Exception& e)
+	{
+		cout << e.what() << endl;
+	}
     return 0;
 }

@@ -1,24 +1,27 @@
 #ifndef CONTENTS_HPP
 # define CONTENTS_HPP
 
-# include <string>
+# include <iostream>
+# include <fstream>
+# include <cstdio>
 
 struct Contents
 {
-    Contents(){};
-	Contents(const Contents& contents) : mContents("")
-	{
-		mContents = contents.mContents;
-	}
+	//	Methods
+    Contents(const std::string& url)
+	: mUrl(url) {};
+	Contents(const std::string& url, const std::string& body)
+	: mUrl(url), mContents(body) {};
     virtual ~Contents(){};
-    const std::string     getContents() const;
-    
-	std::string		mContents;
-};      //  Contents
 
-const std::string	Contents::getContents() const
-{
-	return mContents;
-};
+    virtual std::string	_get() = 0;
+	virtual void		_post() = 0;
+	virtual void		_put() = 0;
+	virtual void		_delete() =0;
+
+	//	Variables
+	std::string	mContents;
+	std::string mUrl;
+};      //  Contents
 
 #endif  //  CONTENTS_HPP

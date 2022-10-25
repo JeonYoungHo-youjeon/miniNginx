@@ -17,6 +17,7 @@ public:
     ~Server() {};
     
     //  Access Location
+
 	const bool is_exist(const string& key) const;
 	const Location& operator[](const string& key) const;
 	const map<string, Location>& getLocations() const;
@@ -31,6 +32,14 @@ public:
 protected:
 private:
 public:
+	class LocationNotExist : public std::exception
+	{
+	public:
+		const char* what() const throw()
+		{
+			return "Location is Not Exist";
+		}
+	};
 protected:
 private:
     map<string, vector<string> >        mAttr;

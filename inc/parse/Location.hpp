@@ -19,6 +19,14 @@ public:
 
 public:
     map<string, vector<string> > mAttr;
+	class AttrNotExist : public std::exception
+	{
+	public:
+		const char* what() const throw()
+		{
+			return "Attribution is Not Exist";
+		}
+	};
 };
 
 //	Location Implementation

@@ -11,8 +11,8 @@
 class Config
 {
 public:
-	Config() {};
-	Config(const char* filepath);
+	Config(){};
+	Config(const char* filepath) ;
 	const std::map<std::string, Server>& getServers() const ;
 	string	str(size_t tab_size);
 	const bool is_exist(const string& key) const;
@@ -23,6 +23,11 @@ private:
 	void	preprocess();
 
 public:
+	class ServerNotExist : public std::exception
+	{
+	public:
+		const char* what() const throw();
+	};
 protected:
 private:
 	std::ifstream					mIfs;
@@ -119,6 +124,11 @@ string	Config::str(size_t tab_size)
 const std::map<std::string, Server>& Config::getServers() const
 {
 	return mServers;
+}
+
+const char* Config::ServerNotExist::what() const throw()
+{
+	return "Server is Not Exist";
 }
 
 #endif  // PARSE_CONFIG_HPP

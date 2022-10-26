@@ -120,7 +120,7 @@ Client::~Client()
 // private
 Client::Client()
 	: clientFd(0), serverFd(0), \
-	addr(sockaddr_in{0}), serverIP(0), serverPort(0)
+	addr(), serverIP(0), serverPort(0)
 {}
 
 // private

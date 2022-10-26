@@ -10,6 +10,7 @@
 # include <arpa/inet.h>
 
 # include "../parse/Config.hpp"
+# include "../exception/Exception.hpp"
 
 class Socket
 {
@@ -94,24 +95,24 @@ Socket::Socket(const std::string& ip_, const std::string& port_)
 {
 	sock_fd = socket(PF_INET, SOCK_STREAM, 0);
 	if (sock_fd == -1)
-		throw; // FIXME:
+		throw EventInitException("socket() error");
 	
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	addr.sin_addr.s_addr = inet_addr(ip_.c_str());
 	addr.sin_port = htons(std::atoi(port_.c_str()));
 
-	setsockopt(sock_fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
-	fcntl(sock_fd, F_SETFL, O_NONBLOCK);
+	if (setsockopt(sock_fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable)) == -1)
+		throw EventInitException("setsockopt() error");
+
+	if (fcntl(sock_fd, F_SETFL, O_NONBLOCK) == -1)
+		throw EventInitException("fcntl() error");
 
 	if (bind(sock_fd, (struct sockaddr*)&addr, sizeof(addr)) == -1)
-	{
-		std::cout << "bind error" << std::endl;
-		throw; // FIXME:
-	}
+		throw EventInitException("bind() error");
 
 	if (listen(sock_fd, SOMAXCONN) == -1)
-		throw; // FIXME:
+		throw EventInitException("listen() error");
 }
 
 Socket& Socket::operator=(const Socket& socket)

@@ -274,30 +274,25 @@ void Event::disconnection(Client* client)
 // TODO : EOF 받을 시 DLE(Data Link Escape) 처리
 void Event::recv_from_client(Client* client)
 {
-	// TODO : request와 response 구현 이후 작성
-	char buf[1024] = {};
-	int recv_len = 0;
+	Request req = client->get_request();
 	int clientFd = client->get_fd();
 
+	int state = req.set_request(clientFd);
 
-	recv_len = recv(clientFd, buf, 1024, 0);
-
-	std::string str = buf;
-
-	if (recv_len == -1)
-		throw; // FIXME: recv error
-	else if (recv_len == 0)
+	if (state <= 0)
 	{
-		disconnection(client);
-		return;
+		update_event(clientFd, EVFILT_READ, EV_DISABLE, 0, 0, NULL);
+		update_event(clientFd, EVFILT_WRITE, EV_ENABLE, 0, 0, NULL);
+	}
+	else
+	{
+		update_event(clientFd, EVFILT_READ, EV_ENABLE, 0, 0, NULL);
 	}
 
-	std::cout << "recv size : " << recv_len << std::endl;
-	// end 
 
 	// TODO : chunked message 수신 시 수정이 필요할 수도 있음
-	update_event(clientFd, EVFILT_READ, EV_DISABLE, 0, 0, NULL);
-	update_event(clientFd, EVFILT_WRITE, EV_ENABLE, 0, 0, NULL);
+	// update_event(clientFd, EVFILT_READ, EV_DISABLE, 0, 0, NULL);
+	// update_event(clientFd, EVFILT_WRITE, EV_ENABLE, 0, 0, NULL);
 }
 
 /**

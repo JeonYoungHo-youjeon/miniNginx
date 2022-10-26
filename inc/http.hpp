@@ -150,12 +150,13 @@ struct Request
 					switch (chunkState)
 					{
 							case HEAD:
+							{
 								long chunkSize = strtol((*it).c_str(), 0, 16);
 								if (chunkSize == 0)
 									return 0;
 								remainString = chunkSize;
 								chunkState = BODY;
-
+							}
 							case BODY:
 								remainString = remainString - (*it).size(); 
 								if (remainString < 0)

@@ -58,28 +58,28 @@ public:
 	{};
 };
 
-class Code4xxException
-	: public Exception
-{
-public:
-	const std::string& what() const
-	{
-		return msg;
-	};
-	Code4xxException(const std::string& m)
-		: Exception("[ClientException] " + m)
-	{};
-	virtual ~Code4xxException() {};
-};
+// class Code4xxException
+// 	: public Exception
+// {
+// public:
+// 	const std::string& what() const
+// 	{
+// 		return msg;
+// 	};
+// 	Code4xxException(const std::string& m)
+// 		: Exception("[ClientException] " + m)
+// 	{};
+// 	virtual ~Code4xxException() {};
+// };
 
-class Code404Exception
-	: public Code4xxException
-{
-public:
-	Code404Exception()
-		: Code4xxException("404 Not Found")
-	{};
-	~Code404Exception() {};
-};
+// class Code404Exception
+// 	: public Code4xxException
+// {
+// public:
+// 	Code404Exception()
+// 		: Code4xxException("404 Not Found")
+// 	{};
+// 	~Code404Exception() {};
+// };
 
 #endif

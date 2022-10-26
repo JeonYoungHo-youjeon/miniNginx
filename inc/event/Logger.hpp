@@ -1,3 +1,7 @@
+/**
+ * TODO: change log format: $remote_addr - [$time_local] $request $status $body_bytes_sent
+ */
+
 #ifndef LOGGER_HPP
 # define LOGGER_HPP
 
@@ -21,7 +25,7 @@ enum eLogColor
 	LOG_GREEN,
 	LOG_YELLOW,
 	LOG_BLUE,
-	END
+	RESET
 };
 
 class Logger
@@ -65,7 +69,6 @@ private:
 */
 void Logger::add_server(int fd, const std::string& ip_port)
 {
-
 	mServer[fd] = ip_port;
 }
 
@@ -152,7 +155,7 @@ void Logger::prefix_logMessage(const Client* client, enum eLogColor color)
 */
 void Logger::suffix_logMessage()
 {
-	std::cout << LOGCOLOR[END] << std::endl;
+	std::cout << LOGCOLOR[RESET] << std::endl;
 }
 
 Logger::Logger()

@@ -17,6 +17,7 @@
 # include "../parse/Util.hpp"
 # include "../http.hpp"
 # include "Logger.hpp"
+# include "../exception/Exception.hpp"
 
 
 class Event
@@ -165,7 +166,7 @@ void Event::init_kqueue()
 {
 	kq = kqueue();
 	if (kq == -1)
-		throw; // FIXME:
+		throw EventInitException("kqueue()");
 	
 	for (std::map<int, Socket>::iterator it = mServerSocket.begin(); it != mServerSocket.end(); ++it)
 		update_event(it->first, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
@@ -218,7 +219,11 @@ void Event::accept_connection(int serverFd)
 		return;
 	}
 	
-	fcntl(clientFd, F_SETFL, O_NONBLOCK);
+	if (fcntl(clientFd, F_SETFL, O_NONBLOCK) == -1)
+	{
+		// TODO: send connection fail response 
+		return;
+	}
 
 	register_client(clientFd, clientAddr, serverFd);
 	logger.connection_logging(mClient[clientFd], LOG_GREEN);
@@ -285,14 +290,7 @@ void Event::recv_from_client(Client* client)
 		update_event(clientFd, EVFILT_WRITE, EV_ENABLE, 0, 0, NULL);
 	}
 	else
-	{
 		update_event(clientFd, EVFILT_READ, EV_ENABLE, 0, 0, NULL);
-	}
-
-
-	// TODO : chunked message 수신 시 수정이 필요할 수도 있음
-	// update_event(clientFd, EVFILT_READ, EV_DISABLE, 0, 0, NULL);
-	// update_event(clientFd, EVFILT_WRITE, EV_ENABLE, 0, 0, NULL);
 }
 
 /**

@@ -10,6 +10,7 @@
 # include <map>
 
 # include "../parse/Config.hpp"
+# include "Client.hpp"
 
 static const std::string LOGCOLOR[] = {
 	"\033[91m",
@@ -31,7 +32,7 @@ enum eLogColor
 class Logger
 {
 public:
-	typedef std::map<int, std::string>	loggerType;
+	typedef std::map<int, std::string>	LoggerMap;
 
 public:
 	void add_server(int fd, const std::string& ip_port);
@@ -54,7 +55,7 @@ private:
 
 private:
 	time_t now;
-	loggerType mServer;
+	LoggerMap mServer;
 };
 
 // Logger implementation
@@ -88,7 +89,7 @@ void Logger::info()
 		std::cout << dt;
 
 	std::cout << "Starting Webserv version 1.0" << std::endl;
-	for (loggerType::iterator it = mServer.begin(); it != mServer.end(); ++it)
+	for (LoggerMap::iterator it = mServer.begin(); it != mServer.end(); ++it)
 		std::cout << "at http://" << it->second << "/" << std::endl;
 	std::cout << "Quit the server with CTRL-BREAK." << std::endl;
 }

@@ -7,12 +7,15 @@
 # include <string>
 # include <cstdlib>
 # include <sys/time.h>
+# include <sys/socket.h>
 
 # include "./parse/Util.hpp"
 
 # define BODY -1
 # define BUFFER_SIZE 1024
 # define HEAD 0
+
+extern Config g_conf;
 
 using std::string;
 using std::cout;
@@ -45,6 +48,7 @@ struct Request
 	int callCount;
 	int remainString;
 	int chunkState;
+	int errorCode;
 
 	Request() {};
 
@@ -77,7 +81,9 @@ struct Request
 		int byte = recv(fd, &rcvData[0], BUFFER_SIZE, 0);
 		if (byte <= 0)
 		{
-
+			strerror(errno);
+			errorCode = 400;
+			return -1;
 		}
 
 		string data = rcvData;
@@ -210,6 +216,7 @@ struct Request
 					contentLength = remove_crlf(splited[1]);
 					remainString = atoi(contentLength.c_str());
 					//TODO: config 에서 client max body size 가지고 와서 비교 후 에러 처리
+					errorCode = 413;
 					continue ;
 				}
 				cout << "set_request ERROR 4 = <" << *it << ">" <<endl;

@@ -3,6 +3,8 @@
 
 # include <netinet/in.h>
 
+# include "../http.hpp"
+
 class Client
 {
 public:
@@ -11,6 +13,10 @@ public:
 	const std::string get_ip() const;
 	const std::string& get_server_ip() const;
 	const std::string& get_server_port() const;
+	Request& get_request()
+	{
+		return (req);
+	};
 
 	Client(int clientFd, const struct sockaddr_in& clientAddr, int serverFd,  \
 			const std::string& serverIP, const std::string& serverPort);
@@ -26,6 +32,7 @@ private:
 	const struct sockaddr_in addr;
 	const std::string serverIP;
 	const std::string serverPort;
+	Request req;
 };
 
 // Client implementation

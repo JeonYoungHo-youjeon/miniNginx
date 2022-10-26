@@ -42,9 +42,9 @@ struct Request
 	string encoding;		// Transper-Encoding (chunked 만 구현)
 	string host;			// 서버의 호스트 명과 포트 (localhost:80)
 	string contentLength;	// 메세지가 담고있는 화물(엔터티entity = body) 의 길이
-	
 	string body;
 
+	string location;
 	int callCount;
 	int remainString;
 	int chunkState;
@@ -131,8 +131,26 @@ struct Request
 				else
 					cout << "set_request ERROR 2 : " << splited[0] << ">" << endl;
 
-				//TODO: config 의 root 반영해서 저장
 				url = splited[1];
+				try
+				{
+					std::vector<string> splitUrl = Util::split(splited[1], '/');
+					location = splited[1];
+				
+					//TODO: server 구해서 동적으로 넣어야함
+					//FIXME: 사용법 이거 맞나?
+					url = g_conf["0.0.0.0:8000"][location]["root"][0];
+					std::vector<std::string>::iterator it = splitUrl.begin();
+					it += 2;
+					for (it; it != splitUrl.end(); ++it)
+					{
+						url += *it;
+					}
+				}
+				catch(const std::exception& e)
+				{
+					std::cerr << e.what() << '\n';
+				}
 
 				if (splited[2] == "HTTP/1.1")
 				{
@@ -147,6 +165,7 @@ struct Request
 					return 0;
 				if (encoding == "chunked")
 				{
+					//TODO: 청크드 메세지에서도 맥스 사이즈 확인
 					switch (chunkState)
 					{
 							case HEAD:
@@ -215,8 +234,20 @@ struct Request
 				{
 					contentLength = remove_crlf(splited[1]);
 					remainString = atoi(contentLength.c_str());
-					//TODO: config 에서 client max body size 가지고 와서 비교 후 에러 처리
-					errorCode = 413;
+					try
+					{
+						//FIXME: 사용법 확인 후 수정
+						string maxSize = g_conf["0.0.0.0:8000"][location]["client_max_body_size"][0];
+						if (g_conf["0.0.0.0:8000"][location]["client_max_body_size"][0] < contentLength)
+						{
+							errorCode = 413;
+							// return ;
+						}
+					}
+					catch(const std::exception& e)
+					{
+						std::cerr << e.what() << '\n';
+					}
 					continue ;
 				}
 				cout << "set_request ERROR 4 = <" << *it << ">" <<endl;
@@ -334,8 +365,26 @@ struct Response
 	{
 		std::stringstream ss;
 		ss << code;
-
 		statusCode = ss.str();
+		// FIXME: g_conf 순회하는 방법 찾고, open 하려면 어떻게 할지 문의
+		// try
+		// {
+		// 	for (std::vector<string>::const_iterator it = g_conf["0.0.0.0:8000"][location]["error_page"].begin(); it != g_conf["0.0.0.0:8000"][location]["error_page"].end(); ++it)
+		// 	{
+		// 		if (*it == statusCode)
+		// 		{
+		// 			int fd = open(*(g_conf["0.0.0.0:8000"][location]["error_page"].end() - 1).c_str());
+		// 			body = read(fd);
+		// 			return get_response();
+		// 		}
+		// 	}
+			
+		// }
+		// catch(const std::exception& e)
+		// {
+		// 	std::cerr << e.what() << '\n';
+		// }
+		
 
 		body = 
 		"<!DOCTYPE html>\n"

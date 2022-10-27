@@ -10,6 +10,7 @@
 # include <sys/socket.h>
 
 # include "./parse/Util.hpp"
+# include "parse/Config.hpp"
 
 # define BODY -1
 # define BUFFER_SIZE 1024
@@ -45,6 +46,7 @@ struct Request
 	string body;
 
 	string location;
+	string resource;
 	int callCount;
 	int remainString;
 	int chunkState;
@@ -71,7 +73,7 @@ struct Request
 		string ret;
 
 		ret = Util::strip(str);
-		ret = Util::remover(str, '\r');
+		ret = Util::remover(ret, '\r');
 		return ret;
 	}
 
@@ -136,13 +138,20 @@ struct Request
 				{
 					std::vector<string> splitUrl = Util::split(splited[1], '/');
 					location = splited[1];
-				
+
 					//TODO: server 구해서 동적으로 넣어야함
 					//FIXME: 사용법 이거 맞나?
+					std::pair<std::string, std::string>	divpath = Util::divider(location, '/');
+					while (divpath.first != "" && !g_conf["0.0.0.0:8000"].is_exist(divpath.first))
+						divpath = Util::divider(divpath, '/');
+					if (divpath.first.empty())
+						divpath.first = "/";
+					location = divpath.first;
+					resource = divpath.second;
 					url = g_conf["0.0.0.0:8000"][location]["root"][0];
 					std::vector<std::string>::iterator it = splitUrl.begin();
 					it += 2;
-					for (it; it != splitUrl.end(); ++it)
+					for (; it != splitUrl.end(); ++it)
 					{
 						url += *it;
 					}
@@ -151,7 +160,6 @@ struct Request
 				{
 					std::cerr << e.what() << '\n';
 				}
-
 				if (splited[2] == "HTTP/1.1")
 				{
 					protocol = remove_crlf(splited[2]);

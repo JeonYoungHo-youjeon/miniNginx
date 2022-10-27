@@ -30,7 +30,7 @@ public:
 		std::string::size_type pos = mPath.rfind('.');
 		if (pos != static_cast<std::string::size_type>(-1))
 			mExt = std::string(mPath.begin() + pos, mPath.end());
-
+/*
 		std::pair<std::string, std::string>	divpath = Util::divider(mPath, '/');
 
 		while (divpath.first != "" && !g_conf[mHost].is_exist(divpath.first))
@@ -39,10 +39,11 @@ public:
 			divpath.first = "/";
 		mLocation = divpath.first;
 		mResource = divpath.second;
+		*/
 		//std::cout << "Ext : " << mExt<< std::endl;
 		//std::cout << "location : " << mLocation << std::endl;
 		//std::cout << "resource : " << mResource << std::endl;
-
+/*
 		if (!g_conf[mHost][mLocation].is_exist(mExt))
 		{
 			if (g_conf[mHost][mLocation].is_exist("root"))
@@ -55,6 +56,8 @@ public:
 				mLocation = g_conf[mHost][mLocation]["root"][0];
 			mContents = new Cgi(mLocation + mResource, req.body, mExt, mParams);
 		}
+		*/
+
 		if (req.method == "GET")
 			body = mContents->_get();
 		if (req.method == "POST")

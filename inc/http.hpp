@@ -47,10 +47,12 @@ struct Request
 
 	string location;
 	string resource;
+	string ext;
 	int callCount;
 	int remainString;
 	int chunkState;
 	int errorCode;
+	vector<string>	params;
 
 	Request() {};
 
@@ -132,7 +134,10 @@ struct Request
 					method = splited[0];
 				else
 					cout << "set_request ERROR 2 : " << splited[0] << ">" << endl;
-
+				//	TODO
+				//	내가 너무 많이 바꾸는 것 같아서 요청;;;;
+				//	처음 들어온 url을 ?을 기준으로 나누고 첫 번째 걸 기존 location으로 생각하면 댐
+				//	나머지는 & 기준으로 나누어서 벡터로 params를 만들어도 되고 ? 이후 문자열을 그냥 query 등으로 보관해도 ㄱㅊ
 				url = splited[1];
 				try
 				{
@@ -141,19 +146,23 @@ struct Request
 
 					//TODO: server 구해서 동적으로 넣어야함
 					//FIXME: 사용법 이거 맞나?
+					{
+						std::string::size_type pos = location.rfind('.');
+						if (pos != static_cast<std::string::size_type>(-1))
+							ext = std::string(location.begin() + pos, location.end());
+					}
 					std::pair<std::string, std::string>	divpath = Util::divider(location, '/');
 					while (divpath.first != "" && !g_conf["0.0.0.0:8000"].is_exist(divpath.first))
 						divpath = Util::divider(divpath, '/');
-					if (divpath.first.empty())
-						divpath.first = "/";
+
 					location = divpath.first;
 					resource = divpath.second;
-					url = g_conf["0.0.0.0:8000"][location]["root"][0];
+					url = g_conf["0.0.0.0:8000"][location]["root"][0];// + "/" + resource;
 					std::vector<std::string>::iterator it = splitUrl.begin();
 					it += 2;
 					for (; it != splitUrl.end(); ++it)
 					{
-						url += *it;
+						url += "/" + *it;
 					}
 				}
 				catch(const std::exception& e)

@@ -14,7 +14,6 @@ struct Cgi : public Contents
 	{}
 	void parent()
 	{}
-	//std::pair<std::string, std::string> div
 	std::string	_get();
 	void		_post();
 	void		_put();

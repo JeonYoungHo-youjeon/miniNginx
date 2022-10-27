@@ -10,7 +10,7 @@ std::string example =
 	"GET /cgi-bin/test_cgi.sh"		//METHOD URL
 	//"POST /filetest.txt"		//METHOD URL
 	//"DELETE /filetest.txt"		//METHOD URL
-	//"?name=youngpar&id=qwe&arg=TEST"	//PARAM
+	"?name=youngpar&id=qwe&arg=TEST"	//PARAM
 	" "
 	"HTTP/1.1\r\n"				//PROTOCOL
     "Host: localhost:8000\r\n"	//HEADER
@@ -23,12 +23,11 @@ Config g_conf("../../config/default.conf");
 Request req(example);
 
 int main(int argc, char** argv, char** envp) {
-    //cout << "Request Test" << endl;
+    cout << "Request Test" << endl;
+	req.print_request();
+    cout << "Test end" << endl;
+
 	cout << g_conf.str(0) << endl;
-
-	//req.print_request();
-    //cout << "Test end" << endl;
-
     try
 	{
 		ResponseImpl resp(req);

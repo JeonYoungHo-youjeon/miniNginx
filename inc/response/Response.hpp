@@ -57,7 +57,16 @@ public:
 			mContents = new Cgi(mLocation + mResource, req.body, mExt, mParams);
 		}
 		*/
-
+		std::cout << req.url << std::endl;
+		std::cout << req.location << std::endl;
+		if (req.ext.empty())
+			mContents = new File(req.url, req.body);
+		else
+			mContents = new Cgi(req.url, req.body, req.ext, mParams);
+		//if (!g_conf[mHost][req.url].is_exist(req.location))
+		//	mContents = new File(req.url, req.body);
+		//else
+		//	mContents = new Cgi(req.url, req.body, )
 		if (req.method == "GET")
 			body = mContents->_get();
 		if (req.method == "POST")

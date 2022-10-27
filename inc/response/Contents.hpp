@@ -8,9 +8,9 @@
 struct Contents
 {
 	//	Methods
-    Contents(const std::string& url)
-	: mUrl(url) {};
-	Contents(const std::string& url, const std::string& body)
+    //Contents(const std::string& url)
+	//: mUrl(url) {};
+	Contents(const std::string& url, const std::string& body = "")
 	: mUrl(url), mContents(body) {};
     virtual ~Contents(){};
 
@@ -22,6 +22,7 @@ struct Contents
 	//	Variables
 	std::string	mContents;
 	std::string mUrl;
+	int 		mCode;
 };      //  Contents
 
 #endif  //  CONTENTS_HPP

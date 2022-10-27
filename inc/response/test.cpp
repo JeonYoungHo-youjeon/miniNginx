@@ -7,8 +7,8 @@
 using namespace std;
 
 std::string example =
-	//"GET /filetest.txt"		//METHOD URL
-	"POST /filetest.txt"		//METHOD URL
+	"GET /cgi-bin/test_cgi.sh"		//METHOD URL
+	//"POST /filetest.txt"		//METHOD URL
 	//"DELETE /filetest.txt"		//METHOD URL
 	//"?name=youngpar&id=qwe&arg=TEST"	//PARAM
 	" "
@@ -19,17 +19,19 @@ std::string example =
 	"총 3줄이 입력될 예정인데\r\n"
 	"잘 되겠지?\r\n";
 
+Config g_conf("../../config/default.conf");
 Request req(example);
-Config conf("../../config/default.conf");
+
 int main(int argc, char** argv, char** envp) {
     //cout << "Request Test" << endl;
-    //req.print_request();
+	cout << g_conf.str(0) << endl;
+
+	//req.print_request();
     //cout << "Test end" << endl;
 
-	cout << conf.str(0) << endl;
     try
 	{
-		ResponseImpl resp(req, conf);
+		ResponseImpl resp(req);
 
 		cout << "---------------------" << endl;
 		try

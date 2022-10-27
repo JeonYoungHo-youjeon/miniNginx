@@ -7,9 +7,8 @@
 
 struct Cgi : public Contents
 {
-    Cgi(const std::string& url, const std::string& body)
-    : Contents(url, body) {};
-    ~Cgi(){};
+    Cgi(const std::string& url, const std::string& body, const string& ext, const vector<string>& params);
+    ~Cgi();
 
 	void child()
 	{}
@@ -20,15 +19,40 @@ struct Cgi : public Contents
 	void		_post();
 	void		_put();
 	void		_delete();
+
+	char**		mEnv;
+	string		mExt;
 };
+
+Cgi::Cgi(const std::string& url, const std::string& body, const string& ext, const vector<string>& params)
+: Contents(url, body), mExt(ext), mEnv(NULL)
+{
+	mEnv = new char* [params.size() + 1];
+	for (size_t i = 0; i < params.size(); ++i)
+	{
+		mEnv[i] = new char[params[i].size() + 1];
+		strcpy(mEnv[i], params[i].c_str());
+	}
+	mEnv[params.size()] = NULL;
+}
+Cgi::~Cgi()
+{
+	if (mEnv)
+	{
+		for (size_t i = 0; mEnv[i] != NULL; ++i)
+			delete[] mEnv[i];
+		delete[] mEnv;
+	}
+}
 
 std::string Cgi::_get()
 {
 	std::ifstream ifs(mUrl);
 
-	//	TODO : 404 맞는지 확인해보기
+	mCode = 200;
 	if (!ifs.is_open())
-		throw Code404Exception();
+		mCode = 404;
+		//throw Code404Exception();
 	std::string buf;
 	while (getline(ifs, buf, '\n'))
 		mContents += buf;
@@ -39,9 +63,10 @@ void 		Cgi::_post()
 {
 	std::ofstream ofs(mUrl);
 
+	mCode = 200;
 	if (!ofs.is_open())
-		throw Code404Exception();
-
+		mCode = 404;
+		//throw Code404Exception();
 }
 void 		Cgi::_put() {};
 void 		Cgi::_delete() {};

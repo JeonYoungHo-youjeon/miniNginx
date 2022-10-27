@@ -49,6 +49,12 @@ public:
 				mLocation = g_conf[mHost][mLocation]["root"][0];
 			mContents = new File(mLocation + mResource, req.body);
 		}
+		else
+		{
+			if (g_conf[mHost][mLocation].is_exist("root"))
+				mLocation = g_conf[mHost][mLocation]["root"][0];
+			mContents = new Cgi(mLocation + mResource, req.body, mExt, mParams);
+		}
 		if (req.method == "GET")
 			body = mContents->_get();
 		if (req.method == "POST")

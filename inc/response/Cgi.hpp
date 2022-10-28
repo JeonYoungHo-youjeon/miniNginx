@@ -5,6 +5,8 @@
 # include "../parse/Config.hpp"
 # include "../exception/Exception.hpp"
 
+# include <unistd.h>
+
 struct Cgi : public Contents
 {
     Cgi(const std::string& url, const std::string& body, const string& ext, const vector<string>& params);
@@ -18,13 +20,14 @@ struct Cgi : public Contents
 	void		_post();
 	void		_put();
 	void		_delete();
+	std::string execute();
 
 	char**		mEnv;
-	string		mExt;
+	string		mExcutor;
 };
 
-Cgi::Cgi(const std::string& url, const std::string& body, const string& ext, const vector<string>& params)
-: Contents(url, body), mExt(ext), mEnv(NULL)
+Cgi::Cgi(const std::string& url, const std::string& body, const string& excutor, const vector<string>& params)
+: Contents(url, body), mExcutor(excutor), mEnv(NULL)
 {
 	mEnv = new char* [params.size() + 1];
 	for (size_t i = 0; i < params.size(); ++i)
@@ -46,15 +49,30 @@ Cgi::~Cgi()
 
 std::string Cgi::_get()
 {
-	std::ifstream ifs(mUrl);
-
 	mCode = 200;
-	if (!ifs.is_open())
-		mCode = 404;
-		//throw Code404Exception();
-	std::string buf;
-	while (getline(ifs, buf, '\n'))
-		mContents += buf;
+
+	int fd[2];
+	if (pipe(fd) < 0)
+	{
+		mCode = 500;
+		return "Internal Server Error";	//	X
+	}
+	pid_t	pid = fork();
+
+	if (pid == -1)
+	{
+		mCode = 500;
+		return "Internal Server Error";    //	X
+	}
+	else if (pid)
+	{
+		write(fd[0], mContents.c_str(), mContents.size() + 1);
+		execve(mExcutor, mUrl, mEnv);
+	}
+	else
+	{
+		//	Child
+	}
 	return mContents;
 }
 

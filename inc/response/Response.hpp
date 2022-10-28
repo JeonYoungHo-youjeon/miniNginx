@@ -25,7 +25,7 @@ public:
 		if (req.url.empty())
 			throw UrlException();
 
-		mHost = "0.0.0.0:8000";	//	서버 요청 파싱 필요?
+		mHost = req.host;
 		parse_query(req.url);
 		std::string::size_type pos = mPath.rfind('.');
 		if (pos != static_cast<std::string::size_type>(-1))
@@ -59,14 +59,12 @@ public:
 		*/
 		std::cout << req.url << std::endl;
 		std::cout << req.location << std::endl;
+		//std::cout << g_conf[req.host][req.location][req.ext][0] << std::endl;
 		if (req.ext.empty())
 			mContents = new File(req.url, req.body);
 		else
-			mContents = new Cgi(req.url, req.body, req.ext, mParams);
-		//if (!g_conf[mHost][req.url].is_exist(req.location))
-		//	mContents = new File(req.url, req.body);
-		//else
-		//	mContents = new Cgi(req.url, req.body, )
+			mContents = new Cgi(req.url, req.body, g_conf[req.host][req.location][req.ext][0], mParams);
+
 		if (req.method == "GET")
 			body = mContents->_get();
 		if (req.method == "POST")

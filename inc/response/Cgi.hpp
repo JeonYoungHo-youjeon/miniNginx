@@ -6,84 +6,120 @@
 # include "../exception/Exception.hpp"
 
 # include <unistd.h>
+# include <fcntl.h>
 
 struct Cgi : public Contents
 {
-    Cgi(const std::string& url, const std::string& body, const string& ext, const vector<string>& params);
+    Cgi(const std::string& path, const std::string& filename, const string& body, const vector<std::string>& params, const string& excutor);
     ~Cgi();
 
 	void child()
 	{}
 	void parent()
 	{}
-	std::string	_get();
+	void		_get();
 	void		_post();
 	void		_put();
 	void		_delete();
 	std::string execute();
 
-	char**		mEnv;
-	string		mExcutor;
+	std::pair<int, int>	getFd()
+	{
+		return std::make_pair(_fdin, _fdout);
+	}
+
+	char**		envp;
+	string		excutor;
+	int 		_fdin;
+	int 		_fdout;
 };
 
-Cgi::Cgi(const std::string& url, const std::string& body, const string& excutor, const vector<string>& params)
-: Contents(url, body), mExcutor(excutor), mEnv(NULL)
+Cgi::Cgi(const std::string& path, const std::string& filename, const string& body, const vector<std::string>& params, const string& excutor)
+: Contents(path + filename, body), excutor(excutor), envp(NULL)
 {
-	mEnv = new char* [params.size() + 1];
+	envp = new char* [params.size() + 1];
 	for (size_t i = 0; i < params.size(); ++i)
 	{
-		mEnv[i] = new char[params[i].size() + 1];
-		strcpy(mEnv[i], params[i].c_str());
+		envp[i] = new char[params[i].size() + 1];
+		strcpy(envp[i], params[i].c_str());
+		std::cout << envp[i] << std::endl;
 	}
-	mEnv[params.size()] = NULL;
+	envp[params.size()] = NULL;
 }
 Cgi::~Cgi()
 {
-	if (mEnv)
+	if (envp)
 	{
-		for (size_t i = 0; mEnv[i] != NULL; ++i)
-			delete[] mEnv[i];
-		delete[] mEnv;
+		for (size_t i = 0; envp[i] != NULL; ++i)
+			delete[] envp[i];
+		delete[] envp;
 	}
 }
 
-std::string Cgi::_get()
+void 	Cgi::_get()
 {
-	mCode = 200;
+	int inFd[2];
+	int	outFd[2];
 
-	int fd[2];
-	if (pipe(fd) < 0)
+	if (pipe(inFd) < 0 || pipe(outFd))
 	{
-		mCode = 500;
-		return "Internal Server Error";	//	X
+		code = 500;
+		return ;
 	}
+	char* argv[3] = {
+			(char*)excutor.c_str(),
+			(char*)url.c_str(),
+			0
+	};
 	pid_t	pid = fork();
 
 	if (pid == -1)
 	{
-		mCode = 500;
-		return "Internal Server Error";    //	X
+		code = 500;
+		return ;    //	X
 	}
-	else if (pid)
+	else if (!pid)
 	{
-		write(fd[0], mContents.c_str(), mContents.size() + 1);
-		execve(mExcutor, mUrl, mEnv);
+		if (dup2(inFd[0], 0) < 0)
+			exit(1);
+		if (dup2(outFd[1], 1) < 0)
+			exit(1);
+		if (close(inFd[0]) < 0)
+			exit(1);
+		if (close(inFd[1]) < 0)
+			exit(1);
+		if (close(outFd[0]) < 0)
+			exit(1);
+		if (close(outFd[1]) < 0)
+			exit(1);
+		if (execve(excutor.c_str(), argv, envp) < 0)
+			exit(1);
 	}
 	else
 	{
-		//	Child
+		setPid(pid);
+		close(inFd[0]);
+		close(outFd[1]);
+		_fdin = inFd[1];
+		_fdout = outFd[0];
+		//fcntl(_fdin, F_SETFL, O_NONBLOCK);
+		//	FIXME	: 임시로 waitpid
+		waitpid(pid, NULL, 0);
+		char buf[1024];
+		size_t sz = read(_fdout, buf, 1024);
+		buf[sz] = 0;
+		contentsBuf = buf;
+		return ;
 	}
-	return mContents;
 }
 
 void 		Cgi::_post()
 {
-	std::ofstream ofs(mUrl);
+	std::ofstream ofs(url);
 
-	mCode = 200;
+	code = 200;
 	if (!ofs.is_open())
-		mCode = 404;
-		//throw Code404Exception();
+		code = 404;
 }
 void 		Cgi::_put() {};
 void 		Cgi::_delete() {};

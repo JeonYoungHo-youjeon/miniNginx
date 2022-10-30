@@ -7,10 +7,11 @@
 using namespace std;
 
 std::string example =
+	//"GET /filetest.txt"
 	"GET /cgi-bin/test_cgi.sh"		//METHOD URL
 	//"POST /filetest.txt"		//METHOD URL
 	//"DELETE /filetest.txt"		//METHOD URL
-	"?name=youngpar&id=qwe&arg=TEST"	//PARAM
+	"?name=youngpar&id=qwe&arg=<ARGTEST>"	//PARAM
 	" "
 	"HTTP/1.1\r\n"				//PROTOCOL
     "Host: localhost:8000\r\n"	//HEADER
@@ -24,18 +25,18 @@ Request req(example);
 
 int main(int argc, char** argv, char** envp) {
     cout << "Request Test" << endl;
-	req.print_request();
+	//req.print_request();
     cout << "Test end" << endl;
 
-	cout << g_conf.str(0) << endl;
+	//cout << g_conf.str(0) << endl;
     try
 	{
-		ResponseImpl resp(req);
+		Response resp(req);
 
 		cout << "---------------------" << endl;
 		try
 		{
-			cout << "response body : " << resp.str() << endl;
+			resp.out();
 		}
 		catch (Exception & e)
 		{

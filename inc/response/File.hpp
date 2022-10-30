@@ -4,56 +4,59 @@
 # include "Contents.hpp"
 # include "../exception/Exception.hpp"
 
-
 struct File : public Contents
 {
-	File(const std::string& url, const std::string& body)
-	: Contents(url, body) {};
+	//File(Response& res) : Contents(res.path + res.filename, res.body) {
+	//	cout << res.path + res.filename << ' ' << endl;
+	//};
+	File(const std::string& path, const std::string& filename, const std::string& body, const std::vector<std::string>& param)
+	: Contents(path + filename, body) {};
 	~File(){};
 
-	std::string	_get();
+	void		_get();
 	void		_post();
 	void		_put();
 	void		_delete();
 };
 
-std::string File::_get()
+void File::_get()
 {
-	std::ifstream ifs(mUrl.c_str());
-	mContents = "";		//	GET Method일 때 body 무시 -> 컨텐츠 fill
+	std::ifstream ifs(url.c_str());
+	contentsBuf = "";		//	GET Method일 때 body 무시 -> 컨텐츠 fill
 
-	mCode = 200;
+	code = 200;
+	std::cout << url << std::endl;
 	if (!ifs.is_open())
-		mCode = 404;
-		//throw Code404Exception();
+	{
+		code = 404;
+		return;
+	}
 	std::string buf;
 	while (getline(ifs, buf, '\n'))
-		mContents += buf + "\r\n";
-	return mContents;
+		contentsBuf += buf + "\r\n";
 }
 
 void 		File::_post()
 {
 	//	TODO : 디렉토리가 없을 시 생성 201?
-	std::ofstream ofs(mUrl.c_str());
+	std::ofstream ofs(url.c_str());
 
-	mCode = 200;
+	code = 200;
 	if (!ofs.is_open())
-		mCode = 404;
+		code = 404;
 		//throw Code404Exception();
 
-	ofs.write(mContents.c_str(), mContents.length() - 1);
+	ofs.write(contentsBuf.c_str(), contentsBuf.length() - 1);
 	if (ofs.fail())
-		mCode = 500;
+		code = 500;
 }
 void 		File::_put() {}
 void 		File::_delete()
 {
-	mContents = "";
-	mCode = 200;
-	if (remove(mUrl.c_str()))
-		mCode = 404;
-		//throw Code404Exception();
+	contentsBuf = "";
+	code = 200;
+	if (remove(url.c_str()))
+		code = 404;
 }
 
 #endif

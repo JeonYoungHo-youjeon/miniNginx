@@ -22,48 +22,49 @@ using std::string;
 using std::cout;
 using std::endl;
 
+struct RequestStartLine
+{
+	string method;			// GET, POST, DELETE 등의 메소드	*
+	string url;				// 요청 URL (./ , /www/...)		*
+	string protocol;		// HTTP 버전 (HTTP/1.1)
+
+	void out()
+	{
+		cout << "method : <" << method << ">" << endl;
+		cout << "url : <" << url << ">" << endl;
+		cout << "protocol : <" << protocol << ">" << endl;
+	}
+};
+
 struct Request
 {
-	/* 
-		GET /index.html HTTP/1.1
-		hOSt: localhost
+	RequestStartLine		StartLine;
+	map<string, string>		Header;
 
-
-		POST /post/file1 HTTP/1.1
-		Host: localhost:8085
-		Content-Length: 12
-
-		helloworld
-	 */
-
-	string method;			// GET, POST, DELETE 등의 메소드
-	string url;				// 요청 URL (./ , /www/...)
-	string protocol;		// HTTP 버전 (HTTP/1.1)
-	string connention;		// 연결 옵션 (close 만 구현)
-	string encoding;		// Transper-Encoding (chunked 만 구현)
-	string host;			// 서버의 호스트 명과 포트 (localhost:80)
-	string contentLength;	// 메세지가 담고있는 화물(엔터티entity = body) 의 길이
 	string body;
 
-	string location;
+	string virtualPath;
+	string realPath;
 	string resource;
+	string excutor;
 	string ext;
+
 	int callCount;
 	int remainString;
 	int chunkState;
-	int errorCode;
+	int statusCode;
 	vector<string>	params;
 
-	Request() {};
+	Request() : statusCode(200) {};
 
 	/**
 	* 전체 리퀘스트가 하나의 문자열로 들어올때 처리. 따로 에러처리는 하지 않음
 	*
 	*/
-	Request(string& str)
+	//	FIXME	: HOST가 0.0.0.0:8000 리터럴로 고정되어있음
+	Request(string& str) : statusCode(200)
 	{
 		std::vector<string> splited = Util::split(str, '\n');
-
 		for (std::vector<string>::size_type i = 0; i < splited.size(); i++)
 		{
 			set_request(splited[i]);
@@ -86,7 +87,7 @@ struct Request
 		if (byte <= 0)
 		{
 			strerror(errno);
-			errorCode = 400;
+			statusCode = 400;
 			return -1;
 		}
 
@@ -129,57 +130,48 @@ struct Request
 				else
 					callCount++;
 
-
 				if (splited[0] == "GET" || splited[0] == "POST" || splited[0] == "DELETE")
-					method = splited[0];
+					StartLine.method = splited[0];
 				else
 					cout << "set_request ERROR 2 : " << splited[0] << ">" << endl;
 				//	FIXME
-				host = "0.0.0.0:8000";
-				location = Util::split(splited[1], '?')[0];
+				Header["host"] = "0.0.0.0:8000";
+				virtualPath = Util::split(splited[1], '?')[0];
 				params = Util::split(Util::split(splited[1], '?')[1], '&');
-				try
-				{
-					//TODO: server 구해서 동적으로 넣어야함
-					//FIXME: 사용법 이거 맞나?
-					{
-						//	.ext 찾기
-						std::string::size_type pos = location.rfind('.');
-						if (pos != static_cast<std::string::size_type>(-1))
-							ext = std::string(location.begin() + pos, location.end());
-					}
 
-					std::pair<std::string, std::string>	divpath = Util::divider(location, '/');
-					while (divpath.first != "" && !g_conf["0.0.0.0:8000"].is_exist(divpath.first))
-						divpath = Util::divider(divpath, '/');
+				//	.ext 찾기
+				std::string::size_type pos = virtualPath.rfind('.');
+				if (pos != static_cast<std::string::size_type>(-1))
+					ext = std::string(virtualPath.begin() + pos, virtualPath.end());
 
-					location = divpath.first;
-					resource = divpath.second;
-					if (g_conf["0.0.0.0:8000"].is_exist(location))
-					{
-						if (g_conf["0.0.0.0:8000"][location].is_exist("root"))
-							url = g_conf["0.0.0.0:8000"][location]["root"][0];
-					}
-					else
-						url = g_conf["0.0.0.0:8000"].getAttr("root")[0];
-					url += resource;
-				}
-				catch(const std::exception& e)
+				std::pair<std::string, std::string>	divpath = Util::divider(virtualPath, '/');
+				while (divpath.first != "" && !g_conf[Header["host"]].is_exist(divpath.first))
+					divpath = Util::divider(divpath, '/');
+
+				virtualPath = divpath.first;
+				resource = divpath.second;
+				if (virtualPath.empty())
+					virtualPath = "/";
+				if (g_conf[Header["host"]].is_exist(virtualPath))
 				{
-					std::cerr << e.what() << '\n';
+					if (g_conf[Header["host"]][virtualPath].is_exist("root"))
+						realPath = g_conf[Header["host"]][virtualPath]["root"].front();
+					if (g_conf[Header["host"]][virtualPath].is_exist(ext))
+						excutor = g_conf[Header["host"]][virtualPath][ext].front();
 				}
+				else
+					realPath = g_conf[Header["host"]].getAttr("root")[0];
+
 				if (splited[2] == "HTTP/1.1")
-				{
-					protocol = remove_crlf(splited[2]);
-				}
+					StartLine.protocol = remove_crlf(splited[2]);
 				else
 					cout << "set_request ERROR 3 : " << splited[2] << ">" << endl;
 			}
 			else if (callCount == BODY)
 			{
-				if (method != "POST")
+				if (StartLine.method != "POST")
 					return 0;
-				if (encoding == "chunked")
+				if (Header["encoding"] == "chunked")
 				{
 					//TODO: 청크드 메세지에서도 맥스 사이즈 확인
 					switch (chunkState)
@@ -213,8 +205,6 @@ struct Request
 					}
 					body += *it + "\n";
 				}
-				
-				
 			}
 			else
 			{
@@ -224,42 +214,22 @@ struct Request
 					cout << "BODY start" << endl;
 					continue ;
 				}
-				std::vector<string> splited = Util::split(*it, ' ');
-				string lower = splited.at(0);
-
-				std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
-				std::cout << "lower: " <<*it << std::endl;
-				if (lower == "connention:")
+				std::vector<string> splited = Util::split(*it, ':');
+				string key = remove_crlf(splited.at(0));
+				string value = remove_crlf(splited.at(1));
+				std::transform(key.begin(), key.end(), key.begin(), ::tolower);
+				std::cout << "Key : " <<*it << std::endl;
+				Header[key] = value;
+				if (key == "Content-Length")
 				{
-					connention = remove_crlf(splited[1]);
-					continue ;
-				}
-
-				if (lower == "encoding:")
-				{
-					encoding = remove_crlf(splited[1]);
-					continue ;
-				}
-
-				if (lower == "host:")
-				{
-					host = remove_crlf(splited[1]);
-					continue ;
-				}
-
-				if (lower == "Content-Length:")
-				{
-					contentLength = remove_crlf(splited[1]);
-					remainString = atoi(contentLength.c_str());
+					Header["Content-Length"] = remove_crlf(splited[1]);
+					remainString = atoi(Header["Content-Length"].c_str());
 					try
 					{
 						//FIXME: 사용법 확인 후 수정
-						string maxSize = g_conf["0.0.0.0:8000"][location]["client_max_body_size"][0];
-						if (g_conf["0.0.0.0:8000"][location]["client_max_body_size"][0] < contentLength)
-						{
-							errorCode = 413;
-							// return ;
-						}
+						string maxSize = g_conf["0.0.0.0:8000"][virtualPath]["client_max_body_size"][0];
+						if (atoi(maxSize.c_str()) < remainString)
+							statusCode = 413;
 					}
 					catch(const std::exception& e)
 					{
@@ -267,10 +237,9 @@ struct Request
 					}
 					continue ;
 				}
-				cout << "set_request ERROR 4 = <" << *it << ">" <<endl;
 			}
 		}
-		
+		Header["host"] = "0.0.0.0:8000";
 		return remainString;
 	}
 
@@ -280,298 +249,14 @@ struct Request
 	*/
 	void print_request()
 	{
-		cout << "method : <" 		<< method 			<< ">" << endl;
-		cout << "url : <" 			<< url 				<< ">" << endl;
-		cout << "protocol : <" 		<< protocol 		<< ">" << endl;
-		cout << "connention : <"	<< connention 		<< ">" << endl;
-		cout << "encoding : <" 		<< encoding 		<< ">" << endl;
-		cout << "host : <" 			<< host 			<< ">" << endl;
-		cout << "contentLength : <" << contentLength	<< ">" << endl;
-		cout << "body : <" 			<< body 			<< ">" << endl;
-		
+		StartLine.out();
+		for (auto it = Header.begin(); it != Header.end(); ++it)
+			cout << it->first << " : " << it->second << endl;
 	}
 };
 
-struct Response
-{
-	/*
-		HTTP/1.1 500 Internal Server Error
-		Connection: close
-		Content-Length: 76
-		Content-Type: text/html
-		Date: Sat, 15 Oct 2022 14:32:11 GMT
-		Server: webserv
-
-		<!DOCTYPE html>
-		<html>
-		<h1>
-			500 Internal Server Error
-		</h1>
-		</html>
-		-------------------------------------
-		HTTP/1.1 404 Not Found
-		Content-Length: 64
-		Content-Type: text/html
-		Date: Sat, 15 Oct 2022 14:32:57 GMT
-		Server: webserv
-
-		<!DOCTYPE html>
-		<html>
-		<h1>
-			404 Not Found
-		</h1>
-		</html>
-		-------------------------------------
-		HTTP/1.1 301 Moved Permanently
-		Date: Sat, 15 Oct 2022 14:32:57 GMT
-		Location: /
-		Server: webserv
-	 */
-	
-	string protocol;		// HTTP 버전 (HTTP/1.1)
-	string statusCode;		// 상태 코드 (200, 404)
-	string reasonPhrase;	// 사유 구절
-	string date;			// 메세지가 만들어진 시간과 날짜
-	string contentLength;	// 메세지가 담고있는 화물(엔터티entity = body) 의 길이
-	string contentType;		// 메세지가 담고있는 화물 의 타입(text/html, image/jpeg)
-	string encoding;		// Transper-Encoding (chunked 만 구현)
-	string connection;		// 연결 옵션 (close 만 구현)
-	string server;			// 서버 애플리케이션의 이름과 버전
-	string location;		// 301 등에서 리소스의 위치를 알려줄때 사용
-
-	string body;
-
-	/**
-	 * 리스폰스 구조체의 변수들을 전송할 문자열로 변환하여 반환함
-	 * 
-	 * @return string : 전송 데이터로 변환된 문자열
-	 */
-	string get_response()
-	{
-		string ret;
-
-		ret += get_protocol() + " ";
-		ret += get_statusCode() + " ";
-		ret += get_reasonPhrase() + "\n";
-		ret += "Date: " + get_date() + "\n";
-
-		if (get_contentLength() != "")
-			ret += "Content-Length: " + get_contentLength() + "\n";
-		
-		ret += "Content-Type: " + get_contentType() + "\n";
-
-		if (get_encoding() != "")
-			ret += "encoding: " + get_encoding() + "\n";
-			
-		if (get_connection() != "")
-			ret += "connection: " + get_connection() + "\n";
-		
-		ret += "server: " + get_server() + "\n";
-
-		if (get_location() != "") 
-			ret += "location: " + get_location() + "\n";
-		
-		ret += "\n";
-		ret += get_body();
-
-		return ret; 
-	}
 
 
-	string make_errorpage(int code)
-	{
-		std::stringstream ss;
-		ss << code;
-		statusCode = ss.str();
-		// FIXME: g_conf 순회하는 방법 찾고, open 하려면 어떻게 할지 문의
-		// try
-		// {
-		// 	for (std::vector<string>::const_iterator it = g_conf["0.0.0.0:8000"][location]["error_page"].begin(); it != g_conf["0.0.0.0:8000"][location]["error_page"].end(); ++it)
-		// 	{
-		// 		if (*it == statusCode)
-		// 		{
-		// 			int fd = open(*(g_conf["0.0.0.0:8000"][location]["error_page"].end() - 1).c_str());
-		// 			body = read(fd);
-		// 			return get_response();
-		// 		}
-		// 	}
-			
-		// }
-		// catch(const std::exception& e)
-		// {
-		// 	std::cerr << e.what() << '\n';
-		// }
-		
-
-		body = 
-		"<!DOCTYPE html>\n"
-		"<html>\n"
-		"  <h1>\n"
-		"    " + statusCode + " " + get_reasonPhrase() + "\n"
-		"  </h1>\n"
-		"</html>\n";
-
-		return get_response();
-	}
-
-	/**
-	 * 현재 리스폰스 구조체의 내용 전체를 출력. 디폴트 값이 있는 데이터는 해당 값으로 출력
-	 *
-	 */
-	void print_response()
-	{
-		cout << "protocol : <" 		<< get_protocol() 		<< ">" << endl;
-		cout << "statusCode : <" 	<< get_statusCode() 	<< ">" << endl;
-		cout << "reasonPhrase : <" 	<< get_reasonPhrase() 	<< ">" << endl;
-		cout << "date : <" 			<< get_date() 			<< ">" << endl;
-		cout << "contentLength : <" << get_contentLength()	<< ">" << endl;
-		cout << "contentType : <" 	<< get_contentType() 	<< ">" << endl;
-		cout << "encoding : <" 		<< get_encoding()		<< ">" << endl;
-		cout << "connection : <" 	<< get_connection() 	<< ">" << endl;
-		cout << "server : <" 		<< get_server() 		<< ">" << endl;
-		cout << "location : <" 		<< get_location() 		<< ">" << endl;
-		cout << "body : <" 			<< get_body() 			<< ">" << endl;
-	}
-
-	/**
-	 * 프로토콜이 있으면 해당값, 없으면 "HTTP/1.1" 반환
-	 * 
-	 */
-	string get_protocol()
-	{
-		if (protocol != "")
-			return protocol;
-		
-		return ("HTTP/1.1");
-	}
-
-	/**
-	 * 상태 코드를 반환. 기본값 없음
-	 * 
-	 */
-	string get_statusCode()
-	{
-		return statusCode;
-	}
-
-	/**
-	 * 사유 구절이 있으면 해당 값 반환, 상태 코드가 없으면 공백 반환, 상태 코드가 있으면 해당 값에 맞게 반환.
-	 * 
-	 */
-	string get_reasonPhrase()
-	{
-		if (reasonPhrase != "")
-			return reasonPhrase;
-		
-		if (statusCode == "")
-			return "";
-		
-		switch (std::atoi(statusCode.c_str())) 
-		{
-			case 200:
-				return "OK";
-			case 404:
-				return "NOT FOUND";
-
-			default:
-				return "DON'T_KNOW_THIS_CODE";
-		}
-	}
-
-	/**
-	 * 현재 시간을 이용하여 HTTP 헤더에 맞는 값으로 변환하여 반환. 
-	 *
-	 */
-	string get_date()
-	{
-		time_t rawtime;
-		struct tm *timeinfo;
-		char buf[31];
-
-		time(&rawtime);
-		timeinfo = gmtime(&rawtime);
-		strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S GMT", timeinfo);
-		date = buf;
-
-		return date;
-	}
-
-	/**
-	 * 엔터티의 길이를 반환. encoding 이 chunked 일때는 공백을 반환. contentLength 가 비어있으면 body의 size 반환.
-	 * 
-	 */
-	string get_contentLength()
-	{
-		if (encoding == "chunked")
-			return ("");
-		if (contentLength == "")
-		{
-			std::stringstream ss;
-			ss << body.size();
-			contentLength = ss.str();
-		}
-		return contentLength;
-	}
-
-	/**
-	 * 엔터티의 타입을 반환. 기본 값을 text/html 로 할까 하다가 "application/octet-stream" 를 임시로 넣어둠(크롬에서 파일 다운로드 됨.)
-	 * 
-	 */
-	string get_contentType()
-	{
-		if (contentType == "")
-			return ("application/octet-stream");
-		return contentType;
-	}
-
-	/**
-	 * encoding 을 반환. 이 과제에서는 chunked 유무여서 해당 변수를 bool 로 할까 하다가 우선 string 으로 뒀음 
-	 * 
-	 */
-	string get_encoding()
-	{
-		return encoding;
-	}
-
-	/**
-	 * connection 을 반환. 이 과제에서는 close 유무여서 해당 변수를 bool 로 할까 하다가 우선 string 으로 뒀음 
-	 * 
-	 */
-	string get_connection()
-	{
-		return connection;
-	}
-
-	/**
-	 * server 를 반환. 기본값은 "miniNginx 1.0"
-	 * 
-	 */
-	string get_server()
-	{
-		if (server == "")
-			return ("miniNginx 1.0");
-		return server;
-	}
-
-	/**
-	 * location 을 반환. 기본값 없음
-	 * 
-	 */
-	string get_location()
-	{
-		return location;
-	}
-
-	/**
-	 * body를 반환. 기본값 없음 
-	 *
-	 */
-	string get_body()
-	{
-		return body;
-	}
-
-};
 
 #endif
 

@@ -5,6 +5,7 @@
 # include <map>
 # include <vector>
 # include <time.h>
+# include <unistd.h>
 
 # include "Socket.hpp"
 # include "../exception/Exception.hpp"

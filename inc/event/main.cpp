@@ -6,13 +6,13 @@
 #include <stdexcept>
 
 using namespace std;
+Config	g_config("../../config/default2.conf");
 
 int main()
 {
 	try
 	{
-		Config config("../../config/default2.conf");
-		Event event(config);
+		Event event;
 		
 		event.event_loop();
 	}
@@ -20,9 +20,6 @@ int main()
 	{
 		std::cerr << e.what() << '\n';
 	}
-	// ParsingException
-	// EventInitException
-	// EventLoopException
 
     return 0;
 }

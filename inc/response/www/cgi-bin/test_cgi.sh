@@ -1,1 +1,1 @@
-echo "This is " $(arg) "Test"
+echo "This is " $arg "Test"

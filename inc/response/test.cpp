@@ -7,10 +7,12 @@
 using namespace std;
 
 std::string example =
-	//"GET /filetest.txt"		//METHOD URL
-	"POST /filetest.txt"		//METHOD URL
+	//"GET /filetest.txt"
+	"GET /cgi-bin/pycgi.py"		//METHOD URL
+	//"GET /cgi-bin/test_cgi.sh"		//METHOD URL
+	//"POST /filetest.txt"		//METHOD URL
 	//"DELETE /filetest.txt"		//METHOD URL
-	//"?name=youngpar&id=qwe&arg=TEST"	//PARAM
+	"?name=youngpar&id=qwe&arg=<ARGTEST>"	//PARAM
 	" "
 	"HTTP/1.1\r\n"				//PROTOCOL
     "Host: localhost:8000\r\n"	//HEADER
@@ -19,22 +21,23 @@ std::string example =
 	"총 3줄이 입력될 예정인데\r\n"
 	"잘 되겠지?\r\n";
 
+Config g_conf("../../config/default.conf");
 Request req(example);
-Config conf("../../config/default.conf");
-int main(int argc, char** argv, char** envp) {
-    //cout << "Request Test" << endl;
-    //req.print_request();
-    //cout << "Test end" << endl;
 
-	cout << conf.str(0) << endl;
+int main(int argc, char** argv, char** envp) {
+    cout << "Request Test" << endl;
+	//req.print_request();
+    cout << "Test end" << endl;
+
+	//cout << g_conf.str(0) << endl;
     try
 	{
-		ResponseImpl resp(req, conf);
+		Response resp(req);
 
 		cout << "---------------------" << endl;
 		try
 		{
-			cout << "response body : " << resp.str() << endl;
+			resp.out();
 		}
 		catch (Exception & e)
 		{

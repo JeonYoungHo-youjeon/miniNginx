@@ -1,10 +1,8 @@
 #ifndef RESPONSE_HPP
 # define RESPONSE_HPP
 
-#include <iostream>
 # include "Cgi.hpp"
 # include "File.hpp"
-# include "../parse/Config.hpp"
 # include "../http.hpp"
 # include "../parse/Util.hpp"
 
@@ -27,15 +25,7 @@ struct Response
 {
 	ResponseStartLine	startLine;
 	map<string, string>	Header;
-	/*
-	string	date;			// 메세지가 만들어진 시간과 날짜
-	string	contentLength;	// 메세지가 담고있는 화물(엔터티entity = body) 의 길이
-	string	contentType;	// 메세지가 담고있는 화물 의 타입(text/html, image/jpeg)
-	string	encoding;		// Transper-Encoding (chunked 만 구현)
-	string	connection;		// 연결 옵션 (close 만 구현)
-	string	server;			// 서버 애플리케이션의 이름과 버전
-	string	location;		// 301 등에서 리소스의 위치를 알려줄때 사용
-	*/
+
 	string body;
 
 	/**
@@ -70,7 +60,6 @@ struct Response
 		return ret;
 	}
 
-
 	string make_errorpage(int code)
 	{
 		startLine.statusCode = code;
@@ -102,7 +91,6 @@ struct Response
 				"    " + get_statusCode() + " " + get_reasonPhrase() + "\n"
 																 "  </h1>\n"
 																 "</html>\n";
-
 		return get_response();
 	}
 
@@ -249,8 +237,8 @@ struct Response
 	{
 		return contentResult->getBody();
 	}
-	int 	set();
-	int 	run();
+	//int 	set();
+	//int 	run();
 };
 Response::Response(const Request& req)
 : startLine(req.statusCode),
@@ -284,6 +272,6 @@ Response::~Response()
 	if (contentResult != nullptr)
 		delete contentResult;
 }
-int 	Response::set(){};
-int 	Response::run(){};
+//int 	Response::set(){};
+//int 	Response::run(){};
 #endif

@@ -8,7 +8,8 @@ using namespace std;
 
 std::string example =
 	//"GET /filetest.txt"
-	"GET /cgi-bin/test_cgi.sh"		//METHOD URL
+	"GET /cgi-bin/pycgi.py"		//METHOD URL
+	//"GET /cgi-bin/test_cgi.sh"		//METHOD URL
 	//"POST /filetest.txt"		//METHOD URL
 	//"DELETE /filetest.txt"		//METHOD URL
 	"?name=youngpar&id=qwe&arg=<ARGTEST>"	//PARAM

@@ -5,6 +5,7 @@
 
 # include "../parse/Config.hpp"
 # include "../parse/Util.hpp"
+# include "../Body.hpp"
 
 using std::string, std::cout , std::endl;
 
@@ -35,7 +36,7 @@ struct Request
 	RequestStartLine				StartLine;
 	std::map<string, string>		Header;
 
-	string body;
+	Body body;
 
 	string virtualPath;
 	string realPath;

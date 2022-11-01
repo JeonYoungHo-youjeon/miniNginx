@@ -35,7 +35,7 @@ enum eType {
 	CLIENT
 };
 
-static const Time TIMEOUT = 10;
+static const Time TIMEOUT = 30;
 static const int MAX_EVENT = 1024; // TODO: I don't know optimal MAX_EVENT yet.
 
 

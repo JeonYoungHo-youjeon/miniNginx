@@ -1,7 +1,3 @@
-/**
- * TODO: change log format: $remote_addr - [$time_local] $request $status $body_bytes_sent
- */
-
 #ifndef LOGGER_HPP
 # define LOGGER_HPP
 

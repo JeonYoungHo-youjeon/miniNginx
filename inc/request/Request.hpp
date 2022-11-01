@@ -5,7 +5,7 @@
 
 # include "../parse/Config.hpp"
 # include "../parse/Util.hpp"
-# include "../Body.hpp"
+// # include "../Body.hpp"
 
 using std::string, std::cout , std::endl;
 
@@ -36,7 +36,7 @@ struct Request
 	RequestStartLine				StartLine;
 	std::map<string, string>		Header;
 
-	Body body;
+	// Body body;
 
 	string virtualPath;
 	string realPath;
@@ -179,15 +179,15 @@ struct Request
 							remainString = chunkSize;
 							chunkState = BODY;
 						}
-						case BODY:
-							remainString = remainString - (*it).size();
-							if (remainString < 0)
-							{
-								*it = (*it).substr(0, remainString);
-								remainString = 0;
-							}
-							body += *it;
-							chunkState = HEAD;
+						// case BODY:
+						// 	remainString = remainString - (*it).size();
+						// 	if (remainString < 0)
+						// 	{
+						// 		*it = (*it).substr(0, remainString);
+						// 		remainString = 0;
+						// 	}
+						// 	body += *it;
+						// 	chunkState = HEAD;
 					}
 				}
 				else
@@ -198,7 +198,7 @@ struct Request
 						*it = (*it).substr(0, remainString);
 						remainString = 0;
 					}
-					body += *it + "\n";
+					// body += *it + "\n";
 				}
 			}
 			else

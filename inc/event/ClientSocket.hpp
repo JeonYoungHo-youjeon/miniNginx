@@ -3,17 +3,21 @@
 
 
 # include "Type.hpp"
-# include "Socket.hpp" // TODO: UPDATE
+# include "Socket.hpp"
+# include "../request/Request.hpp"
+# include "../response/Response.hpp"
 
 class ClientSocket
 	: public Socket
 {
 public:
-	ClientSocket(FD fd_, SockAddr addr_);
-	~ClientSocket();
-
 	bool is_expired() const;
 	void update_lastEventTime();
+	Request* get_request() const;
+	const std::string& get_ip_port() const;
+
+	ClientSocket(FD clientFD, const SockAddr& addr, const std::string& ipPort);
+	~ClientSocket();
 
 private:
 	ClientSocket();
@@ -24,21 +28,12 @@ private:
 
 private:
 	Time lastEventTime;
+	std::string ipPort;
+	Request* req;
+	Response* res;
 };
 
 // ClientSocket implementation
-
-ClientSocket::ClientSocket(FD fd_, SockAddr addr_)
-{
-	fd = fd_;
-	ip = inet_ntoa(addr_.sin_addr);
-	port = "";
-	type = CLIENT;
-	lastEventTime = get_current_time();
-}
-
-ClientSocket::~ClientSocket()
-{}
 
 bool ClientSocket::is_expired() const
 {
@@ -50,9 +45,37 @@ void ClientSocket::update_lastEventTime()
 	lastEventTime = get_current_time();
 }
 
+Request* ClientSocket::get_request() const
+{
+	return req;
+}
+
+const std::string& ClientSocket::get_ip_port() const
+{
+	return ipPort;
+}
+
+
 // private
 ClientSocket::ClientSocket()
 {}
+
+ClientSocket::ClientSocket(FD clientFD, const SockAddr& addr, const std::string& ipPort_)
+	: lastEventTime(get_current_time()), ipPort(ipPort_), req(new Request()), res(NULL)
+{
+	fd = clientFD;
+	ip = inet_ntoa(addr.sin_addr);
+	port = "";
+	type = CLIENT;
+}
+
+ClientSocket::~ClientSocket()
+{
+	if (req)
+		delete req;
+	if (res)
+		delete res;
+}
 
 //private
 ClientSocket::ClientSocket(const ClientSocket& other)

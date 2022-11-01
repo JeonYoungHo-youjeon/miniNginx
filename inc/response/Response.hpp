@@ -247,8 +247,8 @@ Response::Response(const Request& req)
 	path(req.realPath),
 	filename(req.resource),
 	ext(req.ext),
-	excutor(req.excutor),
-	body(req.body)
+	excutor(req.excutor)
+	// body(req.body)
 {
 	Header["host"] = req.Header.find("host")->second;
 	//	이미 오류일 경우 실행 X

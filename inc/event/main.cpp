@@ -6,7 +6,7 @@
 #include <ctime>
 
 using namespace std;
-Config	g_config("../../config/default2.conf");
+Config	g_conf("../../config/default2.conf");
 
 int main()
 {
@@ -20,6 +20,6 @@ int main()
 	{
 		std::cerr << e.what() << '\n';
 	}
-	system("leaks miniNginx");
+	// system("leaks miniNginx");
     return 0;
 }

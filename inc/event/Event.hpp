@@ -192,6 +192,7 @@ void Event::disconnection(const ClientSocket* socket)
 // TODO : EOF 받을 시 DLE(Data Link Escape) 처리
 void Event::recv_from_client(const ClientSocket* socket)
 {
+
 	if (socket->is_expired())
 		return;
 
@@ -200,6 +201,23 @@ void Event::recv_from_client(const ClientSocket* socket)
 	buf[recv_len] = 0;
 	std::cout << "recv message : " << buf << std::endl;
 	kq->enable_write_event(socket);
+
+	if (client->get_request().set_request(client->get_fd(), client->get_ip()))
+	{
+		update_event(clientFd, EVFILT_READ, EV_ENABLE, 0, 0, NULL);
+	}
+	else 
+	{
+		update_event(clientFd, EVFILT_READ, EV_DISABLE, 0, 0, NULL);
+		update_event(clientFd, EVFILT_WRITE, EV_ENABLE, 0, 0, NULL);
+	}
+
+	// char buf[1024];
+	// int recv_len = recv(client->get_fd(), buf, 1024, 0);
+	// buf[recv_len] = 0;
+	// std::cout << "recv message : " << buf << std::endl;
+	// kq->enable_write_event(client->get_fd());
+
 
 	// int pid = fork();
 	// if (pid) {

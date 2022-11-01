@@ -3,6 +3,7 @@
 
 # include "request/Request.hpp"
 # include "response/Response.hpp"
+# include "Body.hpp"
 
 #endif
 

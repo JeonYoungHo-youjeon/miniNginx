@@ -5,6 +5,7 @@
 
 # include "../parse/Config.hpp"
 # include "../parse/Util.hpp"
+# include "../Body.hpp"
 
 using std::string, std::cout , std::endl;
 
@@ -35,7 +36,7 @@ struct Request
 	RequestStartLine				StartLine;
 	std::map<string, string>		Header;
 
-	string body;
+	Body body;
 
 	string virtualPath;
 	string realPath;
@@ -47,6 +48,7 @@ struct Request
 	int remainString;
 	int chunkState;
 	int statusCode;
+	string configName;
 	std::vector<string>	params;
 
 	Request() : statusCode(200) {};
@@ -72,10 +74,11 @@ struct Request
 		return ret;
 	}
 
-	int set_request(int fd)
+	int set_request(int fd, string ip)
 	{
 		char rcvData[BUFFER_SIZE];
 		int byte = recv(fd, &rcvData[0], BUFFER_SIZE, 0);
+		configName = ip;
 		if (byte <= 0)
 		{
 			strerror(errno);
@@ -219,7 +222,7 @@ struct Request
 					try
 					{
 						//FIXME: 사용법 확인 후 수정
-						string maxSize = g_conf["0.0.0.0:8000"][virtualPath]["client_max_body_size"][0];
+						string maxSize = g_conf[configName][virtualPath]["client_max_body_size"][0];
 						if (atoi(maxSize.c_str()) < remainString)
 							statusCode = 413;
 					}
@@ -231,7 +234,6 @@ struct Request
 				}
 			}
 		}
-		Header["host"] = "0.0.0.0:8000";
 		return remainString;
 	}
 

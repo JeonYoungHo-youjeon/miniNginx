@@ -1,113 +1,116 @@
 #ifndef KQUEUE_HPP
 # define KQUEUE_HPP
 
-# include <sys/event.h>
-# include <map>
-# include <vector>
 # include <time.h>
-# include <unistd.h>
 
+# include "Type.hpp"
 # include "Socket.hpp"
 # include "../exception/Exception.hpp"
 
 class KQueue {
 public:
-	typedef int 						FD;
-	typedef std::map<int, Socket> 		ServerSocketMap;
-	typedef struct kevent				KEvent;
-	typedef std::vector<KEvent>		 	ChangeList;
-public:
+
 	const KEvent* get_eventList() const;
 	const ChangeList& get_changeList() const;
 	int wait_event();
-	void add_io_event(FD fd);
-	void add_client_io_event(FD fd);
-	void enable_read_event(FD fd);
-	void enable_write_event(FD fd);
-	void add_proc_event(pid_t pid) {
-		update_event(pid, EVFILT_PROC, EV_ADD, NOTE_EXITSTATUS, 0, NULL);
-	}
+	void add_server_io_event(const Socket* socket);
+	void add_client_io_event(const Socket* socket);
+	void enable_read_event(const Socket* socket);
+	void enable_write_event(const Socket* socket);
+	void add_proc_event(pid_t pid);
 
-	KQueue(const ServerSocketMap& sockets);
-	~KQueue();
-private:
 	KQueue();
-	KQueue(const KQueue& other);
-	KQueue operator=(const KQueue& rhs);
+	~KQueue();
 
+private:
 	void init_kqueue();
 	void update_event(uintptr_t ident, int16_t filter, \
 					uint16_t flags, uint32_t fflags, intptr_t data, void* udata);
-public:
+	void set_timeout(const Socket* socket);
+
+	KQueue(const KQueue& other);
+	KQueue operator=(const KQueue& rhs);
+
 private:
 	FD kq;
 	ChangeList changeList;
-	static const int MAX_EVENT = 1024;
 	KEvent eventList[MAX_EVENT];
 };
 
 // KQueue implementation
 
-const KQueue::KEvent* KQueue::get_eventList() const
+const KEvent* KQueue::get_eventList() const
 {
 	return eventList;
 }
 
-const KQueue::ChangeList& KQueue::get_changeList() const
+const ChangeList& KQueue::get_changeList() const
 {
 	return changeList;
 }
 
 int KQueue::wait_event()
 {
-	// TODO: timeout 설정
 	int nEvent = kevent(kq, &changeList[0], changeList.size(), eventList, MAX_EVENT, NULL);
-	
-	if (nEvent == -1)
-		return -1;
 
-	changeList.clear();
-
-	return nEvent;
+	// TODO: error 발생 시 500 Inerneal Server Error를 던져야 하는 상황 확인
+	switch (errno)
+	{
+	case EACCES:
+		throw EventInitException("kevent() error [errno : EACCES]");
+	case EFAULT:
+		throw EventInitException("kevent() error [errno : EFAULT]");
+	case EBADF:
+		throw EventInitException("kevent() error [errno : EBADF]");
+	case EINTR:
+		throw EventInitException("kevent() error [errno : EINTR]");
+	case EINVAL:
+		throw EventInitException("kevent() error [errno : EINVAL]");
+	case ENOENT:
+		throw EventInitException("kevent() error [errno : ENOENT]");
+	case ENOMEM:
+		throw EventInitException("kevent() error [errno : ENOMEM]");
+	case ESRCH:
+		throw EventInitException("kevent() error [errno : ESRCH]");
+	default:
+		changeList.clear();
+		return nEvent;
+	}
 }
 
-void KQueue::add_io_event(FD fd)
+void KQueue::add_server_io_event(const Socket* socket)
 {
-	update_event(fd, EVFILT_READ, EV_ADD | EV_ENABLE | EV_CLEAR, 0, 0, NULL);
-	update_event(fd, EVFILT_WRITE, EV_ADD | EV_DISABLE, 0, 0, NULL);
-
-	// update_event(fd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
-	// update_event(fd, EVFILT_WRITE, EV_ADD | EV_DISABLE, 0, 0, NULL);
+	update_event(socket->get_fd(), EVFILT_READ, EV_ADD | EV_CLEAR, 0, 0, (void*)socket);
 }
 
-void KQueue::add_client_io_event(FD fd)
+void KQueue::add_client_io_event(const Socket* socket)
 {
-	add_io_event(fd);
-	update_event(fd, EVFILT_TIMER, EV_ADD | EV_ENABLE, 0, 3000, 0);
-	// update_event(fd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
-	// update_event(fd, EVFILT_WRITE, EV_ADD | EV_DISABLE, 0, 0, NULL);
+	update_event(socket->get_fd(), EVFILT_READ, EV_ADD | EV_CLEAR, 0, 0, (void*)socket);
+	update_event(socket->get_fd(), EVFILT_WRITE, EV_ADD | EV_DISABLE, 0, 0, (void*)socket);
+	// update_event(socket->get_fd(), EVFILT_WRITE, EV_DISPATCH, 0, 0, (void*)socket);
+	set_timeout(socket);
 }
 
-void KQueue::enable_read_event(FD fd)
+void KQueue::enable_read_event(const Socket* socket)
 {
-	update_event(fd, EVFILT_READ, EV_ENABLE | EV_CLEAR, 0, 0, NULL);
-	update_event(fd, EVFILT_WRITE, EV_DISABLE, 0, 0, NULL);
-	update_event(fd, EVFILT_TIMER, EV_ADD | EV_ENABLE, 0, 3000, 0);
-
+	update_event(socket->get_fd(), EVFILT_READ, EV_ENABLE | EV_CLEAR, 0, 0, (void*)socket);
+	update_event(socket->get_fd(), EVFILT_WRITE, EV_DISABLE, 0, 0, (void*)socket);
+	set_timeout(socket);
 }
 
-void KQueue::enable_write_event(FD fd)
+void KQueue::enable_write_event(const Socket* socket)
 {
-	update_event(fd, EVFILT_READ, EV_DISABLE, 0, 0, NULL);
-	update_event(fd, EVFILT_WRITE, EV_ENABLE | EV_CLEAR, 0, 0, NULL);
+	update_event(socket->get_fd(), EVFILT_READ, EV_DISABLE, 0, 0, (void*)socket);
+	update_event(socket->get_fd(), EVFILT_WRITE, EV_ENABLE | EV_CLEAR, 0, 0, (void*)socket);
 }
 
-KQueue::KQueue(const ServerSocketMap& sockets)
+void KQueue::add_proc_event(pid_t pid) {
+	update_event(pid, EVFILT_PROC, EV_ADD, NOTE_EXITSTATUS, 0, NULL);
+}
+
+KQueue::KQueue()
 {
 	init_kqueue();
-
-	for (ServerSocketMap::const_iterator it = sockets.begin(); it != sockets.end(); ++it)
-		add_io_event(it->first);
 }
 
 KQueue::~KQueue()
@@ -115,21 +118,19 @@ KQueue::~KQueue()
 	close(kq);
 }
 
-// private
-KQueue::KQueue(const KQueue& other)
-{}
-
-// private
-KQueue KQueue::operator=(const KQueue& rhs)
-{
-	return *this;
-}
-
 void KQueue::init_kqueue()
 {
 	kq = kqueue();
-	if (kq == -1)
-		throw EventInitException("kqueue() error");
+
+	switch (errno)
+	{
+	case ENOMEM:
+		throw EventInitException("kqueue() error [errno : ENOMEM]");
+	case EMFILE:
+		throw EventInitException("kqueue() error [errno : EMFILE]");
+	default:
+		break;
+	}
 }
 
 /**
@@ -158,6 +159,21 @@ void KQueue::update_event(uintptr_t ident, int16_t filter, uint16_t flags, \
 	EV_SET(&kev, ident, filter, flags, fflags, data, udata);
 
 	changeList.push_back(kev);
+}
+
+void KQueue::set_timeout(const Socket* socket)
+{
+	update_event(socket->get_fd(), EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT, (void*)socket);
+}
+
+// private
+KQueue::KQueue(const KQueue& other)
+{}
+
+// private
+KQueue KQueue::operator=(const KQueue& rhs)
+{
+	return *this;
 }
 
 #endif

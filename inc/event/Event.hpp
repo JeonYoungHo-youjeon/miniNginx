@@ -1,20 +1,12 @@
 #ifndef EVENT_HPP
 # define EVENT_HPP
 
-
-# include <vector>
-# include <map>
-# include <string>
-# include <sys/types.h>
-# include <sys/event.h>
-# include <netinet/in.h>
-# include <fcntl.h>
-# include <unistd.h>
-
+// TODO: 정리
 # include "Socket.hpp"
-# include "Client.hpp"
+# include "ServerSocket.hpp"
+# include "ClientSocket.hpp"
 # include "KQueue.hpp"
-# include "../parse/Config.hpp"
+# include "Type.hpp"
 # include "../parse/Util.hpp"
 # include "../http.hpp"
 # include "../exception/Exception.hpp"
@@ -25,11 +17,8 @@ extern Config g_config;
 class Event
 {
 public:
-	typedef std::map<std::string, Server>	configType;
-	typedef std::map<int, Socket> 			ServerSocketMap;
-	typedef std::map<int, Client*>			ClientMap;
-
-
+	typedef std::map<FD, const Socket*>	SocketMap;
+	typedef std::vector<const Socket*>	GarbageCollector;
 public:
 	void event_loop();
 	
@@ -37,20 +26,27 @@ public:
 	~Event();
 
 private:
-	void init_kqueue();
-	void accept_connection(int serverFd);
-	void register_client(int clientFd, struct sockaddr_in clientAddr, int serverFd);
-	void disconnection(Client* client);
-	void send_to_client(Client* client);
-	void recv_from_client(Client* client);
+	void create_server_socket(const ConfigType::iterator it);
+	void accept_connection(FD serverFd);
+	void create_client_socket(FD fd, const SockAddr& addr);
+	void disconnection(const ClientSocket* socket);
+	void recv_from_client(const ClientSocket* socket);
+	void send_to_client(const ClientSocket* socket);
+	void socket_timeout(const ClientSocket* socket);
+	void add_garbage(const Socket* socket);
+
+	void handle_server_event(const KEvent* event, const ServerSocket* socket);
+	void handle_client_event(const KEvent* event, const ClientSocket* socket);
+	void handle_child_process(const KEvent* event);
+	void clear_garbage_sockets();
 
 	Event& operator=(const Event& event);
+	Event(const Event& event);
 
 private:
-	ServerSocketMap mServerSocket;
-	ClientMap mClient;
 	KQueue* kq;
-	static const int MAX_EVENT = 1024; // TODO: I don't know optimal MAX_EVENT yet.
+	SocketMap sockets;
+	GarbageCollector garbageCollector;
 	Logger logger; // REMOVE
 };
 
@@ -66,58 +62,34 @@ private:
 */
 void Event::event_loop()
 {
-	logger.info();
-	int nEvent, currentFd;
-	const KQueue::KEvent* currentEvent;
+	logger.info(); // REMOVE
 
+	int nEvent;
+	const Socket* socket;
+	const KEvent* event;
+
+	// int loop_limit = 0;
 	while (true)
 	{
 		nEvent = kq->wait_event();
-		
-		if (nEvent == -1)
-			return; // TODO: response 500 Internal Server Error
+
+		// if (loop_limit++ == 10)
+		// 	return;
 
 		for (int i = 0; i < nEvent; ++i)
 		{
-			currentEvent = &(kq->get_eventList()[i]);
-			currentFd = currentEvent->ident;
-			if (currentEvent->filter == EVFILT_TIMER) {
-				time_t now = time(0);
-				char* dt = ctime(&now);
-				std::cout << dt;
-				std::cout << currentEvent->data << std::endl;
-				std::cout << "EVFILT_TIMER : " << currentEvent->ident << std::endl;
-			}
-			if (currentEvent->flags & EV_ERROR)
-			{
-				if (mServerSocket.count(currentFd))
-					return; // TODO: response 500 Internal Server Error
-				else
-					return; // TODO: response 503 Service Unavailable
-			}
-			else if (mServerSocket.count(currentFd))
-				accept_connection(currentFd);
-			else if (currentEvent->filter == EVFILT_PROC)
-			{
-				int status;
-				pid_t pid = wait(&status);
-				if (WIFEXITED(status))
-					std::cout << WEXITSTATUS(status) << std::endl;
-			}
-			else
-			{
-				if (currentEvent->flags & EV_EOF) // TODO: 필요한 지 확인
-					disconnection(mClient[currentFd]);
-				else if (currentEvent->filter == EVFILT_READ)
-					recv_from_client(mClient[currentFd]);
-				else if (currentEvent->filter == EVFILT_WRITE)
-				{
-					std::cout << "EVFILT_WRITE" << std::endl;
-					send_to_client(mClient[currentFd]);
-				}
-				// TODO: CGI 종료 프로세스 확인(EVFILT_PROC, NOTE_EXIT in fflags)
-				
-			}
+			event = &(kq->get_eventList()[i]);
+			socket = (Socket*)event->udata;
+
+			if (socket->get_type() == SERVER)
+				handle_server_event(event, (ServerSocket*)socket);
+			else if (socket->get_type() == CLIENT)
+				handle_client_event(event, (ClientSocket*)socket);
+			else if (event->filter == EVFILT_PROC)
+				handle_child_process(event);
+
+			if (!garbageCollector.empty())
+				clear_garbage_sockets();
 		}
 	}
 }
@@ -130,28 +102,12 @@ void Event::event_loop()
  * @return None
 */
 Event::Event()
-	: mServerSocket(), mClient(), kq(NULL)
+	: kq(new KQueue())
 {
-	configType servers = g_config.getServers();
+	ConfigType servers = g_config.getServers();
 	
-	for (configType::iterator it = servers.begin(); it != servers.end(); ++it)
-	{
-		std::vector<std::string> temp = Util::split(it->first, ':');
-
-		Socket socket = Socket(temp[0], temp[1]); // can occur an exception
-		if (fcntl(socket.get_fd(), F_SETFL, O_NONBLOCK) == -1)
-			throw EventInitException("fcntl() error");
-		// TODO: keepalive time 조정
-		int optVal = 1;
-		if (setsockopt(socket.get_fd(), SOL_SOCKET, SO_KEEPALIVE, (void*)&optVal, sizeof(int)) == -1)
-			throw EventInitException("setsockopt() error");
-		//
-		mServerSocket[socket.get_fd()] = socket;
-
-		logger.add_server(socket.get_fd(), it->first);
-	}
-
-	kq = new KQueue(mServerSocket);
+	for (ConfigType::iterator it = servers.begin(); it != servers.end(); ++it)
+		create_server_socket(it);
 }
 
 /**
@@ -163,9 +119,20 @@ Event::Event()
 */
 Event::~Event()
 {
-	for (std::map<int, Client*>::iterator it = mClient.begin(); it != mClient.end(); ++it)
-		delete it->second;
 	delete kq;
+	for (SocketMap::const_iterator it = sockets.begin(); it != sockets.end(); ++it)
+		delete it->second;
+}
+
+void Event::create_server_socket(const ConfigType::iterator it)
+{
+	std::vector<std::string> temp = Util::split(it->first, ':');
+	const ServerSocket* socket = new ServerSocket(temp[0], temp[1]);
+
+	sockets.insert(std::pair<FD, const Socket*>(socket->get_fd(), socket));
+	kq->add_server_io_event(socket);
+
+	logger.add_server(socket->get_fd(), it->first); // REMOVE
 }
 
 /**
@@ -175,11 +142,11 @@ Event::~Event()
  * 
  * @return None
 */
-void Event::accept_connection(int serverFd)
+void Event::accept_connection(FD serverFd)
 {
-	struct sockaddr_in clientAddr;
+	SockAddr clientAddr;
 	socklen_t clientAddrLen = sizeof(clientAddr);
-	int clientFd = accept(serverFd, (struct sockaddr*)&clientAddr, &clientAddrLen);
+	FD clientFd = accept(serverFd, (struct sockaddr*)&clientAddr, &clientAddrLen);
 
 	if (clientFd == -1)
 		return;
@@ -187,31 +154,19 @@ void Event::accept_connection(int serverFd)
 	if (fcntl(clientFd, F_SETFL, O_NONBLOCK) == -1)
 	{
 		// TODO: response 500 Internal Server Error 
-		return;
+		throw EventLoopException("fcntl() error");
 	}
 
-	register_client(clientFd, clientAddr, serverFd);
-	logger.connection_logging(mClient[clientFd], LOG_GREEN);
+	create_client_socket(clientFd, clientAddr);
 }
 
-/**
- * @brief 클라이언트를 등록시키는 함수
- * 
- * @param clientFd(int) 클라이언트의 fd
- * @param clientAddr(struct sockaddr_in) 클라이언트의 주소 정보
- * @param serverFd(int) 클라이언트와 통신하는 서버의 fd
- * 
- * @return None
-*/
-void Event::register_client(int clientFd, struct sockaddr_in clientAddr, int serverFd)
+void Event::create_client_socket(FD fd, const SockAddr& addr)
 {
-	Client* client = new Client(clientFd, clientAddr, serverFd, \
-						mServerSocket[serverFd].get_ip(), \
-						mServerSocket[serverFd].get_port());
+	const ClientSocket* socket = new ClientSocket(fd, addr);
+	kq->add_client_io_event(socket);
+	sockets.insert(std::pair<FD, const Socket*>(socket->get_fd(), socket));
 
-	kq->add_client_io_event(clientFd);
-
-	mClient[clientFd] = client;
+	logger.connection_logging(socket, LOG_GREEN); // REMOVE
 }
 
 /**
@@ -221,16 +176,11 @@ void Event::register_client(int clientFd, struct sockaddr_in clientAddr, int ser
  * 
  * @return None
 */
-void Event::disconnection(Client* client)
+void Event::disconnection(const ClientSocket* socket)
 {	
-	logger.disconnection_logging(client, LOG_YELLOW);
-	int fd = client->get_fd();
-
-	delete mClient[fd];
-	mClient.erase(fd);
-	close(fd);
+	logger.disconnection_logging(socket, LOG_YELLOW);
+	add_garbage(socket);
 }
-
 
 /**
  * @brief read event 발생 시 클라이언트의 메시지를 수신하는 함수
@@ -240,8 +190,18 @@ void Event::disconnection(Client* client)
  * @return None
 */
 // TODO : EOF 받을 시 DLE(Data Link Escape) 처리
-void Event::recv_from_client(Client* client)
+void Event::recv_from_client(const ClientSocket* socket)
 {
+
+	if (socket->is_expired())
+		return;
+
+	char buf[1024];
+	int recv_len = recv(socket->get_fd(), buf, 1024, 0);
+	buf[recv_len] = 0;
+	std::cout << "recv message : " << buf << std::endl;
+	kq->enable_write_event(socket);
+
 	if (client->get_request().set_request(client->get_fd(), client->get_ip()))
 	{
 		update_event(clientFd, EVFILT_READ, EV_ENABLE, 0, 0, NULL);
@@ -258,6 +218,7 @@ void Event::recv_from_client(Client* client)
 	// std::cout << "recv message : " << buf << std::endl;
 	// kq->enable_write_event(client->get_fd());
 
+
 	// int pid = fork();
 	// if (pid) {
 	// 	std::cout << "parent process. child pid : " << pid << std::endl;
@@ -266,18 +227,6 @@ void Event::recv_from_client(Client* client)
 	// 	std::cout << "child exit" << std::endl;
 	// 	exit(33);
 	// }
-	// Request req = client->get_request();
-	// int clientFd = client->get_fd();
-
-	// int state = req.set_request(clientFd);
-
-	// // if (state <= 0)
-	// // {
-	// // 	update_event(clientFd, EVFILT_READ, EV_DISABLE, 0, 0, NULL);
-	// // 	update_event(clientFd, EVFILT_WRITE, EV_ENABLE, 0, 0, NULL);
-	// // }
-	// // else
-	// // 	update_event(clientFd, EVFILT_READ, EV_ENABLE, 0, 0, NULL);
 }
 
 /**
@@ -287,19 +236,82 @@ void Event::recv_from_client(Client* client)
  * 
  * @return None
 */
-void Event::send_to_client(Client* client)
+void Event::send_to_client(const ClientSocket* socket)
 {
-	int clientFd = client->get_fd();
+	if (socket->is_expired())
+		return;
+		
+	FD clientFd = socket->get_fd();
 
 	// TODO : request와 response 구현 이후 작성
 	int send_len = send(clientFd, "success send_to_client", strlen("success send_to_client"), 0);
 	std::cout << "send_len : " << send_len << std::endl;
-	kq->enable_read_event(clientFd);
+	kq->enable_read_event(socket);
 	// end
+}
 
-	// TODO : chunked message 송신 시 수정이 필요할 수도 있음
-	// update_event(clientFd, EVFILT_READ, EV_ENABLE, 0, 0, NULL);
-	// update_event(clientFd, EVFILT_WRITE, EV_DISABLE, 0, 0, NULL);
+void Event::socket_timeout(const ClientSocket* socket)
+{
+	if (socket->is_expired())
+		garbageCollector.push_back(socket);
+}
+
+void Event::handle_server_event(const KEvent* event, const ServerSocket* socket)
+{
+	// TODO: 서버 하나가 죽으면 서버를 종료시킬지? or add garbage
+	// 서버를 종료시키면 모든 clientdprp 500 response
+	if (event->flags & EV_ERROR)
+		return; // TODO: response 500 Internal Server Error
+
+	accept_connection(socket->get_fd());
+}
+
+void Event::handle_client_event(const KEvent* event, const ClientSocket* socket)
+{
+	if (event->filter == EVFILT_TIMER)
+		socket_timeout((ClientSocket*)socket);				
+	if (event->flags & EV_ERROR)
+		return; // TODO: response 503 Service Unavailable
+
+	if (event->flags & EV_EOF)
+	{
+		std::cout << "EV_EOF" << std::endl;
+		// TODO: I don't know to response anything message
+		disconnection((ClientSocket*)socket);
+	}
+	else if (event->filter == EVFILT_READ)
+	{
+		std::cout << "EVFILT_RECV" << std::endl;
+		recv_from_client((ClientSocket*)socket);
+	}
+	else if (event->filter == EVFILT_WRITE)
+	{
+		std::cout << "EVFILT_WRITE" << std::endl;
+		send_to_client((ClientSocket*)socket);
+	}
+}
+
+void Event::handle_child_process(const KEvent* event)
+{
+	int status;
+	pid_t pid = wait(&status);
+	if (WIFEXITED(status))
+		std::cout << WEXITSTATUS(status) << std::endl;
+}
+
+void Event::clear_garbage_sockets()
+{
+	for (GarbageCollector::const_iterator it = garbageCollector.begin(); it != garbageCollector.end(); ++it)
+	{
+		sockets.erase((*it)->get_fd());
+		delete (*it);	
+	}
+	garbageCollector.clear();
+}
+
+void Event::add_garbage(const Socket* socket)
+{
+	garbageCollector.push_back(socket);
 }
 
 // private
@@ -307,5 +319,9 @@ Event& Event::operator=(const Event& event)
 {
 	return *this;
 }
+
+// private
+Event::Event(const Event& event)
+{}
 
 #endif

@@ -142,10 +142,10 @@ struct Request
 					url = g_conf["0.0.0.0:8000"][location]["root"][0];
 					std::vector<std::string>::iterator it = splitUrl.begin();
 					it += 2;
-					for (it; it != splitUrl.end(); ++it)
-					{
-						url += *it;
-					}
+					// for (it; it != splitUrl.end(); ++it)
+					// {
+					// 	url += *it;
+					// }
 				}
 				catch(const std::exception& e)
 				{

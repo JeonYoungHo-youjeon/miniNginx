@@ -10,7 +10,6 @@
 # include <map>
 
 # include "../parse/Config.hpp"
-# include "Client.hpp"
 
 static const std::string LOGCOLOR[] = {
 	"\033[91m",
@@ -37,15 +36,15 @@ public:
 public:
 	void add_server(int fd, const std::string& ip_port);
 	void info();
-	void connection_logging(const Client* client, enum eLogColor color);
+	void connection_logging(const ClientSocket* client, enum eLogColor color);
 	void connection_failed_logging(enum eLogColor color);
-	void disconnection_logging(const Client* client, enum eLogColor color);
+	void disconnection_logging(const ClientSocket* client, enum eLogColor color);
 
 	Logger();
 	~Logger();
 
 private:
-	void prefix_logMessage(const Client* client, enum eLogColor color);
+	void prefix_logMessage(enum eLogColor color);
 	void suffix_logMessage();
 	const std::string print_ip_port(const std::string& ipPort);
 	const std::string print_date();
@@ -102,9 +101,9 @@ void Logger::info()
  * 
  * @return None
 */
-void Logger::connection_logging(const Client* client, enum eLogColor color)
+void Logger::connection_logging(const ClientSocket* client, enum eLogColor color)
 {
-	prefix_logMessage(client, color);
+	prefix_logMessage(color);
 	std::cout << "\tConnection with client(" << client->get_ip() << ")";
 	suffix_logMessage();
 }
@@ -117,9 +116,9 @@ void Logger::connection_logging(const Client* client, enum eLogColor color)
  * 
  * @return None
 */
-void Logger::disconnection_logging(const Client* client, enum eLogColor color)
+void Logger::disconnection_logging(const ClientSocket* client, enum eLogColor color)
 {
-	prefix_logMessage(client, color);
+	prefix_logMessage(color);
 	std::cout << "\tDisconnection with client(" << client->get_ip() << ")";
 	suffix_logMessage();
 }
@@ -142,10 +141,9 @@ Logger::~Logger()
  * 
  * @return None
 */
-void Logger::prefix_logMessage(const Client* client, enum eLogColor color)
+void Logger::prefix_logMessage(enum eLogColor color)
 {
-	std::cout << LOGCOLOR[color] << print_date() \
-			<< print_ip_port(mServer[client->get_server_fd()]);
+	std::cout << LOGCOLOR[color] << print_date();
 }
 
 /**

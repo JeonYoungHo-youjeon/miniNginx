@@ -1,9 +1,9 @@
 #include "Event.hpp"
 #include "../parse/Config.hpp"
 
-#include <ctime>
 #include <iostream>
 #include <stdexcept>
+#include <ctime>
 
 using namespace std;
 Config	g_config("../../config/default2.conf");
@@ -20,6 +20,6 @@ int main()
 	{
 		std::cerr << e.what() << '\n';
 	}
-
+	system("leaks miniNginx");
     return 0;
 }

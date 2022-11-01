@@ -80,7 +80,12 @@ Server::Server(const string& input)
 				if (mLocation.find(tmp[1]) != mLocation.end())
 					std::cerr << "Map Collision" << std::endl;
 				else
+				{
+					//vector<string> listen = Util::split(tmp[1], ':');
+					//if (listen.size() > 2)
+					//	throw std::out_of_range("listen range Error");
 					mLocation[tmp[1]] = Location(tmp.begin() + 2, tmp.end());
+				}
 			}
 			stack.clear();
 		}
@@ -88,7 +93,7 @@ Server::Server(const string& input)
 			stack += *it;
 	}
 	if (mAttr.find("listen") == mAttr.end())
-		mAttr["listen"] = vector<string>(1, "80");
+		mAttr["listen"] = vector<string>(1, "0.0.0.0:80");
 }
 
 const map<string, Location>& Server::getLocations() const

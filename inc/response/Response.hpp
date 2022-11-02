@@ -53,7 +53,7 @@ struct Response
 		ret += get_statusCode() + " ";
 		ret += get_reasonPhrase() + "\n";
 		ret = startLine.protocol + " " + std::to_string(startLine.statusCode) + " " + startLine.reasonPhrase + "\n";
-		for (auto it = Header.begin(); it != Header.end(); ++it)
+		for (std::map<string, string>::iterator it = Header.begin(); it != Header.end(); ++it)
 			ret += it->first + " " + it->second + "\n";
 		ret += get_body();
 
@@ -101,9 +101,10 @@ struct Response
 	void out()
 	{
 		cout << startLine.protocol << " " << startLine.statusCode << " " << startLine.reasonPhrase << "\n";
-		for (auto it = Header.begin(); it != Header.end(); ++it)
+		for (std::map<string, string>::iterator it = Header.begin(); it != Header.end(); ++it)
 			cout << it->first << " : " << it->second << endl;
-		cout << "body : <" << get_body() << ">" << endl;
+		cout << "body" << endl;
+		cout << get_body() << endl;
 	}
 
 	/**
@@ -254,6 +255,9 @@ Response::Response(const Request& req)
 	//	이미 오류일 경우 실행 X
 	if (startLine.statusCode != 200)
 		return ;
+
+	//	TMP
+	body = "TEST1\nTEST2\n";
 
 	if (excutor.empty())
 		contentResult = new File(path, filename, body, params);

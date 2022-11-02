@@ -7,11 +7,12 @@
 # include "../parse/Util.hpp"
 // # include "../Body.hpp"
 
-using std::string, std::cout , std::endl;
+using std::string;
+using std::cout;
+using std::endl;
 
 extern Config g_conf;
 
-const int BUFFER_SIZE = 1024;
 enum e_parsePosition
 {
 	BODY = -1,
@@ -104,6 +105,7 @@ struct Request
 		if (str.empty())
 			throw std::logic_error("TEST");
 
+		configName = "0.0.0.0:8000";
 		std::vector<string> crlf = Util::split(str, '\n');
 		cout << "<" << crlf[0] << ">" << endl;
 		int i = 0;
@@ -111,9 +113,9 @@ struct Request
 		for (std::vector<std::string>::iterator it = crlf.begin(); it != crlf.end(); ++it)
 		{
 			*it = Util::remover(*it, '\r');
-			cout << i++ << endl;
+			++i;
 
-			cout << "for <" << *it << ">" << endl;
+			//cout << "for <" << *it << ">" << endl;
 			if (callCount == 0)
 			{
 				std::vector<string> splited = Util::split(*it, ' ');
@@ -129,9 +131,8 @@ struct Request
 					StartLine.method = splited[0];
 				else
 					cout << "set_request ERROR 2 : " << splited[0] << ">" << endl;
-				//	FIXME
-				Header["host"] = "0.0.0.0:8000";
 				virtualPath = Util::split(splited[1], '?')[0];
+				StartLine.url = splited[1];
 				params = Util::split(Util::split(splited[1], '?')[1], '&');
 
 				//	.ext 찾기
@@ -140,22 +141,24 @@ struct Request
 					ext = std::string(virtualPath.begin() + pos, virtualPath.end());
 
 				std::pair<std::string, std::string>	divpath = Util::divider(virtualPath, '/');
-				while (divpath.first != "" && !g_conf[Header["host"]].is_exist(divpath.first))
+				while (divpath.first != "" && !g_conf[configName].is_exist(divpath.first))
 					divpath = Util::divider(divpath, '/');
 
 				virtualPath = divpath.first;
 				resource = divpath.second;
+
 				if (virtualPath.empty())
 					virtualPath = "/";
-				if (g_conf[Header["host"]].is_exist(virtualPath))
+				//	FIXME : host to Server IP:port
+				if (g_conf[configName].is_exist(virtualPath))
 				{
-					if (g_conf[Header["host"]][virtualPath].is_exist("root"))
-						realPath = g_conf[Header["host"]][virtualPath]["root"].front();
-					if (g_conf[Header["host"]][virtualPath].is_exist(ext))
-						excutor = g_conf[Header["host"]][virtualPath][ext].front();
+					if (g_conf[configName][virtualPath].is_exist("root"))
+						realPath = g_conf[configName][virtualPath]["root"].front();
+					if (g_conf[configName][virtualPath].is_exist(ext))
+						excutor = g_conf[configName][virtualPath][ext].front();
 				}
 				else
-					realPath = g_conf[Header["host"]].getAttr("root")[0];
+					realPath = g_conf[configName].getAttr("root")[0];
 
 				if (splited[2] == "HTTP/1.1")
 					StartLine.protocol = remove_crlf(splited[2]);
@@ -213,8 +216,8 @@ struct Request
 				string key = remove_crlf(splited.at(0));
 				string value = remove_crlf(splited.at(1));
 				std::transform(key.begin(), key.end(), key.begin(), ::tolower);
-				std::cout << "Key : " <<*it << std::endl;
 				Header[key] = value;
+
 				if (key == "Content-Length")
 				{
 					Header["Content-Length"] = remove_crlf(splited[1]);
@@ -244,7 +247,7 @@ struct Request
 	void print_request()
 	{
 		StartLine.out();
-		for (auto it = Header.begin(); it != Header.end(); ++it)
+		for (std::map<string, string>::iterator it = Header.begin(); it != Header.end(); ++it)
 			cout << it->first << " : " << it->second << endl;
 	}
 };

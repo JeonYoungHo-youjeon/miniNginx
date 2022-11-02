@@ -76,7 +76,7 @@ Config::Config(const char* filepath)
 			}
 			if (key != "server")
 				std::cerr << "'server' Directive Error" << std::endl;
-				
+
 			Server	tmp(value);
 
 			if (mServers.find(tmp.id()) != mServers.end())

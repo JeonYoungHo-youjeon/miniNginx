@@ -2,7 +2,7 @@ NAME		= webserv
 CXX			= c++
 CXXFLAGS	= #-std=c++98 -Wall -Wextra -Werror
 
-SRC			= server.cpp
+SRC			= main.cpp
 SRCDIR		= src/
 
 SRCS		= $(addprefix $(SRCDIR), $(SRC))

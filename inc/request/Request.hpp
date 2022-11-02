@@ -5,6 +5,7 @@
 
 # include "../parse/Config.hpp"
 # include "../parse/Util.hpp"
+# include "../response/Cgi.hpp"
 // # include "../Body.hpp"
 
 using std::string;

@@ -4,12 +4,11 @@
 # include "Contents.hpp"
 # include "../parse/Config.hpp"
 # include "../exception/Exception.hpp"
+# include "../define.hpp"
 
 # include <unistd.h>
 # include <fcntl.h>
 # include <signal.h>
-
-const int BUFFER_SIZE = 1024;
 
 struct Cgi : public Contents
 {

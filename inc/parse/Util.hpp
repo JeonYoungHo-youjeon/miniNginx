@@ -11,12 +11,13 @@ struct Util
 {
     static std::string remover(const std::string& input, const char rmchar);
     static std::vector<std::string> split(const std::string& input, const char delimeter);
-	static std::string strip(const std::string& input);
+	static std::string& strip(std::string& input, const char c);
 	static std::pair<std::string, std::string>
 	divider(const std::string& ps, const char delimeter);
 	static std::pair<std::string, std::string>
 	divider(const std::pair<std::string, std::string>& pss, const char delimeter);
 	static int stoi(const std::string& str);
+	static std::string& remove_crlf(std::string& str);
 };
 
 std::string Util::remover(const std::string& input, const char rmchar)
@@ -41,19 +42,19 @@ std::vector<std::string> Util::split(const std::string& input, const char delime
     return ret;
 }
 
-std::string Util::strip(const std::string& input)
+std::string& Util::strip(std::string& input, const char c)
 {
-	std::string::const_iterator	begin = input.begin();
-	std::string::const_iterator	end = input.end();
+	std::size_t pos;
 
-	for (; begin != end && *begin == ' '; ++begin);
-	for (; end != begin && *(end - 1) == ' '; --end);
+	pos = input.find_first_not_of(c);
+	if (pos != std::string::npos)
+		input.erase(0, pos);
 
-	if (begin == input.begin() && end == input.end())
-	{
-		return input;
-	}
-	return std::string(begin, end);
+	pos = input.find_last_not_of(c);
+	if (pos != std::string::npos)
+		input.erase(pos + 1, input.length());
+
+	return input;
 }
 
 std::pair<std::string, std::string>
@@ -79,6 +80,13 @@ int Util::stoi(const std::string& str)
 	int ret;
 	ss >> ret;
 	return ret;
+}
+
+std::string& Util::remove_crlf(std::string& str)
+{
+	Util::strip(str, '\n');
+	Util::strip(str, '\r');
+	return str;
 }
 
 #endif

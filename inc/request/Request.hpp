@@ -14,12 +14,6 @@ using std::endl;
 
 extern Config g_conf;
 
-enum e_parsePosition
-{
-	BODY = -1,
-	HEAD = 0
-};
-
 struct RequestStartLine
 {
 	string method;			// GET, POST, DELETE 등의 메소드	*
@@ -37,8 +31,10 @@ struct Request
 {
 	RequestStartLine				StartLine;
 	std::map<string, string>		Header;
-
-	// Body body;
+	string							configName;
+	std::stringstream				buffer;
+	int 							statement;
+	int 							progress;
 
 	string virtualPath;
 	string realPath;
@@ -46,52 +42,119 @@ struct Request
 	string excutor;
 	string ext;
 
-	int callCount;
-	int remainString;
-	int chunkState;
+	int contentLength;
+	bool chunkFlag;
 	int statusCode;
-	string configName;
+	int clientFd;
 	std::vector<string>	params;
 
-	Request() : statusCode(200) {};
-
 	/**
-	* 전체 리퀘스트가 하나의 문자열로 들어올때 처리. 따로 에러처리는 하지 않음
-	*
+	* @brief : 생성자 초기화, set()을 통한 초기화 등 임의로 다양하게 구현
 	*/
-	//	FIXME	: HOST가 0.0.0.0:8000 리터럴로 고정되어있음
-	Request(string& str) : statusCode(200)
+	Request() : statusCode(200) {};
+	Request(int fd, const string& configName) : statusCode(200), configName(configName), clientFd(clientFd) {};
+	Request(const string& configName) : statusCode(200), configName(configName) {}
+
+	void set(int fd, const string& configName)
 	{
-		std::vector<string> splited = Util::split(str, '\n');
-		for (std::vector<string>::size_type i = 0; i < splited.size(); i++)
-			set_request(splited[i]);
+		this->configName = configName;
+		this->clientFd = fd;
+		statement = eState::NONE;
+		progress = REQ::START_LINE;
 	}
 
-	string remove_crlf(string& str)
-	{
-		string ret;
-
-		ret = Util::strip(str);
-		ret = Util::remover(ret, '\r');
-		return ret;
-	}
-
-	int set_request(int fd, string ip)
+	int read()
 	{
 		char rcvData[BUFFER_SIZE];
-		int byte = recv(fd, &rcvData[0], BUFFER_SIZE, 0);
-		configName = ip;
+		int byte = recv(clientFd, &rcvData[0], BUFFER_SIZE, 0);
+
 		if (byte <= 0)
 		{
 			strerror(errno);
-			statusCode = 400;
-			return -1;
+			throw statusCode = 400;	//	catch (int statusCode);
 		}
+		buffer << rcvData;
 
-		string data = rcvData;
-		return set_request(data);
+		if (buffer.str().back() != '\n')
+			return statement = eState::READ_REQUEST;
+
+		return statement = parse();
 	}
 
+	int parse()
+	{
+		string tmpBuf;
+
+		if (progress == REQ::START_LINE)
+		{
+			std::getline(buffer, tmpBuf, '\n');
+
+			std::stringstream tmpSs(Util::remove_crlf(tmpBuf));
+			tmpSs >> StartLine.method >> StartLine.url >> StartLine.protocol;
+			if (!tmpSs)
+				throw "Format Error";
+			progress = REQ::HEADER;
+		}
+
+		while (progress == REQ::HEADER)
+		{
+			std::getline(buffer, tmpBuf);
+			if (tmpBuf.back() != '\r')
+			{
+				buffer << tmpBuf;
+				return eState::READ_REQUEST;
+			}
+			Util::strip(tmpBuf, '\r');
+			if (tmpBuf.empty())
+				progress = REQ::HEADER_SET;
+			else
+				makeHeader(tmpBuf);
+		}
+
+		if (progress == REQ::HEADER_SET)
+		{
+			virtualPath = Util::split(StartLine.url, '?')[0];
+			params = Util::split(Util::split(StartLine.url, '?')[1], '&');
+
+			if (Header.find("Transfer-Encoding") != Header.end())
+				chunkFlag = true;
+			if (Header.find("Content-Length") != Header.end())
+				contentLength = Util::stoi(Header["Content-Length"]);
+
+			if (chunkFlag ^ Header.find("Content-Length") != Header.end())
+				throw "Request 116L Chunked && Content-Length";
+
+			if (StartLine.method != "POST" && (progress = REQ::DONE))
+				return eState::DONE_REQUEST;
+		}
+
+		while (progress == REQ::BODY)
+		{
+			std::getline(buffer, tmpBuf);
+
+			if (tmpBuf == "\r")
+				progress = REQ::DONE;
+		}
+
+		string maxSize = g_conf[configName][virtualPath]["client_max_body_size"][0];
+		if (atoi(maxSize.c_str()) < contentLength)
+			statusCode = 413;
+
+		return eState::DONE_REQUEST;
+	}
+
+	void makeHeader(const std::string& buf)
+	{
+		std::pair<std::string, std::string> kv = Util::divider(buf, ':');
+
+		//	TODO : 정규화 필요 여부 확인
+		if (kv.first.empty() || kv.second.empty())
+			throw statusCode = 400;	//	bad Request
+		if (Header.find(kv.first) != Header.end())
+			throw statusCode = 400;
+
+		Header[kv.first] = kv.second;
+	}
 
 	// FIXME: 에러는 throw 하는걸로 생각중인데, 우선 출력만 해놓고 에러 처리 방식 정해지면 다시 구현.
 	/**
@@ -100,38 +163,18 @@ struct Request
 	*/
 	int set_request(string& str)
 	{
-		// callCount 가 0 일때 = 처음 호출됨 = 메소드, url, 프로토콜 저장
-		// callCount 가 -1(BODY)일때 = body 구간. 입력되는 만큼 body에 계속 저장함.
-		// callCount 가 0 보다 클때 = 헤더 필드 구간. 공백이 나오면 callCount 를 BODY 로 바꾸고, 그렇지 않으면 구조체에 필드 저장
 		if (str.empty())
 			throw std::logic_error("TEST");
 
-		configName = "0.0.0.0:8000";
 		std::vector<string> crlf = Util::split(str, '\n');
 		cout << "<" << crlf[0] << ">" << endl;
 		int i = 0;
 		cout << crlf.size() << endl;
 		for (std::vector<std::string>::iterator it = crlf.begin(); it != crlf.end(); ++it)
 		{
-			*it = Util::remover(*it, '\r');
-			++i;
 
-			//cout << "for <" << *it << ">" << endl;
 			if (callCount == 0)
 			{
-				std::vector<string> splited = Util::split(*it, ' ');
-				if (splited.size() != 3)
-				{
-					cout << "set_request ERROR 1 : <" << str << ">" << endl;
-					throw std::logic_error("TEST");
-				}
-				else
-					callCount++;
-
-				if (splited[0] == "GET" || splited[0] == "POST" || splited[0] == "DELETE")
-					StartLine.method = splited[0];
-				else
-					cout << "set_request ERROR 2 : " << splited[0] << ">" << endl;
 				virtualPath = Util::split(splited[1], '?')[0];
 				StartLine.url = splited[1];
 				params = Util::split(Util::split(splited[1], '?')[1], '&');
@@ -160,11 +203,6 @@ struct Request
 				}
 				else
 					realPath = g_conf[configName].getAttr("root")[0];
-
-				if (splited[2] == "HTTP/1.1")
-					StartLine.protocol = remove_crlf(splited[2]);
-				else
-					cout << "set_request ERROR 3 : " << splited[2] << ">" << endl;
 			}
 			else if (callCount == BODY)
 			{
@@ -213,22 +251,15 @@ struct Request
 					cout << "BODY start" << endl;
 					continue ;
 				}
-				std::vector<string> splited = Util::split(*it, ':');
-				string key = remove_crlf(splited.at(0));
-				string value = remove_crlf(splited.at(1));
-				std::transform(key.begin(), key.end(), key.begin(), ::tolower);
-				Header[key] = value;
 
 				if (key == "Content-Length")
 				{
-					Header["Content-Length"] = remove_crlf(splited[1]);
+					Header["Content-Length"] = Util::remove_crlf(splited[1]);
 					remainString = atoi(Header["Content-Length"].c_str());
 					try
 					{
 						//FIXME: 사용법 확인 후 수정
-						string maxSize = g_conf[configName][virtualPath]["client_max_body_size"][0];
-						if (atoi(maxSize.c_str()) < remainString)
-							statusCode = 413;
+
 					}
 					catch(const std::exception& e)
 					{

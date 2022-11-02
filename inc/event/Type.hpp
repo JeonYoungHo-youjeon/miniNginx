@@ -18,7 +18,7 @@
 
 // User defined header files
 # include "../parse/Config.hpp"
-
+# include "../define.hpp"
 
 typedef int 							FD;
 typedef struct kevent					KEvent;
@@ -28,15 +28,5 @@ typedef std::string						String;
 typedef std::map<std::string, Server>	ConfigType;
 typedef time_t							Time;
 typedef int								Type;
-
-
-enum eType {
-	SERVER = 0,
-	CLIENT
-};
-
-static const Time TIMEOUT = 30;
-static const int MAX_EVENT = 1024; // TODO: I don't know optimal MAX_EVENT yet.
-
 
 #endif // TYPE_HPP

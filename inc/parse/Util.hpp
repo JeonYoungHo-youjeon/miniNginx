@@ -16,6 +16,7 @@ struct Util
 	divider(const std::string& ps, const char delimeter);
 	static std::pair<std::string, std::string>
 	divider(const std::pair<std::string, std::string>& pss, const char delimeter);
+	static int stoi(const std::string& str);
 };
 
 std::string Util::remover(const std::string& input, const char rmchar)
@@ -70,6 +71,14 @@ Util::divider(const std::pair<std::string, std::string>& pss, const char delimet
 	std::pair<std::string, std::string>	newpss = divider(pss.first, delimeter);
 	newpss.second += pss.second;
 	return newpss;
+}
+
+int Util::stoi(const std::string& str)
+{
+	std::stringstream ss(str);
+	int ret;
+	ss >> ret;
+	return ret;
 }
 
 #endif

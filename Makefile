@@ -1,6 +1,7 @@
 NAME		= webserv
 CXX			= c++
 CXXFLAGS	= #-std=c++98 -Wall -Wextra -Werror
+DEBUG		= -g
 
 SRC			= main.cpp
 SRCDIR		= src/
@@ -12,7 +13,7 @@ INC			= inc/
 all : $(NAME)
 
 $(NAME) : $(OBJS)
-	$(CXX) $(CXXFLAGS) $(OBJS) -I$(INC) -o $(NAME)
+	$(CXX) $(CXXFLAGS) $(DEBUG) $(OBJS) -I$(INC) -o $(NAME)
 
 clean	:
 	@rm -rf $(OBJS)

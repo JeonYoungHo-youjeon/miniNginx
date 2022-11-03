@@ -2,14 +2,11 @@
 # define EVENT_HPP
 
 
-# include "Socket.hpp"
-# include "ServerSocket.hpp"
-# include "ClientSocket.hpp"
-# include "KQueue.hpp"
+
 # include "Type.hpp"
-# include "../parse/Util.hpp"
-# include "../http.hpp"
-# include "../exception/Exception.hpp"
+# include "KQueue.hpp"
+# include "ClientSocket.hpp"
+# include "ServerSocket.hpp"
 # include "Logger.hpp" // REMOVE
 
 extern Config g_conf;
@@ -30,8 +27,9 @@ private:
 	void accept_connection(FD serverFD);
 	void create_client_socket(FD clientFD, const SockAddr& addr, FD serverFD);
 	void disconnection(const ClientSocket* socket);
-	void recv_from_client(const ClientSocket* socket);
-	void send_to_client(const ClientSocket* socket);
+	void handle_client_read_event(ClientSocket* socket);
+	void handle_client_write_event(ClientSocket* socket);
+	void handle_next_event(ClientSocket* socket, State state);
 	void socket_timeout(const ClientSocket* socket);
 	void add_garbage(const Socket* socket);
 
@@ -39,6 +37,7 @@ private:
 	void handle_client_event(const KEvent* event, const ClientSocket* socket);
 	void handle_child_process(const KEvent* event);
 	void clear_garbage_sockets();
+	void set_next_event(State state);
 
 	Event& operator=(const Event& event);
 	Event(const Event& event);
@@ -126,7 +125,7 @@ void Event::create_server_socket(const ConfigType::iterator it)
 	const ServerSocket* socket = new ServerSocket(temp[0], temp[1]);
 
 	sockets.insert(std::pair<FD, const Socket*>(socket->get_fd(), socket));
-	kq->add_server_io_event(socket);
+	kq->add_server_io_event(socket, socket->get_fd());
 
 	logger.add_server(socket->get_fd(), it->first); // REMOVE
 }
@@ -158,9 +157,9 @@ void Event::accept_connection(FD serverFD)
 
 void Event::create_client_socket(FD clientFD, const SockAddr& addr, FD serverFD)
 {
-	std::string s = sockets[serverFD]->get_ip() + ":" + sockets[serverFD]->get_port();
+	const std::string s = sockets[serverFD]->get_ip() + ":" + sockets[serverFD]->get_port();
 	const ClientSocket* socket = new ClientSocket(clientFD, addr, s);
-	kq->add_client_io_event(socket);
+	kq->add_client_io_event(socket, socket->get_fd());
 	sockets.insert(std::pair<FD, const Socket*>(socket->get_fd(), socket));
 
 	logger.connection_logging(socket, LOG_GREEN); // REMOVE
@@ -187,53 +186,80 @@ void Event::disconnection(const ClientSocket* socket)
  * @return None
 */
 // TODO : EOF 받을 시 DLE(Data Link Escape) 처리
-void Event::recv_from_client(const ClientSocket* socket)
+void Event::handle_client_read_event(ClientSocket* socket)
 {
 	if (socket->is_expired())
 		return;
 
+	State state = socket->get_state();
+	Request* req = socket->get_request();
+	Response* res = socket->get_response();
 
-	socket->get_request()->set_request(socket->get_fd(), socket->get_ip_port());
-	kq->enable_write_event(socket);
-	// if (client->get_request().set_request(client->get_fd(), client->get_ip()))
-	// {
-	// 	update_event(clientFD, EVFILT_READ, EV_ENABLE, 0, 0, NULL);
-	// }
-	// else 
-	// {
-	// 	update_event(clientFD, EVFILT_READ, EV_DISABLE, 0, 0, NULL);
-	// 	update_event(clientFD, EVFILT_WRITE, EV_ENABLE, 0, 0, NULL);
-	// }
-	// int pid = fork();
-	// if (pid) {
-	// 	std::cout << "parent process. child pid : " << pid << std::endl;
-	// 	kq->add_proc_event(pid);
-	// } else {
-	// 	std::cout << "child exit" << std::endl;
-	// 	exit(33);
-	// }
+	switch (state)
+	{
+	case READ_REQUEST:
+		state = req->set_request();
+		if (state == DONE_REQUEST)
+		{
+			socket->set_response(req);
+			state = res->process();
+		}
+		break;
+	case READ_FILE_RESPONSE:
+		state = req->read_file();
+		break;
+	case READ_CGI_RESPONSE:
+		state = req->read_cgi();
+		break;
+	}
+
+	handle_next_event(socket, state);
 }
 
-/**
- * @brief write event 발생 시 클라이언트에게 메시지를 전송하는 함수
- * 
- * @param client(Client*) write event를 발생시킨 client
- * 
- * @return None
-*/
-void Event::send_to_client(const ClientSocket* socket)
+void Event::handle_client_write_event(ClientSocket* socket)
 {
 	if (socket->is_expired())
 		return;
 		
-	FD clientFD = socket->get_fd();
+	State state = socket->get_state();
+	Response* res = socket->get_response();
 
-	// TODO : request와 response 구현 이후 작성
-	int send_len = send(clientFD, "success send_to_client", strlen("success send_to_client"), 0);
-	std::cout << "send_len : " << send_len << std::endl;
-	kq->enable_read_event(socket);
-	// end
+	switch (state)
+	{
+	case WRITE_FILE_RESPONSE:
+		state = res->write_file();
+		break;
+	case WRITE_CGI_RESPONSE:
+		state = res->write_cgi();
+		break;
+	case SEND_HEADER_RESPONSE:
+		state = res->send_header();
+		break;
+	case SEND_BODY_RESPONSE:
+		state = res->send_body();
+		break;
+	}
+
+	handle_next_event(socket, state);
 }
+
+void Event::handle_next_event(ClientSocket* socket, State state)
+{
+	if (state == DONE_RESPONSE && socket->get_connection() != "close")
+	{
+		socket->update_state(READ_REQUEST);
+		kq->enable_read_event(socket, socket->get_fd());
+	}
+	else if (state == CLOSE_CONNECTION)
+		disconnection(socket);
+	else
+	{
+		socket->update_state(state);
+		kq->set_next_event(socket, socket->get_state());
+	}
+}
+
+
 
 void Event::socket_timeout(const ClientSocket* socket)
 {
@@ -269,19 +295,19 @@ void Event::handle_client_event(const KEvent* event, const ClientSocket* socket)
 	else if (event->filter == EVFILT_READ)
 	{
 		std::cout << "EVFILT_RECV" << std::endl;
-		recv_from_client((ClientSocket*)socket);
+		handle_client_read_event((ClientSocket*)socket);
 	}
 	else if (event->filter == EVFILT_WRITE)
 	{
 		std::cout << "EVFILT_WRITE" << std::endl;
-		send_to_client((ClientSocket*)socket);
+		handle_client_write_event((ClientSocket*)socket);
 	}
 }
 
 void Event::handle_child_process(const KEvent* event)
 {
 	int status;
-	pid_t pid = wait(&status);
+	PID pid = wait(&status);
 	if (WIFEXITED(status))
 		std::cout << WEXITSTATUS(status) << std::endl;
 }
@@ -295,6 +321,7 @@ void Event::clear_garbage_sockets()
 	}
 	garbageCollector.clear();
 }
+
 
 void Event::add_garbage(const Socket* socket)
 {

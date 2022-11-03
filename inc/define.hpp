@@ -7,16 +7,19 @@ enum eType {
 };
 
 enum eState {
-	NONE = 0,
-	READ_REQUEST,
+	READ_REQUEST = 0,
 	DONE_REQUEST,
-	READ_RESPONSE,
-	WRITE_RESPONSE,
+	READ_FILE_RESPONSE,
+	READ_CGI_RESPONSE,
+	WRITE_FILE_RESPONSE,
+	WRITE_CGI_RESPONSE,
+	SEND_HEADER_RESPONSE,
+	SEND_BODY_RESPONSE,
 	DONE_RESPONSE,
-	DONE
+	CLOSE_CONNECTION
 };
 
-static const time_t		TIMEOUT = 30;
+static const long		TIMEOUT = 30;
 static const int		MAX_EVENT = 1024; // TODO: I don't know optimal MAX_EVENT yet.
 const int				BUFFER_SIZE = 1024;
 

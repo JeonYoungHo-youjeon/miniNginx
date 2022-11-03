@@ -18,6 +18,8 @@ struct Util
 	divider(const std::pair<std::string, std::string>& pss, const char delimeter);
 	static int stoi(const std::string& str);
 	static std::string& remove_crlf(std::string& str);
+	static std::string join(const std::string& str1, const std::string& str2, const char c);
+	static int to_hex(const std::string& str);
 };
 
 std::string Util::remover(const std::string& input, const char rmchar)
@@ -88,5 +90,19 @@ std::string& Util::remove_crlf(std::string& str)
 	Util::strip(str, '\r');
 	return str;
 }
+
+std::string Util::join(const std::string& str1, const std::string& str2, const char c)
+{
+	return str1 + c + str2;
+}
+
+int Util::to_hex(const std::string& str)
+{
+	int ret;
+	std::stringstream ss(str);
+	ss >> std::hex >> ret;
+	return ret;
+}
+
 
 #endif

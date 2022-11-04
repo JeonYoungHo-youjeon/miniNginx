@@ -35,15 +35,13 @@ struct Request
 
 	string						configName;
 	string						locationName;
+	string 						fileName;
+	string 						ext;
 	std::stringstream			buffer;
 	int 						statement;
 	int 						progress;
 
 	string virtualPath;
-	string realPath;
-	string filename;
-	string excutor;
-	string ext;
 
 	int contentLength;
 	bool chunkFlag;
@@ -125,6 +123,9 @@ struct Request
 			virtualPath = Util::split(StartLine.url, '?')[0];
 			params = Util::split(Util::split(StartLine.url, '?')[1], '&');
 			locationName = findLocation(virtualPath);
+			fileName = virtualPath.erase(0, locationName.size());
+			ext = findExtension(virtualPath);
+
 
 			if (Header.find("Transfer-Encoding") != Header.end()
 				^ Header.find("Content-Length") != Header.end())

@@ -20,6 +20,7 @@ struct Util
 	static std::string& remove_crlf(std::string& str);
 	static std::string join(const std::string& str1, const std::string& str2, const char c);
 	static int to_hex(const std::string& str);
+	static std::string get_date();
 };
 
 std::string Util::remover(const std::string& input, const char rmchar)
@@ -104,5 +105,17 @@ int Util::to_hex(const std::string& str)
 	return ret;
 }
 
+std::string Util::get_date()
+{
+	time_t rawtime;
+	struct tm *timeinfo;
+	char buf[31];
+
+	time(&rawtime);
+	timeinfo = gmtime(&rawtime);
+	strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S GMT", timeinfo);
+
+	return buf;
+}
 
 #endif

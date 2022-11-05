@@ -2,6 +2,7 @@
 # define RESPONSE_HPP
 
 # include <cstdio>
+# include <sstream>
 
 # include "Cgi.hpp"
 # include "File.hpp"
@@ -25,135 +26,97 @@ struct ResponseStartLine
 struct Response
 {
 	const Request&		Req;
-	ResponseStartLine	startLine;
+	ResponseStartLine	StartLine;
 	map<string, string>	Header;
 	string				Body;
+
+	string				postBody;
+	int					contentLength;
+	int					statement;
+	int					progress;
 
 	/**
 	 * brief : 파일 경로 관련 변수
 	 */
-	Contents*	contentResult;
-	string		path;
-	string		filename;
-	string		ext;
-	string		excutor;
+	Contents*		contentResult;
+	string			path;
+	string			fileName;
+	string			ext;
+	string			excutor;
 	vector<string>	params;
 
 	Response(const Request& req);
 	~Response();
 
 	/**
-	 *
-	 * @return : Status
+	 * @brief Set & return nextToDo
+	 * @return statement
 	 */
-	int 	set()
-	{
-		if (Req.StartLine.method == "GET")
-		{
-
-		}
-		if (Req.StartLine.method == "POST")
-		{
-
-		}
-		if (Req.StartLine.method == "DELETE")
-		{
-			//if (remove(file path))
-				throw StartLine.statusCode = 404;
-			return 	DONE_RESPONSE;
-		}
-	}
+	int 	execute();
 
 	/**
-	 * @brief :	Read & return nextToDo
-	 * @return : Status
+	 * @brief Write & return nextToDo
+	 * @return statement
 	 */
-	int 	read()
-	{
-		//	TODO : 읽고 읽을것이 남아있으면 READ_RESPONSE 반환
-	}
+	int 	write();
 
 	/**
-	 * Write & return nextTodo
-	 * @return Status
+	 * @brief Read & return nextToDo
+	 * @return statement
 	 */
-	int 	write()
-	{
-		//	TODO : 쓰고 쓸 것이 남아있으면 WRITE_RESPONSE 반환
-	}
-
-	int 	execute()
-	{
-		//	TODO : execve or open, CGI라면 실행하고 자식 프로세스 outFd를 프로세스의 stdout으로 변경, 파일이라면 open하고 outFd를 파일의 fd로 변경
-
-	}
+	int 	read();
 
 	/**
-	 * @brief : set -> execute -> read or write로 진행 예정
-	 * @return set : EXECUTE || DONE
-	 * @return exec : WRITE or READ
+	 * @brief : exec -> read or write로 진행 예정
+	 * @return exec : WRITE or READ or DONE
 	 * @return write : WRITE or READ
 	 * @return read : READ or DONE
 	 */
+
 	//			set() -> execute() -> write() for done -> read for done
 	//	return	EXEC_ -> _READ || _WRITE for done
-	/**
-	 * @brief : 리스폰스 구조체의 변수들을 전송할 문자열로 변환하여 반환함
-	 *
-	 * @return string : 전송 데이터로 변환된 문자열
-	 */
-	 /*
-	string get_response()
+
+	int		makeHeader()
 	{
-		string ret;
-
-		ret += get_protocol() + " ";
-		ret += get_statusCode() + " ";
-		ret += get_reasonPhrase() + "\n";
-		ret = startLine.protocol + " " + std::to_string(startLine.statusCode) + " " + startLine.reasonPhrase + "\n";
-		for (std::map<string, string>::iterator it = Header.begin(); it != Header.end(); ++it)
-			ret += it->first + " " + it->second + "\n";
-		ret += get_body();
-
-		return ret;
+		//	TODO : 이제 octet, contentLength, connection ... 처리
+		Header["Content-Length"] = Util::to_string(Body.size());
+		Header["Date"] = Util::get_date();
+		Header["Connection"] = "Keep-Alive";
+		Header["Server"] = "miniNginx/1.1";
+		{    /* 필요 헤더*/    }
+		return makeStartLine();
 	}
-	  */
 
-	string make_errorpage(int code) { return ""; }
-	/*{
-		body =
+	int		makeStartLine()
+	{
+		StartLine.reasonPhrase = get_reasonPhrase();
+		StartLine.protocol = "HTTP/1.1";
+		return statement = DONE_RESPONSE;
+	}
+
+	int make_errorpage(int code)
+	{
+		Body =
 				"<!DOCTYPE html>\n"
 				"<html>\n"
 				"  <h1>\n"
-				"    " + get_statusCode() + " " + get_reasonPhrase() + "\n"
-																 "  </h1>\n"
-																 "</html>\n";
-		return get_response();
-	}*/
-
-	/**
-	 * 현재 리스폰스 구조체의 내용 전체를 출력. 디폴트 값이 있는 데이터는 해당 값으로 출력
-	 *
-	 */
-	void out()
-	{
-		cout << startLine.protocol << " " << startLine.statusCode << " " << startLine.reasonPhrase << "\n";
-		for (std::map<string, string>::iterator it = Header.begin(); it != Header.end(); ++it)
-			cout << it->first << " : " << it->second << endl;
-		cout << "body" << endl;
-		//cout << get_body() << endl;
+				"    " + Util::to_string(StartLine.statusCode) + " " + get_reasonPhrase() + "\n"
+				"  </h1>\n"
+				"</html>\n";
+		return makeHeader();
 	}
 
 	/**
 	 * 사유 구절이 있으면 해당 값 반환, 상태 코드가 없으면 공백 반환, 상태 코드가 있으면 해당 값에 맞게 반환.
 	 *
 	 */
+
 	string get_reasonPhrase()
 	{
-		if (startLine.reasonPhrase != "")
-			return startLine.reasonPhrase;
+		if (!StartLine.reasonPhrase.empty())
+			return StartLine.reasonPhrase;
 
-		switch (startLine.statusCode)
+		switch (StartLine.statusCode)
 		{
 			case 200:
 				return "OK";
@@ -165,24 +128,18 @@ struct Response
 		}
 	}
 };
+
 Response::Response(const Request& req)
-:	Req(req)
+:	Req(req), postBody(req.buffer.str()), contentLength(0)
 {
-	if ()
-	//	이미 오류일 경우 실행 X
-	if (startLine.statusCode != 200)
-	{
-		Body = make_errorpage(Req.statusCode);
-		return ;
-	}
+	path = req.locationName;
+	fileName = req.fileName;
+	if (!req.locationName.empty() && g_conf[Req.configName][path].is_exist("root"))
+		path = g_conf[Req.configName][path]["root"][0];
+	path += fileName;
+	ext = req.ext;
 
-	//if (g_conf)
-
-	//	TMP
-	//if (excutor.empty())
-	//	contentResult = new File(path, filename, body, params);
-	//else
-	//	contentResult = new Cgi(path, filename, body, params, excutor);
+	progress = READY;
 }
 
 Response::~Response()
@@ -190,6 +147,74 @@ Response::~Response()
 	if (contentResult != nullptr)
 		delete contentResult;
 }
-//int 	Response::set(){};
-//int 	Response::run(){};
+
+int 	Response::execute()
+{
+	/**
+	 * @brief try remove file, throw error if catch error 
+	 */
+	
+	try
+	{
+		if (StartLine.statusCode != 200)
+			throw StartLine.statusCode;
+
+		if (Req.StartLine.method == "DELETE")
+		{
+			if (remove(path.c_str()))
+				throw StartLine.statusCode = 404;
+			return 	makeHeader();
+		}
+
+		if (g_conf[Req.configName][Req.locationName].is_exist(ext))
+			contentResult = new Cgi(path, ext, params);
+		else
+			contentResult = new File(path);
+		
+		progress = contentResult->set();
+
+		if (Req.StartLine.method == "GET")
+			return statement = READ_RESPONSE;
+
+		if (Req.StartLine.method == "POST")
+			return statement = WRITE_RESPONSE;
+		
+		//	Method Error -> Bad Request
+		throw StartLine.statusCode = 400;
+	}
+	catch (int errNo)	//	예외 발생 시 일단 객체 내에서 처리 -> 수정 O
+	{
+		return make_errorpage(errNo);
+	}
+	return makeHeader();
+}
+
+int 	Response::write()
+{
+	if (postBody.empty())
+		return READ_RESPONSE;
+
+	//	쓰고 쓸 것이 남아있으면 WRITE_RESPONSE 반환
+	size_t	len = ::write(contentResult->inFd, postBody.c_str(), BUFFER_SIZE);
+
+	if (len < 0)
+		throw StartLine.statusCode = 500;
+	postBody.erase(0, len);
+	//	전부 보냈으면 결과 값 받아오기 위해 READ_RESPONSE 반환
+	if (len < BUFFER_SIZE)
+		return READ_RESPONSE;
+	return WRITE_RESPONSE;
+}
+
+int 	Response::read()
+{
+	//	읽고 읽을것이 남아있으면 READ_RESPONSE 반환
+	char buf[BUFFER_SIZE];
+	size_t	len = ::read(contentResult->outFd, buf, BUFFER_SIZE);
+
+	Body += string(buf, len);
+	//	TODO : READ 탈출 조건 정하기 - 일단 무조건 READ_RESPONSE 보내고 클라이언트에서 kill & close 하기?
+	return READ_RESPONSE;
+}
+
 #endif

@@ -7,25 +7,21 @@
 
 struct Contents
 {
-	Contents(const std::string& url, const std::string& body = "")
-	: url(url), contentsBuf(body) {};
+	Contents(const std::string& url)
+	: url(url), pid(0) {};
     virtual ~Contents(){};
-
-    virtual void		_get() = 0;
-	virtual void		_post() = 0;
-	virtual void		_put() = 0;
-	virtual void		_delete() =0;
 
 	const int 			getPid() const ;
 	void 				setPid(int pid);
-
-	const std::string&	getBody() const ;
+	virtual int			set();
+	virtual int			close();
+	virtual void		kill();
 
 	//	Variables
-	std::string	contentsBuf;
 	std::string url;
-	int 		code;
-	int 		pid;
+	int			inFd;
+	int			outFd;
+	pid_t 		pid;
 };      //  Contents
 
 const int	Contents::getPid() const
@@ -35,9 +31,5 @@ const int	Contents::getPid() const
 void 		Contents::setPid(int pid)
 {
 	this->pid = pid;
-}
-const std::string&	Contents::getBody() const
-{
-	return contentsBuf;
 }
 #endif  //  CONTENTS_HPP

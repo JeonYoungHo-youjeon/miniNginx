@@ -55,20 +55,20 @@ struct Request
 	*/
 	Request() : statusCode(200) {};
 	Request(int fd, const string& configName)
-	: statusCode(200), configName(configName), clientFd(clientFd)
+	: statusCode(200), configName(configName)
 	{
 		this->configName = configName;
 		this->clientFd = fd;
-		statement = eState::NONE;
-		progress = REQ::START_LINE;
+		statement = NONE;
+		progress = START_LINE;
 	};
 
 	void set(int fd, const string& configName)
 	{
 		this->configName = configName;
 		this->clientFd = fd;
-		statement = eState::NONE;
-		progress = REQ::START_LINE;
+		statement = NONE;
+		progress = START_LINE;
 	}
 
 	int read()
@@ -84,7 +84,7 @@ struct Request
 		buffer << rcvData;
 
 		if (buffer.str().back() != '\n')
-			return statement = eState::READ_REQUEST;
+			return statement = READ_REQUEST;
 
 		return statement = parse();
 	}
@@ -94,7 +94,7 @@ struct Request
 		string tmpBuf;
 
 		//	STARTLINE
-		if (progress == REQ::START_LINE)
+		if (progress == START_LINE)
 		{
 			std::getline(buffer, tmpBuf, '\n');
 			std::stringstream tmpSs(Util::remove_crlf(tmpBuf));
@@ -102,23 +102,23 @@ struct Request
 			tmpSs >> StartLine.method >> StartLine.url >> StartLine.protocol;
 			if (!tmpSs || !tmpSs.str().empty())
 				throw "Format Error";
-			progress = REQ::HEADER;
+			progress = HEADER;
 		}
 
 		//	HEADER
-		while (progress == REQ::HEADER)
+		while (progress == HEADER)
 		{
 			std::getline(buffer, tmpBuf);
 
 			Util::strip(tmpBuf, '\r');
 			if (tmpBuf.empty())
-				progress = REQ::HEADER_SET;
+				progress = HEADER_SET;
 			else
 				makeHeader(tmpBuf);
 		}
 
 		//	HEADER SETTING
-		if (progress == REQ::HEADER_SET)
+		if (progress == HEADER_SET)
 		{
 			virtualPath = Util::split(StartLine.url, '?')[0];
 			params = Util::split(Util::split(StartLine.url, '?')[1], '&');
@@ -137,9 +137,9 @@ struct Request
 			if (Header.find("Transfer-Encoding") != Header.end())
 				contentLength = chunkFlag = true;
 
-			if (StartLine.method != "POST" && (progress = REQ::DONE))
-				return eState::DONE_REQUEST;
-			progress = REQ::BODY;
+			if (StartLine.method != "POST" && (progress = DONE))
+				return DONE_REQUEST;
+			progress = BODY;
 		}
 
 		//	BODY
@@ -147,7 +147,7 @@ struct Request
 		if (g_conf[configName][locationName].is_exist("client_max_body_size"))
 			bodyMax = Util::stoi(g_conf[configName][locationName]["client_max_body_size"][0]);
 
-		while (progress == REQ::BODY && contentLength)
+		while (progress == BODY && contentLength)
 		{
 			std::getline(buffer, tmpBuf);
 			Util::remove_crlf(tmpBuf);
@@ -170,9 +170,9 @@ struct Request
 		}
 
 		if (contentLength)
-			return eState::READ_REQUEST;
+			return READ_REQUEST;
 
-		return eState::DONE_REQUEST;
+		return DONE_REQUEST;
 	}
 
 	void makeBody()

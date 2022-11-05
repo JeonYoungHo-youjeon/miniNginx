@@ -21,6 +21,7 @@ struct Util
 	static std::string join(const std::string& str1, const std::string& str2, const char c);
 	static int to_hex(const std::string& str);
 	static std::string get_date();
+	static std::string to_string(int num);
 };
 
 std::string Util::remover(const std::string& input, const char rmchar)
@@ -117,5 +118,13 @@ std::string Util::get_date()
 
 	return buf;
 }
+
+std::string Util::to_string(int num)
+{
+	std::stringstream ss;
+	ss << num;
+	return ss.str();
+}
+
 
 #endif

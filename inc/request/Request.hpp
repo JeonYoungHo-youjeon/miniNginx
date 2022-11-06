@@ -14,12 +14,6 @@ using std::endl;
 
 extern Config g_conf;
 
-enum e_parsePosition
-{
-	BODY = -1,
-	HEAD = 0
-};
-
 struct RequestStartLine
 {
 	string method;			// GET, POST, DELETE 등의 메소드	*
@@ -35,210 +29,190 @@ struct RequestStartLine
 
 struct Request
 {
-	RequestStartLine				StartLine;
-	std::map<string, string>		Header;
+	RequestStartLine			StartLine;
+	std::map<string, string>	Header;
+	std::string 				Body;
 
-	// Body body;
+	string						configName;
+	string						locationName;
+	string 						fileName;
+	string 						ext;
+	std::stringstream			buffer;
+	int 						statement;
+	int 						progress;
 
 	string virtualPath;
-	string realPath;
-	string resource;
-	string excutor;
-	string ext;
 
-	int callCount;
-	int remainString;
-	int chunkState;
+	int contentLength;
+	bool chunkFlag;
 	int statusCode;
-	string configName;
+	int clientFd;
+
 	std::vector<string>	params;
 
-	Request() : statusCode(200) {};
-
 	/**
-	* 전체 리퀘스트가 하나의 문자열로 들어올때 처리. 따로 에러처리는 하지 않음
-	*
+	* @brief : 생성자 초기화, set()을 통한 초기화 등 임의로 다양하게 구현
 	*/
-	//	FIXME	: HOST가 0.0.0.0:8000 리터럴로 고정되어있음
-	Request(string& str) : statusCode(200)
+	Request() : statusCode(200) {};
+	Request(int fd, const string& configName)
+	: statusCode(200), configName(configName)
 	{
-		std::vector<string> splited = Util::split(str, '\n');
-		for (std::vector<string>::size_type i = 0; i < splited.size(); i++)
-			set_request(splited[i]);
+		this->configName = configName;
+		this->clientFd = fd;
+		statement = NONE;
+		progress = START_LINE;
+	};
+
+	void set(int fd, const string& configName)
+	{
+		this->configName = configName;
+		this->clientFd = fd;
+		statement = NONE;
+		progress = START_LINE;
 	}
 
-	string remove_crlf(string& str)
-	{
-		string ret;
-
-		ret = Util::strip(str);
-		ret = Util::remover(ret, '\r');
-		return ret;
-	}
-
-	int set_request(int fd, string ip)
+	int read()
 	{
 		char rcvData[BUFFER_SIZE];
-		int byte = recv(fd, &rcvData[0], BUFFER_SIZE, 0);
-		configName = ip;
+		int byte = recv(clientFd, &rcvData[0], BUFFER_SIZE, 0);
+
 		if (byte <= 0)
 		{
 			strerror(errno);
-			statusCode = 400;
-			return -1;
+			throw statusCode = 400;	//	catch (int statusCode);
 		}
+		buffer << rcvData;
 
-		string data = rcvData;
-		return set_request(data);
+		if (buffer.str().back() != '\n')
+			return statement = READ_REQUEST;
+
+		return statement = parse();
 	}
 
-
-	// FIXME: 에러는 throw 하는걸로 생각중인데, 우선 출력만 해놓고 에러 처리 방식 정해지면 다시 구현.
-	/**
-	* 받아온 리퀘스트 구조체에 한줄씩 들어오는 문자열을 상황에 맞게 처리해서 저장.
-	*
-	*/
-	int set_request(string& str)
+	int parse()
 	{
-		// callCount 가 0 일때 = 처음 호출됨 = 메소드, url, 프로토콜 저장
-		// callCount 가 -1(BODY)일때 = body 구간. 입력되는 만큼 body에 계속 저장함.
-		// callCount 가 0 보다 클때 = 헤더 필드 구간. 공백이 나오면 callCount 를 BODY 로 바꾸고, 그렇지 않으면 구조체에 필드 저장
-		if (str.empty())
-			throw std::logic_error("TEST");
+		string tmpBuf;
 
-		configName = "0.0.0.0:8000";
-		std::vector<string> crlf = Util::split(str, '\n');
-		cout << "<" << crlf[0] << ">" << endl;
-		int i = 0;
-		cout << crlf.size() << endl;
-		for (std::vector<std::string>::iterator it = crlf.begin(); it != crlf.end(); ++it)
+		//	STARTLINE
+		if (progress == START_LINE)
 		{
-			*it = Util::remover(*it, '\r');
-			++i;
+			std::getline(buffer, tmpBuf, '\n');
+			std::stringstream tmpSs(Util::remove_crlf(tmpBuf));
 
-			//cout << "for <" << *it << ">" << endl;
-			if (callCount == 0)
-			{
-				std::vector<string> splited = Util::split(*it, ' ');
-				if (splited.size() != 3)
-				{
-					cout << "set_request ERROR 1 : <" << str << ">" << endl;
-					throw std::logic_error("TEST");
-				}
-				else
-					callCount++;
-
-				if (splited[0] == "GET" || splited[0] == "POST" || splited[0] == "DELETE")
-					StartLine.method = splited[0];
-				else
-					cout << "set_request ERROR 2 : " << splited[0] << ">" << endl;
-				virtualPath = Util::split(splited[1], '?')[0];
-				StartLine.url = splited[1];
-				params = Util::split(Util::split(splited[1], '?')[1], '&');
-
-				//	.ext 찾기
-				std::string::size_type pos = virtualPath.rfind('.');
-				if (pos != static_cast<std::string::size_type>(-1))
-					ext = std::string(virtualPath.begin() + pos, virtualPath.end());
-
-				std::pair<std::string, std::string>	divpath = Util::divider(virtualPath, '/');
-				while (divpath.first != "" && !g_conf[configName].is_exist(divpath.first))
-					divpath = Util::divider(divpath, '/');
-
-				virtualPath = divpath.first;
-				resource = divpath.second;
-
-				if (virtualPath.empty())
-					virtualPath = "/";
-				//	FIXME : host to Server IP:port
-				if (g_conf[configName].is_exist(virtualPath))
-				{
-					if (g_conf[configName][virtualPath].is_exist("root"))
-						realPath = g_conf[configName][virtualPath]["root"].front();
-					if (g_conf[configName][virtualPath].is_exist(ext))
-						excutor = g_conf[configName][virtualPath][ext].front();
-				}
-				else
-					realPath = g_conf[configName].getAttr("root")[0];
-
-				if (splited[2] == "HTTP/1.1")
-					StartLine.protocol = remove_crlf(splited[2]);
-				else
-					cout << "set_request ERROR 3 : " << splited[2] << ">" << endl;
-			}
-			else if (callCount == BODY)
-			{
-				if (StartLine.method != "POST")
-					return 0;
-				if (Header["encoding"] == "chunked")
-				{
-					//TODO: 청크드 메세지에서도 맥스 사이즈 확인
-					switch (chunkState)
-					{
-						case HEAD:
-						{
-							long chunkSize = strtol((*it).c_str(), 0, 16);
-							if (chunkSize == 0)
-								return 0;
-							remainString = chunkSize;
-							chunkState = BODY;
-						}
-						// case BODY:
-						// 	remainString = remainString - (*it).size();
-						// 	if (remainString < 0)
-						// 	{
-						// 		*it = (*it).substr(0, remainString);
-						// 		remainString = 0;
-						// 	}
-						// 	body += *it;
-						// 	chunkState = HEAD;
-					}
-				}
-				else
-				{
-					remainString = remainString - (*it).size();
-					if (remainString < 0)
-					{
-						*it = (*it).substr(0, remainString);
-						remainString = 0;
-					}
-					// body += *it + "\n";
-				}
-			}
-			else
-			{
-				if (*it == "")
-				{
-					callCount = BODY;
-					cout << "BODY start" << endl;
-					continue ;
-				}
-				std::vector<string> splited = Util::split(*it, ':');
-				string key = remove_crlf(splited.at(0));
-				string value = remove_crlf(splited.at(1));
-				std::transform(key.begin(), key.end(), key.begin(), ::tolower);
-				Header[key] = value;
-
-				if (key == "Content-Length")
-				{
-					Header["Content-Length"] = remove_crlf(splited[1]);
-					remainString = atoi(Header["Content-Length"].c_str());
-					try
-					{
-						//FIXME: 사용법 확인 후 수정
-						string maxSize = g_conf[configName][virtualPath]["client_max_body_size"][0];
-						if (atoi(maxSize.c_str()) < remainString)
-							statusCode = 413;
-					}
-					catch(const std::exception& e)
-					{
-						std::cerr << e.what() << '\n';
-					}
-					continue ;
-				}
-			}
+			tmpSs >> StartLine.method >> StartLine.url >> StartLine.protocol;
+			if (!tmpSs || !tmpSs.str().empty())
+				throw "Format Error";
+			progress = HEADER;
 		}
-		return remainString;
+
+		//	HEADER
+		while (progress == HEADER)
+		{
+			std::getline(buffer, tmpBuf);
+
+			Util::strip(tmpBuf, '\r');
+			if (tmpBuf.empty())
+				progress = HEADER_SET;
+			else
+				makeHeader(tmpBuf);
+		}
+
+		//	HEADER SETTING
+		if (progress == HEADER_SET)
+		{
+			virtualPath = Util::split(StartLine.url, '?')[0];
+			params = Util::split(Util::split(StartLine.url, '?')[1], '&');
+			locationName = findLocation(virtualPath);
+			fileName = virtualPath.erase(0, locationName.size());
+			ext = findExtension(virtualPath);
+
+
+			if (Header.find("Transfer-Encoding") != Header.end()
+				^ Header.find("Content-Length") != Header.end())
+				throw "Request 133L Chunked && Content-Length";
+
+			if (Header.find("Content-Length") != Header.end())
+				contentLength = Util::stoi(Header["Content-Length"]);
+
+			if (Header.find("Transfer-Encoding") != Header.end())
+				contentLength = chunkFlag = true;
+
+			if (StartLine.method != "POST" && (progress = DONE))
+				return DONE_REQUEST;
+			progress = BODY;
+		}
+
+		//	BODY
+		int		bodyMax = 0;
+		if (g_conf[configName][locationName].is_exist("client_max_body_size"))
+			bodyMax = Util::stoi(g_conf[configName][locationName]["client_max_body_size"][0]);
+
+		while (progress == BODY && contentLength)
+		{
+			std::getline(buffer, tmpBuf);
+			Util::remove_crlf(tmpBuf);
+
+			//	버퍼가 비었을 때 강제로 스코프 탈출시켜 if로 예외처리 되게 함
+			if (tmpBuf.empty())
+				break ;
+
+			Util::join(Body, tmpBuf, '\n');
+			contentLength -= tmpBuf.size();
+
+			if (chunkFlag)
+			{
+				std::getline(buffer, tmpBuf);
+				contentLength = Util::to_hex(tmpBuf);
+			}
+
+			if (bodyMax && Body.size() > bodyMax)
+				throw statusCode = 413;
+		}
+
+		if (contentLength)
+			return READ_REQUEST;
+
+		return DONE_REQUEST;
+	}
+
+	void makeBody()
+	{
+		if (!contentLength)
+			return ;
+	}
+
+	void makeHeader(const std::string& buf)
+	{
+		std::pair<std::string, std::string> kv = Util::divider(buf, ':');
+
+		//	TODO : 정규화 필요 여부 확인
+		if (kv.first.empty() || kv.second.empty())
+			throw statusCode = 400;	//	bad Request
+		if (Header.find(kv.first) != Header.end())
+			throw statusCode = 400;
+
+		Header[kv.first] = kv.second;
+	}
+
+	//	TODO : 맘에 안드는 함수
+	std::string findLocation(const std::string& path)
+	{
+		std::string ret;
+		std::string tmp;
+		vector<std::string> pathTree = Util::split(path, '/');
+
+		for (std::vector<std::string>::iterator it = pathTree.begin(); it != pathTree.end(); ++it)
+			if (g_conf[configName].is_exist(tmp = Util::join(tmp, *it, '/')))
+				ret = tmp;
+		return ret;
+	};
+
+	std::string findExtension(const std::string& url)
+	{
+		std::string::size_type pos = url.rfind('.');
+		if (pos == std::string::npos)
+			return "";
+		return std::string(url.begin() + pos, url.end());
 	}
 
 	/**

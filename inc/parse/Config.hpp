@@ -66,8 +66,8 @@ Config::Config(const char* filepath)
 		if (buf == '{') cnt++;
 		if (!key.empty() && !cnt)
 		{
-			key = Util::strip(key);
-			value = Util::strip(value);
+			key = Util::strip(key, ' ');
+			value = Util::strip(value, ' ');
 
 			if (key.empty() || value.empty())
 			{
@@ -96,7 +96,7 @@ void	Config::preprocess(std::ifstream& ifs)
 	std::string tmp;
 
 	while (std::getline(ifs, tmp, '\n'))
-		mStringBuf += Util::strip(tmp);
+		mStringBuf += Util::strip(tmp, ' ');
     mStringBuf = Util::remover(mStringBuf, '\t');
 }
 

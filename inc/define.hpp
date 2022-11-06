@@ -17,9 +17,20 @@ enum eState {
 	SEND_BODY_RESPONSE,
 	DONE_RESPONSE,
 	CLOSE_CONNECTION
+	// TODO: EXEC_RESPONSE
 };
 
-static const long		TIMEOUT = 30;
+enum eProg
+{
+	READY,
+	START_LINE,
+	HEADER,
+	HEADER_SET,
+	BODY,
+	PROG_DONE
+};
+
+static const time_t		TIMEOUT = 30;
 static const int		MAX_EVENT = 1024; // TODO: I don't know optimal MAX_EVENT yet.
 const int				BUFFER_SIZE = 1024;
 

@@ -11,9 +11,20 @@ enum eState {
 	READ_REQUEST,
 	DONE_REQUEST,
 	READ_RESPONSE,
+	EXEC_RESPONSE,
 	WRITE_RESPONSE,
 	DONE_RESPONSE,
 	DONE
+};
+
+enum eProg
+{
+	READY,
+	START_LINE,
+	HEADER,
+	HEADER_SET,
+	BODY,
+	PROG_DONE
 };
 
 static const time_t		TIMEOUT = 30;

@@ -5,17 +5,6 @@
 # include "Type.hpp"
 # include "Socket.hpp"
 
-struct ClientFD
-{
-	ClientFD()
-		: readFileFD(0), readCGIFD(0), writeFileFD(0), writeCGIFD(0)
-	{}
-
-	FD readFileFD;
-	FD readCGIFD;
-	FD writeFileFD;
-	FD writeCGIFD;
-};
 
 class ClientSocket
 	: public Socket
@@ -24,9 +13,16 @@ public:
 	bool is_expired() const;
 	void update_lastEventTime();
 	void update_state(State s);
-	void set_response(const Request* req);
-	Request* get_request() const;
-	Response* get_response() const;
+	State set_response(const Request& req);
+	State set_response(int error_code);
+	void set_readFD(FD fd);
+	void set_writeFD(FD fd);
+	void set_PID(PID pid);
+	FD get_readFD() const;
+	FD get_writeFD() const;
+	PID get_PID() const;
+	Request& get_request();
+	Response& get_response();
 	const std::string& get_server_ip_port() const;
 	State get_state() const;
 
@@ -43,9 +39,10 @@ private:
 private:
 	Time lastEventTime;
 	std::string serverIPPort;
-	Request* req;
-	Response* res;
-	ClientFD* clientFD;
+	Request req;
+	Response res;
+	FD readFD;
+	FD writeFD;
 	PID childPID;
 	State state;
 };
@@ -66,17 +63,52 @@ void ClientSocket::update_state(State s)
 {
 	state = s;
 }
-void ClientSocket::set_response(const Request* req)
+State ClientSocket::set_response(const Request& req)
 {
-	res = new Response(*req);
+	return res.set(req);
 }
 
-Request* ClientSocket::get_request() const
+State ClientSocket::set_response(int error_code)
+{
+	return res.set(req.configName, error_code);
+}
+
+void ClientSocket::set_readFD(FD fd)
+{
+	readFD = fd;
+}
+
+void ClientSocket::set_writeFD(FD fd)
+{
+	writeFD = fd;
+}
+
+void ClientSocket::set_PID(PID pid)
+{
+	childPID = pid;
+}
+
+FD ClientSocket::get_readFD() const 
+{
+	return readFD;
+}
+
+FD ClientSocket::get_writeFD() const
+{
+	return writeFD;
+}
+
+PID ClientSocket::get_PID() const
+{
+	return childPID;
+}
+
+Request& ClientSocket::get_request()
 {
 	return req;
 }
 
-Response* ClientSocket::get_response() const
+Response& ClientSocket::get_response()
 {
 	return res;
 }
@@ -96,24 +128,18 @@ ClientSocket::ClientSocket()
 {}
 
 ClientSocket::ClientSocket(FD clientFD, const SockAddr& addr, const std::string& serverIPPort_)
-	: lastEventTime(get_current_time()), serverIPPort(serverIPPort_), res(NULL), \
-		clientFD(new ClientFD()), childPID(0), state(READ_REQUEST),
+	: lastEventTime(get_current_time()), serverIPPort(serverIPPort_), \
+		readFD(0), writeFD(0), childPID(0), state(READY_REQUEST)
 {
 	fd = clientFD;
 	ip = inet_ntoa(addr.sin_addr);
 	port = "";
 	type = CLIENT;
-	req = new Request(fd, serverIPPort);
+	req = Request(fd, serverIPPort);
 }
 
 ClientSocket::~ClientSocket()
 {
-	if (req)
-		delete req;
-	if (res)
-		delete res;
-	if (clientFD)
-		delete clientFD;
 }
 
 //private

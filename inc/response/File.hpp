@@ -33,7 +33,7 @@ int	File::close()
 {
 	::close(outFd);
 	::close(inFd);
-	return DONE;
+	return true;
 }
 
 

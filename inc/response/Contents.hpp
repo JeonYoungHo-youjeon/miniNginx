@@ -13,9 +13,9 @@ struct Contents
 
 	const int 			getPid() const ;
 	void 				setPid(int pid);
-	virtual int			set();
-	virtual int			close();
-	virtual void		kill();
+	virtual int			set() = 0;
+	virtual int			close() = 0;
+	virtual void		kill() = 0;
 
 	//	Variables
 	std::string url;

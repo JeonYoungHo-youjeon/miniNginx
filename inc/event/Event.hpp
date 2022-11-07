@@ -14,7 +14,7 @@ extern Config g_conf;
 class Event
 {
 public:
-	typedef std::map<FD, const Socket*>	SocketMap;
+	typedef std::map<FD, Socket*>	SocketMap;
 	typedef std::vector<const Socket*>	GarbageCollector;
 public:
 	void event_loop();
@@ -122,9 +122,9 @@ Event::~Event()
 void Event::create_server_socket(const ConfigType::iterator it)
 {
 	std::vector<std::string> temp = Util::split(it->first, ':');
-	const ServerSocket* socket = new ServerSocket(temp[0], temp[1]);
+	ServerSocket* socket = new ServerSocket(temp[0], temp[1]);
 
-	sockets.insert(std::pair<FD, const Socket*>(socket->get_fd(), socket));
+	sockets.insert(std::pair<FD, Socket*>(socket->get_fd(), socket));
 	kq->add_server_io_event(socket, socket->get_fd());
 
 	logger.add_server(socket->get_fd(), it->first); // REMOVE
@@ -146,21 +146,23 @@ void Event::accept_connection(FD serverFD)
 	if (clientFD == -1)
 		return;
 	
+	create_client_socket(clientFD, clientAddr, serverFD);
+
 	if (fcntl(clientFD, F_SETFL, O_NONBLOCK) == -1)
 	{
 		// TODO: response 500 Internal Server Error 
-		throw EventLoopException("fcntl() error");
+		ClientSocket* socket = (ClientSocket*)sockets[clientFD];
+		State state = socket->set_response(500);
+		kq->set_next_event(socket, state);
 	}
-
-	create_client_socket(clientFD, clientAddr, serverFD);
 }
 
 void Event::create_client_socket(FD clientFD, const SockAddr& addr, FD serverFD)
 {
 	const std::string s = sockets[serverFD]->get_ip() + ":" + sockets[serverFD]->get_port();
-	const ClientSocket* socket = new ClientSocket(clientFD, addr, s);
+	ClientSocket* socket = new ClientSocket(clientFD, addr, s);
 	kq->add_client_io_event(socket, socket->get_fd());
-	sockets.insert(std::pair<FD, const Socket*>(socket->get_fd(), socket));
+	sockets.insert(std::pair<FD, Socket*>(socket->get_fd(), socket));
 
 	logger.connection_logging(socket, LOG_GREEN); // REMOVE
 }
@@ -192,26 +194,31 @@ void Event::handle_client_read_event(ClientSocket* socket)
 		return;
 
 	State state = socket->get_state();
-	Request* req = socket->get_request();
-	Response* res = socket->get_response();
+	Request* req = &(socket->get_request());
+	const Response* res = &(socket->get_response());
 
-	switch (state)
+	try
 	{
-	case READ_REQUEST:
-		state = req->set_request();
-		if (state == DONE_REQUEST)
+		switch (state)
 		{
-			socket->set_response(req);
-			state = res->process();
+		case READY_REQUEST:
+			state = req->set(socket->get_fd(), socket->get_server_ip_port());
+			if (state == DONE_REQUEST)
+				state = socket->get_response().set(*req);
+			break;
+		case READ_REQUEST:
+			state = req->read();
+			if (state == DONE_REQUEST)
+				state =socket->get_response().set(*req);
+			break;
 		}
-		break;
-	case READ_FILE_RESPONSE:
-		state = req->read_file();
-		break;
-	case READ_CGI_RESPONSE:
-		state = req->read_cgi();
-		break;
 	}
+	catch (int error_code)
+	{
+		state = socket->set_response(error_code);
+	}
+	// TODO: other exception
+	std::cout << "state : " << state << std::endl;
 
 	handle_next_event(socket, state);
 }
@@ -222,22 +229,15 @@ void Event::handle_client_write_event(ClientSocket* socket)
 		return;
 		
 	State state = socket->get_state();
-	Response* res = socket->get_response();
+	Response* res = &(socket->get_response());
 
-	switch (state)
+	try
 	{
-	case WRITE_FILE_RESPONSE:
-		state = res->write_file();
-		break;
-	case WRITE_CGI_RESPONSE:
-		state = res->write_cgi();
-		break;
-	case SEND_HEADER_RESPONSE:
-		state = res->send_header();
-		break;
-	case SEND_BODY_RESPONSE:
-		state = res->send_body();
-		break;
+		state = res->write();
+	}
+	catch (int error_code)
+	{
+		state = socket->set_response(error_code);
 	}
 
 	handle_next_event(socket, state);
@@ -245,13 +245,19 @@ void Event::handle_client_write_event(ClientSocket* socket)
 
 void Event::handle_next_event(ClientSocket* socket, State state)
 {
-	if (state == DONE_RESPONSE && socket->get_connection() != "close")
+	const std::string& connection = socket->get_response().Header["Connection"];
+
+	if (state == DONE_RESPONSE && connection != "close")
 	{
+		// TODO : send
 		socket->update_state(READ_REQUEST);
 		kq->enable_read_event(socket, socket->get_fd());
 	}
-	else if (state == CLOSE_CONNECTION)
+	else if (state == DONE_RESPONSE)
+	{
+		// TODO : send
 		disconnection(socket);
+	}
 	else
 	{
 		socket->update_state(state);
@@ -263,6 +269,7 @@ void Event::handle_next_event(ClientSocket* socket, State state)
 
 void Event::socket_timeout(const ClientSocket* socket)
 {
+	// TODO: CGI kill
 	if (socket->is_expired()) {
 		logger.disconnection_logging(socket, LOG_YELLOW);
 		add_garbage(socket);
@@ -271,7 +278,7 @@ void Event::socket_timeout(const ClientSocket* socket)
 
 void Event::handle_server_event(const KEvent* event, const ServerSocket* socket)
 {
-	// TODO: 서버 하나가 죽으면 서버를 종료시킬지? or add garbage
+	// TODO: 서버 하나 죽으면 모두 죽기
 	// 서버를 종료시키면 모든 clientdprp 500 response
 	if (event->flags & EV_ERROR)
 		return; // TODO: response 500 Internal Server Error

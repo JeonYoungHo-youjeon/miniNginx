@@ -40,6 +40,7 @@ struct Request
 	std::stringstream			buffer;
 	int 						statement;
 	int 						progress;
+	std::string					tmp;
 
 	string virtualPath;
 
@@ -59,38 +60,53 @@ struct Request
 	{
 		this->configName = configName;
 		this->clientFd = fd;
-		statement = NONE;
+		statement = READ_REQUEST;
 		progress = START_LINE;
 	};
 
-	void set(int fd, const string& configName)
+	Request& operator=(const Request& req)
+	{
+		return *this;
+	}
+
+	int set(int fd, const string& configName)
 	{
 		this->configName = configName;
 		this->clientFd = fd;
-		statement = NONE;
+		statement = READ_REQUEST;
 		progress = START_LINE;
+
+		return READ_REQUEST;
 	}
 
+#include <iostream>
 	int read()
 	{
 		char rcvData[BUFFER_SIZE];
 		int byte = recv(clientFd, &rcvData[0], BUFFER_SIZE, 0);
 
-		if (byte <= 0)
+		if (byte < 0)
 		{
 			strerror(errno);
 			throw statusCode = 400;	//	catch (int statusCode);
 		}
-		buffer << rcvData;
-
-		if (buffer.str().back() != '\n')
+		tmp += rcvData;
+		//buffer << rcvData;
+		//std::cout << buffer.str() << std::endl;
+		for (int i = 0; i < tmp.size(); ++i) {
+			std::cout << tmp[i] << " : " << (int)tmp[i] << std::endl;
+		}
+		if (buffer.str().back() != '\n') {
+		std::cout << "back" << std::endl;
 			return statement = READ_REQUEST;
+		}
 
 		return statement = parse();
 	}
 
 	int parse()
 	{
+		std::cout << "start pares" << std::endl;
 		string tmpBuf;
 
 		//	STARTLINE
@@ -137,7 +153,7 @@ struct Request
 			if (Header.find("Transfer-Encoding") != Header.end())
 				contentLength = chunkFlag = true;
 
-			if (StartLine.method != "POST" && (progress = DONE))
+			if (StartLine.method != "POST" && (progress = PROG_DONE))
 				return DONE_REQUEST;
 			progress = BODY;
 		}
@@ -147,7 +163,7 @@ struct Request
 		if (g_conf[configName][locationName].is_exist("client_max_body_size"))
 			bodyMax = Util::stoi(g_conf[configName][locationName]["client_max_body_size"][0]);
 
-		while (progress == BODY && contentLength)
+		while (progress == BODY && contentLength > 0)
 		{
 			std::getline(buffer, tmpBuf);
 			Util::remove_crlf(tmpBuf);
@@ -167,8 +183,9 @@ struct Request
 
 			if (bodyMax && Body.size() > bodyMax)
 				throw statusCode = 413;
+			std::cout << "in" << std::endl;
 		}
-
+		std::cout << "out" << std::endl;
 		if (contentLength)
 			return READ_REQUEST;
 

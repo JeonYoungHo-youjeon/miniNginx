@@ -52,6 +52,9 @@ Cgi::~Cgi()
 			delete[] envp[i];
 		delete[] envp;
 	}
+	::close(inFd);
+	::close(outFd);
+	::kill(pid, SIGKILL);
 }
 
 int     Cgi::set()
@@ -96,7 +99,7 @@ int		Cgi::close()
 {
 	::close(inFd);
 	::close(outFd);
-	return DONE;
+	return true;
 }
 
 void		Cgi::kill()

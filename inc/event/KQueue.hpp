@@ -110,47 +110,35 @@ void KQueue::add_proc_event(pid_t pid)
 
 void KQueue::set_next_event(ClientSocket* socket, State state)
 {
-	ClientFD* clientFD = socket->get_clientFD();
-	Response* res = socket->get_response();
+	const Response* res = &(socket->get_response());
+	FD fd;
+	PID pid;
 
 	switch (state)
 	{
 	case READ_REQUEST:
 		enable_read_event(socket, socket->get_fd());
 		break;
-	case READ_FILE_RESPONSE:
-		if (clientFD->readFileFD == 0)
-			clientFD->readFileFD = res->get_read_file_fd();
-		enable_read_event(socket, clientFD->readFileFD);
-		break;
-	case READ_CGI_RESPONSE:
-		if (socket->get_child_pid() == 0)
+	case READ_RESPONSE:
+		if (!socket->get_readFD())
 		{
-			socket->set_child_pid(res->get_child_pid());
-			add_proc_event(socket->get_child_pid());
+			fd = socket->get_response().contentResult->outFd;
+			socket->set_readFD(fd);
 		}
-		if (clientFD->readCGIFD == 0)
-			clientFD->readCGIFD = res->get_read_cgi_fd();
-		enable_read_event(socket, clientFD->readCGIFD);
+		enable_read_event(socket, fd);
 		break;
-	case WRITE_FILE_RESPONSE:
-		if (clientFD->writeFileFD == 0)
-			clientFD->writeFileFD = res->get_write_file_fd();
-		enable_write_event(socket, clientFD->writeFileFD);
-		break;
-	case WRITE_CGI_RESPONSE:
-		if (socket->get_child_pid() == 0)
+	case WRITE_RESPONSE:
+		if (!socket->get_PID())
 		{
-			socket->set_child_pid(res->get_child_pid());
-			add_proc_event(socket->get_child_pid());
+			pid = socket->get_response().contentResult->getPid();
+			add_proc_event(pid);
 		}
-		if (clientFD->writeCGIFD == 0)
-			clientFD->writeCGIFD = res->get_write_cgi_fd();
-		enable_write_event(socket, clientFD->writeCGIFD);
-		break;
-	case SEND_HEADER_RESPONSE:
-	case SEND_BODY_RESPONSE:
-		enable_write_event(socket, socket->get_fd());
+		if (!socket->get_writeFD())
+		{
+			fd = socket->get_response().contentResult->inFd;
+			socket->set_writeFD(fd);
+		}
+		enable_write_event(socket, fd);
 		break;
 	}
 }

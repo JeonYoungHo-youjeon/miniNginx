@@ -4,8 +4,7 @@
 
 # include "Type.hpp"
 # include "Socket.hpp"
-# include "../request/Request.hpp"
-# include "../response/Response.hpp"
+
 
 class ClientSocket
 	: public Socket
@@ -13,10 +12,21 @@ class ClientSocket
 public:
 	bool is_expired() const;
 	void update_lastEventTime();
-	Request* get_request() const;
-	const std::string& get_ip_port() const;
+	void update_state(State s);
+	State set_response(const Request& req);
+	State set_response(int error_code);
+	void set_readFD(FD fd);
+	void set_writeFD(FD fd);
+	void set_PID(PID pid);
+	FD get_readFD() const;
+	FD get_writeFD() const;
+	PID get_PID() const;
+	Request& get_request();
+	Response& get_response();
+	const std::string& get_server_ip_port() const;
+	State get_state() const;
 
-	ClientSocket(FD clientFD, const SockAddr& addr, const std::string& ipPort);
+	ClientSocket(FD clientFD, const SockAddr& addr, const std::string& serverIPPort);
 	~ClientSocket();
 
 private:
@@ -28,9 +38,13 @@ private:
 
 private:
 	Time lastEventTime;
-	std::string ipPort;
-	Request* req;
-	Response* res;
+	std::string serverIPPort;
+	Request req;
+	Response res;
+	FD readFD;
+	FD writeFD;
+	PID childPID;
+	State state;
 };
 
 // ClientSocket implementation
@@ -45,36 +59,87 @@ void ClientSocket::update_lastEventTime()
 	lastEventTime = get_current_time();
 }
 
-Request* ClientSocket::get_request() const
+void ClientSocket::update_state(State s)
+{
+	state = s;
+}
+State ClientSocket::set_response(const Request& req)
+{
+	return res.set(req);
+}
+
+State ClientSocket::set_response(int error_code)
+{
+	return res.set(req.configName, error_code);
+}
+
+void ClientSocket::set_readFD(FD fd)
+{
+	readFD = fd;
+}
+
+void ClientSocket::set_writeFD(FD fd)
+{
+	writeFD = fd;
+}
+
+void ClientSocket::set_PID(PID pid)
+{
+	childPID = pid;
+}
+
+FD ClientSocket::get_readFD() const 
+{
+	return readFD;
+}
+
+FD ClientSocket::get_writeFD() const
+{
+	return writeFD;
+}
+
+PID ClientSocket::get_PID() const
+{
+	return childPID;
+}
+
+Request& ClientSocket::get_request()
 {
 	return req;
 }
 
-const std::string& ClientSocket::get_ip_port() const
+Response& ClientSocket::get_response()
 {
-	return ipPort;
+	return res;
 }
 
+const std::string& ClientSocket::get_server_ip_port() const
+{
+	return serverIPPort;
+}
+
+State ClientSocket::get_state() const
+{
+	return state;
+}
 
 // private
 ClientSocket::ClientSocket()
 {}
 
-ClientSocket::ClientSocket(FD clientFD, const SockAddr& addr, const std::string& ipPort_)
-	: lastEventTime(get_current_time()), ipPort(ipPort_), req(new Request()), res(NULL)
+ClientSocket::ClientSocket(FD clientFD, const SockAddr& addr, const std::string& serverIPPort_)
+	: lastEventTime(get_current_time()), serverIPPort(serverIPPort_), \
+		readFD(0), writeFD(0), childPID(0), state(READY_REQUEST)
 {
 	fd = clientFD;
 	ip = inet_ntoa(addr.sin_addr);
 	port = "";
 	type = CLIENT;
+	req = Request(fd, serverIPPort);
 }
 
 ClientSocket::~ClientSocket()
 {
-	if (req)
-		delete req;
-	if (res)
-		delete res;
 }
 
 //private

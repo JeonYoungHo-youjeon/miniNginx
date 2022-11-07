@@ -3,8 +3,6 @@
 
 
 # include "Type.hpp"
-# include "../parse/Config.hpp"
-# include "../exception/Exception.hpp"
 
 class Socket
 {

@@ -1,11 +1,9 @@
 #ifndef KQUEUE_HPP
 # define KQUEUE_HPP
 
-# include <time.h>
 
 # include "Type.hpp"
-# include "Socket.hpp"
-# include "../exception/Exception.hpp"
+# include "ClientSocket.hpp"
 
 class KQueue {
 public:
@@ -13,11 +11,12 @@ public:
 	const KEvent* get_eventList() const;
 	const ChangeList& get_changeList() const;
 	int wait_event();
-	void add_server_io_event(const Socket* socket);
-	void add_client_io_event(const Socket* socket);
-	void enable_read_event(const Socket* socket);
-	void enable_write_event(const Socket* socket);
+	void add_server_io_event(const Socket* socket, FD fd);
+	void add_client_io_event(const Socket* socket, FD fd);
+	void enable_read_event(const Socket* socket, FD fd);
+	void enable_write_event(const Socket* socket, FD fd);
 	void add_proc_event(pid_t pid);
+	void set_next_event(ClientSocket* socket, State state);
 
 	KQueue();
 	~KQueue();
@@ -78,35 +77,72 @@ int KQueue::wait_event()
 	}
 }
 
-void KQueue::add_server_io_event(const Socket* socket)
+void KQueue::add_server_io_event(const Socket* socket, FD fd)
 {
-	update_event(socket->get_fd(), EVFILT_READ, EV_ADD | EV_CLEAR, 0, 0, (void*)socket);
+	update_event(fd, EVFILT_READ, EV_ADD | EV_CLEAR, 0, 0, (void*)socket);
 }
 
-void KQueue::add_client_io_event(const Socket* socket)
+void KQueue::add_client_io_event(const Socket* socket, FD fd)
 {
-	update_event(socket->get_fd(), EVFILT_READ, EV_ADD | EV_CLEAR, 0, 0, (void*)socket);
-	update_event(socket->get_fd(), EVFILT_WRITE, EV_ADD | EV_DISABLE, 0, 0, (void*)socket);
-	// update_event(socket->get_fd(), EVFILT_WRITE, EV_DISPATCH, 0, 0, (void*)socket);
+	update_event(fd, EVFILT_READ, EV_ADD | EV_CLEAR, 0, 0, (void*)socket);
+	update_event(fd, EVFILT_WRITE, EV_ADD | EV_DISABLE, 0, 0, (void*)socket);
+	// update_event(fd, EVFILT_WRITE, EV_DISPATCH, 0, 0, (void*)socket);
 	set_timeout(socket);
 }
 
-void KQueue::enable_read_event(const Socket* socket)
+void KQueue::enable_read_event(const Socket* socket, FD fd)
 {
-	update_event(socket->get_fd(), EVFILT_READ, EV_ENABLE | EV_CLEAR, 0, 0, (void*)socket);
-	update_event(socket->get_fd(), EVFILT_WRITE, EV_DISABLE, 0, 0, (void*)socket);
+	update_event(fd, EVFILT_READ, EV_ENABLE | EV_CLEAR, 0, 0, (void*)socket);
+	update_event(fd, EVFILT_WRITE, EV_DISABLE, 0, 0, (void*)socket);
 	set_timeout(socket);
 }
 
-void KQueue::enable_write_event(const Socket* socket)
+void KQueue::enable_write_event(const Socket* socket, FD fd)
 {
-	update_event(socket->get_fd(), EVFILT_READ, EV_DISABLE, 0, 0, (void*)socket);
-	update_event(socket->get_fd(), EVFILT_WRITE, EV_ENABLE | EV_CLEAR, 0, 0, (void*)socket);
+	update_event(fd, EVFILT_READ, EV_DISABLE, 0, 0, (void*)socket);
+	update_event(fd, EVFILT_WRITE, EV_ENABLE | EV_CLEAR, 0, 0, (void*)socket);
 }
 
-void KQueue::add_proc_event(pid_t pid) {
+void KQueue::add_proc_event(pid_t pid)
+{
 	update_event(pid, EVFILT_PROC, EV_ADD, NOTE_EXITSTATUS, 0, NULL);
 }
+
+void KQueue::set_next_event(ClientSocket* socket, State state)
+{
+	const Response* res = &(socket->get_response());
+	FD fd;
+	PID pid;
+
+	switch (state)
+	{
+	case READ_REQUEST:
+		enable_read_event(socket, socket->get_fd());
+		break;
+	case READ_RESPONSE:
+		if (!socket->get_readFD())
+		{
+			fd = socket->get_response().contentResult->outFd;
+			socket->set_readFD(fd);
+		}
+		enable_read_event(socket, fd);
+		break;
+	case WRITE_RESPONSE:
+		if (!socket->get_PID())
+		{
+			pid = socket->get_response().contentResult->getPid();
+			add_proc_event(pid);
+		}
+		if (!socket->get_writeFD())
+		{
+			fd = socket->get_response().contentResult->inFd;
+			socket->set_writeFD(fd);
+		}
+		enable_write_event(socket, fd);
+		break;
+	}
+}
+
 
 KQueue::KQueue()
 {

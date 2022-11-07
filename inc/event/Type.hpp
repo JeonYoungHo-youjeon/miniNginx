@@ -18,7 +18,11 @@
 
 // User defined header files
 # include "../parse/Config.hpp"
+# include "../parse/Util.hpp"
 # include "../define.hpp"
+# include "../exception/Exception.hpp"
+# include "../http.hpp"
+
 
 typedef int 							FD;
 typedef struct kevent					KEvent;
@@ -28,5 +32,7 @@ typedef std::string						String;
 typedef std::map<std::string, Server>	ConfigType;
 typedef time_t							Time;
 typedef int								Type;
+typedef int								State;
+typedef pid_t							PID;
 
 #endif // TYPE_HPP

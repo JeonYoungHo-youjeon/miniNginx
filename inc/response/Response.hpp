@@ -25,11 +25,12 @@ struct ResponseStartLine
 
 struct Response
 {
-	const Request&		Req;
+	const Request*		Req;
 	ResponseStartLine	StartLine;
 	map<string, string>	Header;
 	string				Body;
 
+	string				configName;
 	string				postBody;
 	int					contentLength;
 	int					statement;
@@ -45,9 +46,30 @@ struct Response
 	string			excutor;
 	vector<string>	params;
 
+	Response();
 	Response(const Request& req);
 	~Response();
 
+	int set(const std::string& configName, int error_code)
+	{
+		this->configName = configName;
+		StartLine.statusCode = error_code;
+		return execute();
+	}
+	int set(const Request& req)
+	{
+		Req = &req;
+		postBody = req.buffer.str();
+		path = req.locationName;
+		fileName = req.fileName;
+		if (!req.locationName.empty() && g_conf[Req->configName][path].is_exist("root"))
+			path = g_conf[Req->configName][path]["root"][0];
+		path += fileName;
+		ext = req.ext;
+
+		progress = READY;
+		return statement = execute();
+	}
 	/**
 	 * @brief Set & return nextToDo
 	 * @return statement
@@ -129,18 +151,9 @@ struct Response
 	}
 };
 
-Response::Response(const Request& req)
-:	Req(req), postBody(req.buffer.str()), contentLength(0)
-{
-	path = req.locationName;
-	fileName = req.fileName;
-	if (!req.locationName.empty() && g_conf[Req.configName][path].is_exist("root"))
-		path = g_conf[Req.configName][path]["root"][0];
-	path += fileName;
-	ext = req.ext;
+Response::Response()
+{}
 
-	progress = READY;
-}
 
 Response::~Response()
 {
@@ -159,24 +172,24 @@ int 	Response::execute()
 		if (StartLine.statusCode != 200)
 			throw StartLine.statusCode;
 
-		if (Req.StartLine.method == "DELETE")
+		if (Req->StartLine.method == "DELETE")
 		{
 			if (remove(path.c_str()))
 				throw StartLine.statusCode = 404;
 			return 	makeHeader();
 		}
-
-		if (g_conf[Req.configName][Req.locationName].is_exist(ext))
+  
+		if (g_conf[Req->configName][Req->locationName].is_exist(ext))
 			contentResult = new Cgi(path, ext, params);
 		else
 			contentResult = new File(path);
 		
 		progress = contentResult->set();
 
-		if (Req.StartLine.method == "GET")
+		if (Req->StartLine.method == "GET")
 			return statement = READ_RESPONSE;
 
-		if (Req.StartLine.method == "POST")
+		if (Req->StartLine.method == "POST")
 			return statement = WRITE_RESPONSE;
 		
 		//	Method Error -> Bad Request
@@ -199,6 +212,9 @@ int 	Response::write()
 
 	if (len < 0)
 		throw StartLine.statusCode = 500;
+	else if (len == 0)
+		return makeHeader();
+
 	postBody.erase(0, len);
 	//	전부 보냈으면 결과 값 받아오기 위해 READ_RESPONSE 반환
 	if (len < BUFFER_SIZE)
@@ -214,6 +230,11 @@ int 	Response::read()
 
 	Body += string(buf, len);
 	//	TODO : READ 탈출 조건 정하기 - 일단 무조건 READ_RESPONSE 보내고 클라이언트에서 kill & close 하기?
+	if (!len)
+		return makeHeader();
+	if (len < 0)
+		throw StartLine.statusCode = 500;
+	
 	return READ_RESPONSE;
 }
 

@@ -56,6 +56,7 @@ struct Response
 		StartLine.statusCode = error_code;
 		return execute();
 	}
+
 	int set(const Request& req)
 	{
 		Req = &req;
@@ -100,11 +101,22 @@ struct Response
 
 	int		makeHeader()
 	{
-		//	TODO : 이제 octet, contentLength, connection ... 처리
 		Header["Content-Length"] = Util::to_string(Body.size());
 		Header["Date"] = Util::get_date();
-		Header["Connection"] = "Keep-Alive";
 		Header["Server"] = "miniNginx/1.1";
+
+		map<string, string>::iterator it = Header.find("Connection");
+		if (it == Header.end())
+			Header["Connection"] = "Keep-Alive";
+
+		it = Header.find("Content-Type");
+		if (it == Header.end() && !contentResult->getPid())
+			Header["Content-Type"] = "text/html";
+		else 
+			Header["Content-Type"] = get_contentType();
+
+		// Header["Location"] = "/";
+
 		{    /* 필요 헤더*/    }
 		return makeStartLine();
 	}
@@ -133,6 +145,28 @@ struct Response
 	 *
 	 */
 
+	string get_contentType()
+	{
+		const char *mimetypes[][2] = 
+		{
+			{ "html", "text/html" },
+			{ "jpg", "image/jpeg" },
+			{ "jpeg", "image/jpeg" },
+			{ "mp3", "audio/mpeg" }
+		};
+
+		for (size_t i = 0; i < sizeof(mimetypes)/sizeof(mimetypes[0]); i++) 
+		{
+			std::string::size_type dotpos = path.rfind('.');
+			if (path.compare(dotpos+1, path.size(), mimetypes[i][0]) == 0)
+				return mimetypes[i][1];
+
+		}
+		
+		return "application/octet-stream";
+	};
+
+
 	string get_reasonPhrase()
 	{
 		if (!StartLine.reasonPhrase.empty())
@@ -142,8 +176,24 @@ struct Response
 		{
 			case 200:
 				return "OK";
+			case 201:
+				return "Created";
+			case 204:
+				return "No Content";
+			case 301:
+				return "Moved Permanently";
+			case 400:
+				return "Bad Request";
+			case 403:
+				return "Forbidden";
 			case 404:
-				return "NOT FOUND";
+				return "Not Found";
+			case 405:
+				return "Method Not Allowed";
+			case 413:
+				return "Payload Too Large";
+			case 500:
+				return "Internal Server Error";
 
 			default:
 				return "DON'T_KNOW_THIS_CODE";

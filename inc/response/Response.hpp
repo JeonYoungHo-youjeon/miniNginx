@@ -56,6 +56,7 @@ struct Response
 		StartLine.statusCode = error_code;
 		return execute();
 	}
+
 	int set(const Request& req)
 	{
 		Req = &req;
@@ -100,11 +101,22 @@ struct Response
 
 	int		makeHeader()
 	{
-		//	TODO : 이제 octet, contentLength, connection ... 처리
 		Header["Content-Length"] = Util::to_string(Body.size());
 		Header["Date"] = Util::get_date();
-		Header["Connection"] = "Keep-Alive";
 		Header["Server"] = "miniNginx/1.1";
+
+		map<string, string>::iterator it = Header.find("Connection");
+		if (it == Header.end())
+			Header["Connection"] = "Keep-Alive";
+
+		it = Header.find("Content-Type");
+		if (it == Header.end() && !contentResult->getPid())
+			Header["Content-Type"] = "text/html";
+		else 
+			Header["Content-Type"] = get_contentType();
+
+		// Header["Location"] = "/";
+
 		{    /* 필요 헤더*/    }
 		return makeStartLine();
 	}
@@ -132,6 +144,28 @@ struct Response
 	 * 사유 구절이 있으면 해당 값 반환, 상태 코드가 없으면 공백 반환, 상태 코드가 있으면 해당 값에 맞게 반환.
 	 *
 	 */
+
+	string get_contentType()
+	{
+		const char *mimetypes[][2] = 
+		{
+			{ "html", "text/html" },
+			{ "jpg", "image/jpeg" },
+			{ "jpeg", "image/jpeg" },
+			{ "mp3", "audio/mpeg" }
+		};
+
+		for (size_t i = 0; i < sizeof(mimetypes)/sizeof(mimetypes[0]); i++) 
+		{
+			std::string::size_type dotpos = path.rfind('.');
+			if (path.compare(dotpos+1, path.size(), mimetypes[i][0]) == 0)
+				return mimetypes[i][1];
+
+		}
+		
+		return "application/octet-stream";
+	};
+
 
 	string get_reasonPhrase()
 	{

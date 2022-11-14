@@ -206,7 +206,9 @@ void Event::handle_client_read_event(ClientSocket* socket)
 		case READ_REQUEST:
 			state = req->read();
 			if (state == DONE_REQUEST) {
+				std::cout << "[DONE_REQUEST]" << std::endl;
 				req->print_request();
+				disconnection(socket);
 			}
 //				state = socket->get_response().set(*req);
 			break;
@@ -214,7 +216,9 @@ void Event::handle_client_read_event(ClientSocket* socket)
 	}
 	catch (int error_code)
 	{
-		state = socket->set_response(error_code);
+		std::cout << "[catch error_code] : " << error_code << std::endl;
+		disconnection(socket);
+		// state = socket->set_response(error_code);
 	}
 	// TODO: other exception
 	std::cout << "state : " << state << std::endl;
@@ -269,7 +273,7 @@ void Event::handle_next_event(ClientSocket* socket, State state)
 void Event::socket_timeout(const ClientSocket* socket)
 {
 	// TODO: CGI kill
-	if (socket->is_expired()) {
+	if (socket->is_expired() && sockets.count(socket->get_fd())) {
 		logger.disconnection_logging(socket, LOG_YELLOW);
 		add_garbage(socket);
 	}

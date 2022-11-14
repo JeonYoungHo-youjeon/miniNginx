@@ -36,7 +36,7 @@ struct Request
 	string						locationName;
 	string 						fileName;
 	string 						ext;
-	string						buffer;
+	std::stringstream			buffer;
 	int 						statement;
 	int 						progress;
 	std::string					tmp;
@@ -78,7 +78,7 @@ struct Request
 
 	int read()
 	{
-		char rcvData[BUFFER_SIZE];
+		char rcvData[BUFFER_SIZE] = {0};
 		int byte = recv(clientFd, &rcvData[0], BUFFER_SIZE, 0);
 
 		if (byte <= 0)
@@ -86,55 +86,45 @@ struct Request
 			strerror(errno);
 			throw statusCode = 400;	//	catch (int statusCode);
 		}
-		buffer += rcvData;
-		if (buffer[buffer.size() - 1] != '\n')
+		buffer << rcvData;
+		if (buffer.str().find('\n') == std::string::npos)
 			return statement = READ_REQUEST;
 		return statement = parse();
 	}
 
 	int parse()
 	{
-		string tmpBuf;
-
-		//	STARTLINE
+		cout << "progress == START_LINE" << endl;
 		if (progress == START_LINE)
 		{
-			//	TODO
-			Util::getline(buffer, tmpBuf, '\n');
-
-			std::vector<std::string> tmpvec = Util::split(Util::remove_crlf(tmpBuf), ' ');
-			if (tmpvec.size() != 3)
+			if (parse_startline() == false)
 				throw statusCode = 400;
 
-			StartLine.method  = tmpvec[0];
-			StartLine.url = tmpvec[1];
-			StartLine.protocol = tmpvec[2];
 			StartLine.out();
 			progress = HEADER;
+			return READ_REQUEST;
 		}
-
 		cout << "progress == HEADER" << endl;
-		//	HEADER
+
 		while (progress == HEADER)
 		{
-			cout << "[" << buffer << "]" << endl;
-			if (buffer.empty())
+			if (is_done_buffer() == true)
 				return READ_REQUEST;
-			Util::getline(buffer, tmpBuf);
-			cout << "[tmpBuf]" << endl;
-			cout << tmpBuf << endl;
-			Util::strip(tmpBuf, '\r');
-			if (tmpBuf.empty())
+
+			if (is_end_header() == true) {
 				progress = HEADER_SET;
-			else
-				makeHeader(tmpBuf);
+				break;
+			}
+
+			std::getline(buffer, tmp);
+			make_header(tmp);
 		}
 		cout << "progress == HEADER_SET" << endl;
 
-		//	HEADER SETTING
 		if (progress == HEADER_SET)
 		{
-			cout << "A" << endl;
+			// virtualPath : ?로 나눌 때 [0]
+			// params : ?로 나눌 때 [1]
 			virtualPath = Util::split(StartLine.url, '?')[0];
 			params = Util::split(Util::split(StartLine.url, '?')[1], '&');
 			locationName = findLocation(virtualPath);
@@ -142,8 +132,10 @@ struct Request
 			ext = findExtension(virtualPath);
 
 			if (Header.find("Transfer-Encoding") != Header.end()
-				^ Header.find("Content-Length") != Header.end())
-				throw "Request 133L Chunked && Content-Length";
+				^ Header.find("Content-Length") != Header.end()) {
+					std::cout << Header["Content-Length"] << std::endl;
+					throw "Request 133L Chunked && Content-Length";
+				}
 
 			if (Header.find("Content-Length") != Header.end())
 				contentLength = Util::stoi(Header["Content-Length"]);
@@ -157,33 +149,33 @@ struct Request
 		}
 
 		//	BODY
-		int		bodyMax = 0;
-		if (g_conf[configName][locationName].is_exist("client_max_body_size"))
-			bodyMax = Util::stoi(g_conf[configName][locationName]["client_max_body_size"][0]);
+		// int		bodyMax = 0;
+		// if (g_conf[configName][locationName].is_exist("client_max_body_size"))
+		// 	bodyMax = Util::stoi(g_conf[configName][locationName]["client_max_body_size"][0]);
 
-		while (progress == BODY && contentLength > 0)
-		{
-			Util::getline(buffer, tmpBuf);
-			Util::remove_crlf(tmpBuf);
+		// while (progress == BODY && contentLength > 0)
+		// {
+		// 	Util::getline(buffer, tmpBuf);
+		// 	Util::remove_crlf(tmpBuf);
 
-			//	버퍼가 비었을 때 강제로 스코프 탈출시켜 if로 예외처리 되게 함
-			if (tmpBuf.empty())
-				break ;
+		// 	//	버퍼가 비었을 때 강제로 스코프 탈출시켜 if로 예외처리 되게 함
+		// 	if (tmpBuf.empty())
+		// 		break ;
 
-			Util::join(Body, tmpBuf, '\n');
-			contentLength -= tmpBuf.size();
+		// 	Util::join(Body, tmpBuf, '\n');
+		// 	contentLength -= tmpBuf.size();
 
-			if (chunkFlag)
-			{
-				Util::getline(buffer, tmpBuf);
-				contentLength = Util::to_hex(tmpBuf);
-			}
+		// 	if (chunkFlag)
+		// 	{
+		// 		Util::getline(buffer, tmpBuf);
+		// 		contentLength = Util::to_hex(tmpBuf);
+		// 	}
 
-			if (bodyMax && Body.size() > bodyMax)
-				throw statusCode = 413;
-		}
-		if (contentLength)
-			return READ_REQUEST;
+		// 	if (bodyMax && Body.size() > bodyMax)
+		// 		throw statusCode = 413;
+		// }
+		// if (contentLength)
+		// 	return READ_REQUEST;
 
 		return DONE_REQUEST;
 	}
@@ -194,17 +186,16 @@ struct Request
 			return ;
 	}
 
-	void makeHeader(const std::string& buf)
+	void make_header(const std::string& buf)
 	{
-		std::pair<std::string, std::string> kv = Util::divider(buf, ':');
+		std::stringstream ss(buf);
+		std::string key;
+		std::string val;
 
-		//	TODO : 정규화 필요 여부 확인
-		if (kv.first.empty() || kv.second.empty())
-			throw statusCode = 400;	//	bad Request
-		if (Header.find(kv.first) != Header.end())
-			throw statusCode = 400;
+		std::getline(ss, key, ':');
+		ss >> val;
 
-		Header[kv.first] = kv.second;
+		Header[key] = val;
 	}
 
 	//	TODO : 맘에 안드는 함수
@@ -237,7 +228,47 @@ struct Request
 		StartLine.out();
 		for (std::map<string, string>::iterator it = Header.begin(); it != Header.end(); ++it)
 			cout << it->first << " : " << it->second << endl;
+		cout << "[Body]" << endl;
 		cout << Body << endl;
+	}
+
+	bool parse_startline() {
+		buffer >> StartLine.method >> StartLine.url >> StartLine.protocol;
+		if (StartLine.method == "" || StartLine.url == "" || StartLine.protocol == "")
+			return false;
+		if (buffer.peek() != '\r' && buffer.peek() != '\n')
+			return false;
+		skip_crlf();
+		return true;
+	}
+
+	bool is_done_buffer()
+	{
+		if (buffer.eof())
+		{
+			buffer.str("");
+			buffer.clear();
+			return true;
+		}
+		return false;
+	}
+
+	void skip_crlf()
+	{
+		if (buffer.peek() == '\r')
+			buffer.get();
+		if (buffer.peek() == '\n')
+			buffer.get();
+	}
+
+	bool is_end_header()
+	{
+		if (buffer.peek() == '\r')
+		{
+			skip_crlf();
+			return true;
+		}
+		return false;
 	}
 };
 

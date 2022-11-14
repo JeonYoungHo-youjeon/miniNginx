@@ -59,7 +59,7 @@ struct Response
 	int set(const Request& req)
 	{
 		Req = &req;
-		postBody = req.buffer.str();
+		//postBody = req.buffer.str();
 		path = req.locationName;
 		fileName = req.fileName;
 		if (!req.locationName.empty() && g_conf[Req->configName][path].is_exist("root"))

@@ -202,14 +202,13 @@ void Event::handle_client_read_event(ClientSocket* socket)
 		switch (state)
 		{
 		case READY_REQUEST:
-			state = req->set(socket->get_fd(), socket->get_server_ip_port());
-			if (state == DONE_REQUEST)
-				state = socket->get_response().set(*req);
-			break;
+			req->set(socket->get_fd(), socket->get_server_ip_port());
 		case READ_REQUEST:
 			state = req->read();
-			if (state == DONE_REQUEST)
-				state =socket->get_response().set(*req);
+			if (state == DONE_REQUEST) {
+				req->print_request();
+			}
+//				state = socket->get_response().set(*req);
 			break;
 		}
 	}

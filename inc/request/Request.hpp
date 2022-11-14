@@ -6,7 +6,6 @@
 # include "../parse/Config.hpp"
 # include "../parse/Util.hpp"
 # include "../response/Cgi.hpp"
-// # include "../Body.hpp"
 
 using std::string;
 using std::cout;
@@ -37,7 +36,7 @@ struct Request
 	string						locationName;
 	string 						fileName;
 	string 						ext;
-	std::stringstream			buffer;
+	string						buffer;
 	int 						statement;
 	int 						progress;
 	std::string					tmp;
@@ -69,79 +68,78 @@ struct Request
 		return *this;
 	}
 
-	int set(int fd, const string& configName)
+	void set(int fd, const string& configName)
 	{
 		this->configName = configName;
 		this->clientFd = fd;
 		statement = READ_REQUEST;
 		progress = START_LINE;
-
-		return READ_REQUEST;
 	}
 
-#include <iostream>
 	int read()
 	{
 		char rcvData[BUFFER_SIZE];
 		int byte = recv(clientFd, &rcvData[0], BUFFER_SIZE, 0);
 
-		if (byte < 0)
+		if (byte <= 0)
 		{
 			strerror(errno);
 			throw statusCode = 400;	//	catch (int statusCode);
 		}
-		tmp += rcvData;
-		//buffer << rcvData;
-		//std::cout << buffer.str() << std::endl;
-		for (int i = 0; i < tmp.size(); ++i) {
-			std::cout << tmp[i] << " : " << (int)tmp[i] << std::endl;
-		}
-		if (buffer.str().back() != '\n') {
-		std::cout << "back" << std::endl;
+		buffer += rcvData;
+		if (buffer[buffer.size() - 1] != '\n')
 			return statement = READ_REQUEST;
-		}
-
 		return statement = parse();
 	}
 
 	int parse()
 	{
-		std::cout << "start pares" << std::endl;
 		string tmpBuf;
 
 		//	STARTLINE
 		if (progress == START_LINE)
 		{
-			std::getline(buffer, tmpBuf, '\n');
-			std::stringstream tmpSs(Util::remove_crlf(tmpBuf));
+			//	TODO
+			Util::getline(buffer, tmpBuf, '\n');
 
-			tmpSs >> StartLine.method >> StartLine.url >> StartLine.protocol;
-			if (!tmpSs || !tmpSs.str().empty())
-				throw "Format Error";
+			std::vector<std::string> tmpvec = Util::split(Util::remove_crlf(tmpBuf), ' ');
+			if (tmpvec.size() != 3)
+				throw statusCode = 400;
+
+			StartLine.method  = tmpvec[0];
+			StartLine.url = tmpvec[1];
+			StartLine.protocol = tmpvec[2];
+			StartLine.out();
 			progress = HEADER;
 		}
 
+		cout << "progress == HEADER" << endl;
 		//	HEADER
 		while (progress == HEADER)
 		{
-			std::getline(buffer, tmpBuf);
-
+			cout << "[" << buffer << "]" << endl;
+			if (buffer.empty())
+				return READ_REQUEST;
+			Util::getline(buffer, tmpBuf);
+			cout << "[tmpBuf]" << endl;
+			cout << tmpBuf << endl;
 			Util::strip(tmpBuf, '\r');
 			if (tmpBuf.empty())
 				progress = HEADER_SET;
 			else
 				makeHeader(tmpBuf);
 		}
+		cout << "progress == HEADER_SET" << endl;
 
 		//	HEADER SETTING
 		if (progress == HEADER_SET)
 		{
+			cout << "A" << endl;
 			virtualPath = Util::split(StartLine.url, '?')[0];
 			params = Util::split(Util::split(StartLine.url, '?')[1], '&');
 			locationName = findLocation(virtualPath);
 			fileName = virtualPath.erase(0, locationName.size());
 			ext = findExtension(virtualPath);
-
 
 			if (Header.find("Transfer-Encoding") != Header.end()
 				^ Header.find("Content-Length") != Header.end())
@@ -165,7 +163,7 @@ struct Request
 
 		while (progress == BODY && contentLength > 0)
 		{
-			std::getline(buffer, tmpBuf);
+			Util::getline(buffer, tmpBuf);
 			Util::remove_crlf(tmpBuf);
 
 			//	버퍼가 비었을 때 강제로 스코프 탈출시켜 if로 예외처리 되게 함
@@ -177,15 +175,13 @@ struct Request
 
 			if (chunkFlag)
 			{
-				std::getline(buffer, tmpBuf);
+				Util::getline(buffer, tmpBuf);
 				contentLength = Util::to_hex(tmpBuf);
 			}
 
 			if (bodyMax && Body.size() > bodyMax)
 				throw statusCode = 413;
-			std::cout << "in" << std::endl;
 		}
-		std::cout << "out" << std::endl;
 		if (contentLength)
 			return READ_REQUEST;
 
@@ -241,6 +237,7 @@ struct Request
 		StartLine.out();
 		for (std::map<string, string>::iterator it = Header.begin(); it != Header.end(); ++it)
 			cout << it->first << " : " << it->second << endl;
+		cout << Body << endl;
 	}
 };
 

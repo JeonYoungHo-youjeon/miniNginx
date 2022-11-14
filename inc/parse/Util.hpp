@@ -22,6 +22,7 @@ struct Util
 	static int to_hex(const std::string& str);
 	static std::string get_date();
 	static std::string to_string(int num);
+	static void getline(std::string& buffer, std::string& to, const char c);
 };
 
 std::string Util::remover(const std::string& input, const char rmchar)
@@ -40,7 +41,7 @@ std::vector<std::string> Util::split(const std::string& input, const char delime
     std::stringstream			ss(input);
     std::string					tmp;
 
-    while (getline(ss, tmp, delimeter))
+    while (std::getline(ss, tmp, delimeter))
         ret.push_back(tmp);
 
     return ret;
@@ -66,7 +67,10 @@ Util::divider(const std::string& ps, const char delimeter)
 {
 	size_t idx = ps.rfind(delimeter);
 	std::string first(ps.begin(), ps.begin() + idx);
-	std::string second(ps.begin() + idx, ps.end());
+	std::string second(ps.begin() + idx + 1, ps.end());
+	std::cout << "divider" << std::endl;
+	std::cout << "[" << first << "]" << std::endl;
+	std::cout << "[" << second << "]" << std::endl;
 	return std::make_pair(first, second);
 }
 
@@ -126,5 +130,15 @@ std::string Util::to_string(int num)
 	return ss.str();
 }
 
+void Util::getline(std::string& buffer, std::string& to, const char c = '\n')
+{
+	std::stringstream ss(buffer);
+	std::getline(ss, to, c);
+	buffer.erase(0, to.size() + 1);
+	size_t	pos = buffer.find_first_not_of(c);
+	buffer.erase(0, pos);
+	std::cout << "ORIGIN BUF : " << buffer << std::endl;
+	std::cout << "TO BUF : " << to << std::endl;
+}
 
 #endif

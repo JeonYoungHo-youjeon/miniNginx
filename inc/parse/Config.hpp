@@ -19,7 +19,7 @@ public:
 	string	str(size_t tab_size);
 	const bool is_exist(const string& key) const;
 	const Server& operator[](const string& key) const;
-	const string& getContentType(const string& key) const;
+	// const string& getContentType(const string& key) const;
 	const string& getStatusMsg(int key) const;
 
 protected:
@@ -138,18 +138,18 @@ const char* Config::ServerNotExist::what() const throw()
 	return "Server is Not Exist";
 }
 
-const string& Config::getContentType(const string& key) const
-{
-	std::map<string, string>::const_iterator it = mime.find(key);
-	if (it == mime.end())
-		return "application/octet-stream";
-	return it->second;
-}
+// const string& Config::getContentType(const string& key) const
+// {
+// 	std::map<string, string>::const_iterator it = mime.find(key);
+// 	if (it == mime.end())
+// 		return "application/octet-stream";
+// 	return it->second;
+// }
 
-const string& Config::getStatusMsg(int key) const
-{
-	std::map<int, string>::const_iterator	it = statusMsg.find(key);
-}
+// const string& Config::getStatusMsg(int key) const
+// {
+// 	std::map<int, string>::const_iterator	it = statusMsg.find(key);
+// }
 
 
 #endif  // PARSE_CONFIG_HPP

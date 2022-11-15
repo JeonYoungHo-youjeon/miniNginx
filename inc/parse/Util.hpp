@@ -104,8 +104,18 @@ std::string Util::join(const std::string& str1, const std::string& str2, const c
 
 int Util::to_hex(const std::string& str)
 {
+	int idx = 0;
+
+	while (idx < str.size())
+	{
+		if (!(('0' <= str[idx] && str[idx] <= '9') || ('a' <= str[idx] && str[idx] <= 'f')))
+			return -1;
+		++idx;
+	}
+	
 	int ret;
 	std::stringstream ss(str);
+
 	ss >> std::hex >> ret;
 	return ret;
 }

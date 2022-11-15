@@ -108,13 +108,13 @@ struct Response
 		Header["Connection"] = "Keep-Alive";
 		Header["Server"] = "miniNginx/1.1";
 		{    /* 필요 헤더*/    }
-		Header["Content-Type"] = g_conf.getContentType(ext);
+		// Header["Content-Type"] = g_conf.getContentType(ext);
 		return makeStartLine();
 	}
 
 	int makeStartLine()
 	{
-		StartLine.reasonPhrase = g_conf.getStatusMsg(StartLine.statusCode);
+		// StartLine.reasonPhrase = g_conf.getStatusMsg(StartLine.statusCode);
 		StartLine.protocol = "HTTP/1.1";
 		return statement = DONE_RESPONSE;
 	}

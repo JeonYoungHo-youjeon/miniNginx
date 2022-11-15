@@ -221,7 +221,6 @@ void Event::handle_client_read_event(ClientSocket* socket)
 		// state = socket->set_response(error_code);
 	}
 	// TODO: other exception
-	std::cout << "state : " << state << std::endl;
 
 	handle_next_event(socket, state);
 }

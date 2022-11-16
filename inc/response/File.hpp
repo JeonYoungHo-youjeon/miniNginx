@@ -6,9 +6,6 @@
 
 struct File : public Contents
 {
-	//File(Response& res) : Contents(res.path + res.filename, res.body) {
-	//	cout << res.path + res.filename << ' ' << endl;
-	//};
 	File(const std::string& url) : Contents(url) {};
 	File(const std::string& path, const std::vector<std::string>& param)
 	: Contents(path) {};

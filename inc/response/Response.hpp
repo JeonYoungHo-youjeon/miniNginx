@@ -65,7 +65,7 @@ struct Response
 		return ret;
 	}
 
-	int set(const std::string & configName, int error_code)
+	int set(const std::string& configName, int error_code)
 	{
 		this->configName = configName;
 		StartLine.statusCode = error_code;
@@ -74,13 +74,14 @@ struct Response
 
 	int set(const Request& req)
 	{
+		StartLine.statusCode = 200;
 		Req = &req;
 		postBody = req.buffer.str();
 		locationName = path = req.locationName;
 		fileName = req.fileName;
 		if (!req.locationName.empty() && g_conf[Req->configName][path].is_exist("root"))
 			path = g_conf[Req->configName][path]["root"][0];
-		path += fileName;
+		path = Util::join(path, fileName, '/');
 		ext = req.ext;
 
 		progress = READY;
@@ -115,26 +116,16 @@ struct Response
 	int makeHeader()
 	{
 		std::cout << "OK" << std::endl;
-		Header["Content-Length"] = Util::to_string(Body.size());
+		//Header["Content-Length"] = Util::to_string(Body.size());
 		Header["Date"] = Util::get_date();
-		std::cout << Util::get_date() << std::endl;
 		Header["Server"] = "miniNginx/1.1";
 
 		map<string, string>::iterator it = Header.find("Connection");
 		if (it == Header.end())
 			Header["Connection"] = "Keep-Alive";
-
-		//it = Header.find("Content-Type");
-		//if (it == Header.end() && !contentResult->getPid())
-		//	Header["Content-Type"] = "text/html";
-		//else
 		Header["Content-Type"] = g_conf.getContentType(ext);
 		Header["Content-Length"] = Body.size();
-
-		// Header["Location"] = "/";
-
 		{    /* 필요 헤더*/    }
-		//Header["Content-Type"] = g_conf.getContentType(ext);
 		return makeStartLine();
 	}
 
@@ -142,6 +133,7 @@ struct Response
 	{
 		StartLine.reasonPhrase = g_conf.getStatusMsg(StartLine.statusCode);
 		StartLine.protocol = "HTTP/1.1";
+		std::cout << "STARTLINE OK" << std::endl;
 		return statement = DONE_RESPONSE;
 	}
 
@@ -162,66 +154,6 @@ struct Response
 																							"  </h1>\n"
 																							"</html>\n";
 		return makeHeader();
-	}
-
-	/**
-	 * 사유 구절이 있으면 해당 값 반환, 상태 코드가 없으면 공백 반환, 상태 코드가 있으면 해당 값에 맞게 반환.
-	 *
-	 */
-
-	string get_contentType()
-	{
-		const char *mimetypes[][2] = 
-		{
-			{ "html", "text/html" },
-			{ "jpg", "image/jpeg" },
-			{ "jpeg", "image/jpeg" },
-			{ "mp3", "audio/mpeg" }
-		};
-
-		for (size_t i = 0; i < sizeof(mimetypes)/sizeof(mimetypes[0]); i++) 
-		{
-			std::string::size_type dotpos = path.rfind('.');
-			if (path.compare(dotpos+1, path.size(), mimetypes[i][0]) == 0)
-				return mimetypes[i][1];
-
-		}
-		
-		return "application/octet-stream";
-	};
-
-
-	string get_reasonPhrase()
-	{
-		if (!StartLine.reasonPhrase.empty())
-			return StartLine.reasonPhrase;
-
-		switch (StartLine.statusCode)
-		{
-			case 200:
-				return "OK";
-			case 201:
-				return "Created";
-			case 204:
-				return "No Content";
-			case 301:
-				return "Moved Permanently";
-			case 400:
-				return "Bad Request";
-			case 403:
-				return "Forbidden";
-			case 404:
-				return "Not Found";
-			case 405:
-				return "Method Not Allowed";
-			case 413:
-				return "Payload Too Large";
-			case 500:
-				return "Internal Server Error";
-
-			default:
-				return "DON'T_KNOW_THIS_CODE";
-		}
 	}
 };
 
@@ -256,7 +188,7 @@ int 	Response::execute()
 			contentResult = new Cgi(path, ext, params);
 		else
 			contentResult = new File(path);
-		
+
 		progress = contentResult->set();
 
 		if (Req->StartLine.method == "GET")

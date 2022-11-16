@@ -102,7 +102,9 @@ struct Request
 
 			StartLine.out();
 			progress = HEADER;
-			return READ_REQUEST;
+			
+			if (is_done_buffer() == true)
+				return READ_REQUEST;
 		}
 
 		while (progress == HEADER)

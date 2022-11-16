@@ -8,7 +8,7 @@ class StatusMsg : public std::map<int, std::string>
 {
 private:
 	StatusMsg(const StatusMsg&);
-	StatusMsg& operator=(const StatusMsg&);
+//	StatusMsg& operator=(const StatusMsg&);
 public:
 	StatusMsg();
 	~StatusMsg();

@@ -8,7 +8,7 @@ class Mime : public std::map<std::string, std::string>
 {
 private:
 	Mime(const Mime&);
-	Mime& operator=(const Mime&);
+//	Mime& operator=(const Mime&);
 public:
 	Mime();
 	~Mime();

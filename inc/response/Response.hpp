@@ -53,11 +53,23 @@ struct Response
 
 	~Response();
 
+	string toHtml()
+	{
+		string ret;
+		ret += StartLine.protocol + ' ' + Util::to_string(StartLine.statusCode) + ' ' + StartLine.reasonPhrase + "\r\n";
+		for (std::map<string, string>::iterator it = Header.begin(); it != Header.end(); ++it)
+			ret += it->first + ": " + it->second + "\r\n";
+		ret += "\r\n";
+		if (!Body.empty())
+			ret += Body + "\r\n";
+		return ret;
+	}
+
 	int set(const std::string & configName, int error_code)
 	{
 		this->configName = configName;
 		StartLine.statusCode = error_code;
-		return execute();
+		return make_errorpage(error_code);
 	}
 
 	int set(const Request& req)
@@ -102,30 +114,33 @@ struct Response
 
 	int makeHeader()
 	{
+		std::cout << "OK" << std::endl;
 		Header["Content-Length"] = Util::to_string(Body.size());
 		Header["Date"] = Util::get_date();
+		std::cout << Util::get_date() << std::endl;
 		Header["Server"] = "miniNginx/1.1";
 
 		map<string, string>::iterator it = Header.find("Connection");
 		if (it == Header.end())
 			Header["Connection"] = "Keep-Alive";
 
-		it = Header.find("Content-Type");
-		if (it == Header.end() && !contentResult->getPid())
-			Header["Content-Type"] = "text/html";
-		else 
-			Header["Content-Type"] = get_contentType();
+		//it = Header.find("Content-Type");
+		//if (it == Header.end() && !contentResult->getPid())
+		//	Header["Content-Type"] = "text/html";
+		//else
+		Header["Content-Type"] = g_conf.getContentType(ext);
+		Header["Content-Length"] = Body.size();
 
 		// Header["Location"] = "/";
 
 		{    /* 필요 헤더*/    }
-		// Header["Content-Type"] = g_conf.getContentType(ext);
+		//Header["Content-Type"] = g_conf.getContentType(ext);
 		return makeStartLine();
 	}
 
 	int makeStartLine()
 	{
-		// StartLine.reasonPhrase = g_conf.getStatusMsg(StartLine.statusCode);
+		StartLine.reasonPhrase = g_conf.getStatusMsg(StartLine.statusCode);
 		StartLine.protocol = "HTTP/1.1";
 		return statement = DONE_RESPONSE;
 	}

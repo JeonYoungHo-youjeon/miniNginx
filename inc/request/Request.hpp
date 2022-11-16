@@ -193,8 +193,8 @@ struct Request
 					bodySS << charBuffer;
 
 					std::cout << "[CHUNK DATA]" << std::endl;
-					for (char c : bodySS.str())
-						std::cout << (int)c << " ";
+					for (int i = 0; i < bodySS.str().size(); ++i)
+						std::cout << (int)bodySS.str()[i] << " ";
 					std::cout << std::endl;
 
 					int buffer_len = strlen(charBuffer);

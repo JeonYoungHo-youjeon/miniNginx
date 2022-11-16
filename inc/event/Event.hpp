@@ -209,7 +209,6 @@ void Event::handle_client_read_event(ClientSocket* socket)
 				std::cout << "[DONE_REQUEST]" << std::endl;
 				req->print_request();
 				state = socket->get_response().set(*req);
-				std::cout << state << std::endl;
 			}
 			break;
 		}
@@ -247,17 +246,22 @@ void Event::handle_client_write_event(ClientSocket* socket)
 
 void Event::handle_next_event(ClientSocket* socket, State state)
 {
-	const std::string& connection = socket->get_request().Header[HEAD[CONNECTION]];
+	std::string connection;
+
+	if (socket->get_request().Header.count(HEAD[CONNECTION]))
+		connection = socket->get_request().Header[HEAD[CONNECTION]];
 
 	// if (state == DONE_RESPONSE && connection != "close")
 	// {
-	// 	// TODO : send
 	// 	socket->update_state(READ_REQUEST);
+	// 	// TODO : send
+	// 	send(socket->get_fd(), socket->get_response().Body.c_str(), BUFFER_SIZE, 0);
 	// 	kq->enable_read_event(socket, socket->get_fd());
 	// }
 	if (state == DONE_RESPONSE)
 	{
 		// TODO : send
+		send(socket->get_fd(), socket->get_response().Body.c_str(), BUFFER_SIZE, 0);
 		disconnection(socket);
 	}
 	else

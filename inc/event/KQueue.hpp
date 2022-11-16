@@ -53,28 +53,30 @@ int KQueue::wait_event()
 	int nEvent = kevent(kq, &changeList[0], changeList.size(), eventList, MAX_EVENT, NULL);
 
 	// TODO: error 발생 시 500 Inerneal Server Error를 던져야 하는 상황 확인
-	switch (errno)
-	{
-	case EACCES:
-		throw EventInitException("kevent() error [errno : EACCES]");
-	case EFAULT:
-		throw EventInitException("kevent() error [errno : EFAULT]");
-	case EBADF:
-		throw EventInitException("kevent() error [errno : EBADF]");
-	case EINTR:
-		throw EventInitException("kevent() error [errno : EINTR]");
-	case EINVAL:
-		throw EventInitException("kevent() error [errno : EINVAL]");
-	case ENOENT:
-		throw EventInitException("kevent() error [errno : ENOENT]");
-	case ENOMEM:
-		throw EventInitException("kevent() error [errno : ENOMEM]");
-	case ESRCH:
-		throw EventInitException("kevent() error [errno : ESRCH]");
-	default:
-		changeList.clear();
-		return nEvent;
-	}
+	// switch (errno)
+	// {
+	// case EACCES:
+	// 	throw EventInitException("kevent() error [errno : EACCES]");
+	// case EFAULT:
+	// 	throw EventInitException("kevent() error [errno : EFAULT]");
+	// case EBADF:
+	// 	throw EventInitException("kevent() error [errno : EBADF]");
+	// case EINTR:
+	// 	throw EventInitException("kevent() error [errno : EINTR]");
+	// case EINVAL:
+	// 	throw EventInitException("kevent() error [errno : EINVAL]");
+	// case ENOENT:
+	// 	throw EventInitException("kevent() error [errno : ENOENT]");
+	// case ENOMEM:
+	// 	throw EventInitException("kevent() error [errno : ENOMEM]");
+	// case ESRCH:
+	// 	throw EventInitException("kevent() error [errno : ESRCH]");
+	// default:
+	// 	changeList.clear();
+	// 	return nEvent;
+	// }
+	changeList.clear();
+	return nEvent;
 }
 
 void KQueue::add_server_io_event(const Socket* socket, FD fd)

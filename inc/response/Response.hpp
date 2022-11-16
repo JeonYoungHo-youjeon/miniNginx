@@ -25,32 +25,35 @@ struct ResponseStartLine
 
 struct Response
 {
-	const Request*		Req;
-	ResponseStartLine	StartLine;
-	map<string, string>	Header;
-	string				Body;
+	const Request *Req;
+	ResponseStartLine StartLine;
+	map<string, string> Header;
+	string Body;
 
-	string				configName;
-	string				postBody;
-	int					contentLength;
-	int					statement;
-	int					progress;
+	string configName;
+	string postBody;
+	int contentLength;
+	int statement;
+	int progress;
 
 	/**
 	 * brief : 파일 경로 관련 변수
 	 */
-	Contents*		contentResult;
-	string			path;
-	string			fileName;
-	string			ext;
-	string			excutor;
-	vector<string>	params;
+	Contents *contentResult;
+	string locationName;
+	string path;
+	string fileName;
+	string ext;
+	string excutor;
+	vector<string> params;
 
 	Response();
-	Response(const Request& req);
+
+	Response(const Request & req);
+
 	~Response();
 
-	int set(const std::string& configName, int error_code)
+	int set(const std::string & configName, int error_code)
 	{
 		this->configName = configName;
 		StartLine.statusCode = error_code;
@@ -61,7 +64,7 @@ struct Response
 	{
 		Req = &req;
 		postBody = req.buffer.str();
-		path = req.locationName;
+		locationName = path = req.locationName;
 		fileName = req.fileName;
 		if (!req.locationName.empty() && g_conf[Req->configName][path].is_exist("root"))
 			path = g_conf[Req->configName][path]["root"][0];
@@ -71,23 +74,24 @@ struct Response
 		progress = READY;
 		return statement = execute();
 	}
+
 	/**
 	 * @brief Set & return nextToDo
 	 * @return statement
 	 */
-	int 	execute();
+	int execute();
 
 	/**
 	 * @brief Write & return nextToDo
 	 * @return statement
 	 */
-	int 	write();
+	int write();
 
 	/**
 	 * @brief Read & return nextToDo
 	 * @return statement
 	 */
-	int 	read();
+	int read();
 
 	/**
 	 * @brief : exec -> read or write로 진행 예정
@@ -96,10 +100,7 @@ struct Response
 	 * @return read : READ or DONE
 	 */
 
-	//			set() -> execute() -> write() for done -> read for done
-	//	return	EXEC_ -> _READ || _WRITE for done
-
-	int		makeHeader()
+	int makeHeader()
 	{
 		Header["Content-Length"] = Util::to_string(Body.size());
 		Header["Date"] = Util::get_date();
@@ -118,25 +119,33 @@ struct Response
 		// Header["Location"] = "/";
 
 		{    /* 필요 헤더*/    }
+		// Header["Content-Type"] = g_conf.getContentType(ext);
 		return makeStartLine();
 	}
 
-	int		makeStartLine()
+	int makeStartLine()
 	{
-		StartLine.reasonPhrase = get_reasonPhrase();
+		// StartLine.reasonPhrase = g_conf.getStatusMsg(StartLine.statusCode);
 		StartLine.protocol = "HTTP/1.1";
 		return statement = DONE_RESPONSE;
 	}
 
 	int make_errorpage(int code)
 	{
+		if (g_conf[configName][locationName].is_exist("error_page"))
+		{
+			for (size_t i = 0; i < g_conf[configName][locationName]["error_page"].size() - 1; ++i)
+				if (Util::to_string(StartLine.statusCode) == g_conf[configName][locationName]["error_page"][i])
+					path = g_conf[configName][locationName]["error_page"].back();
+			return execute();
+		}
 		Body =
 				"<!DOCTYPE html>\n"
 				"<html>\n"
 				"  <h1>\n"
-				"    " + Util::to_string(StartLine.statusCode) + " " + get_reasonPhrase() + "\n"
-				"  </h1>\n"
-				"</html>\n";
+				"    " + Util::to_string(StartLine.statusCode) + " " +  + "\n"
+																							"  </h1>\n"
+																							"</html>\n";
 		return makeHeader();
 	}
 
@@ -203,8 +212,6 @@ struct Response
 
 Response::Response()
 {}
-
-
 Response::~Response()
 {
 	if (contentResult != nullptr)
@@ -219,16 +226,17 @@ int 	Response::execute()
 	
 	try
 	{
-		if (StartLine.statusCode != 200)
-			throw StartLine.statusCode;
-
 		if (Req->StartLine.method == "DELETE")
 		{
 			if (remove(path.c_str()))
-				throw StartLine.statusCode = 404;
+				throw 404;
+			Body = path;
 			return 	makeHeader();
 		}
-  
+		//	Method Error -> Bad Request
+		if (Req->StartLine.method != "GET" && Req->StartLine.method != "POST")
+			throw 400;
+
 		if (g_conf[Req->configName][Req->locationName].is_exist(ext))
 			contentResult = new Cgi(path, ext, params);
 		else
@@ -241,13 +249,10 @@ int 	Response::execute()
 
 		if (Req->StartLine.method == "POST")
 			return statement = WRITE_RESPONSE;
-		
-		//	Method Error -> Bad Request
-		throw StartLine.statusCode = 400;
 	}
 	catch (int errNo)	//	예외 발생 시 일단 객체 내에서 처리 -> 수정 O
 	{
-		return make_errorpage(errNo);
+		return make_errorpage(StartLine.statusCode = errNo);
 	}
 	return makeHeader();
 }

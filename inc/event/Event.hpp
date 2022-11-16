@@ -202,23 +202,25 @@ void Event::handle_client_read_event(ClientSocket* socket)
 		switch (state)
 		{
 		case READY_REQUEST:
-			state = req->set(socket->get_fd(), socket->get_server_ip_port());
-			if (state == DONE_REQUEST)
-				state = socket->get_response().set(*req);
-			break;
+			req->set(socket->get_fd(), socket->get_server_ip_port());
 		case READ_REQUEST:
 			state = req->read();
-			if (state == DONE_REQUEST)
-				state =socket->get_response().set(*req);
+			if (state == DONE_REQUEST) {
+				std::cout << "[DONE_REQUEST]" << std::endl;
+				req->print_request();
+				state = socket->get_response().set(*req);
+				std::cout << state << std::endl;
+			}
 			break;
 		}
 	}
 	catch (int error_code)
 	{
-		state = socket->set_response(error_code);
+		std::cout << "[catch error_code] : " << error_code << std::endl;
+		disconnection(socket);
+		// state = socket->set_response(error_code);
 	}
 	// TODO: other exception
-	std::cout << "state : " << state << std::endl;
 
 	handle_next_event(socket, state);
 }
@@ -245,15 +247,15 @@ void Event::handle_client_write_event(ClientSocket* socket)
 
 void Event::handle_next_event(ClientSocket* socket, State state)
 {
-	const std::string& connection = socket->get_response().Header["Connection"];
+	const std::string& connection = socket->get_request().Header[HEAD[CONNECTION]];
 
-	if (state == DONE_RESPONSE && connection != "close")
-	{
-		// TODO : send
-		socket->update_state(READ_REQUEST);
-		kq->enable_read_event(socket, socket->get_fd());
-	}
-	else if (state == DONE_RESPONSE)
+	// if (state == DONE_RESPONSE && connection != "close")
+	// {
+	// 	// TODO : send
+	// 	socket->update_state(READ_REQUEST);
+	// 	kq->enable_read_event(socket, socket->get_fd());
+	// }
+	if (state == DONE_RESPONSE)
 	{
 		// TODO : send
 		disconnection(socket);
@@ -270,7 +272,7 @@ void Event::handle_next_event(ClientSocket* socket, State state)
 void Event::socket_timeout(const ClientSocket* socket)
 {
 	// TODO: CGI kill
-	if (socket->is_expired()) {
+	if (socket->is_expired() && sockets.count(socket->get_fd())) {
 		logger.disconnection_logging(socket, LOG_YELLOW);
 		add_garbage(socket);
 	}

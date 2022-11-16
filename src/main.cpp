@@ -20,16 +20,9 @@ int main(int argc, char** argv)
 		cerr << "Error" << e.what() << endl;
 		return 1;
 	}
-	try
-	{
-		Event event;
+	Event event;
 		
-		event.event_loop();
-	}
-	catch(const std::exception& e)
-	{
-		std::cerr << e.what() << '\n';
-	}
+	event.event_loop();
 	// system("leaks miniNginx");
     return 0;
 }

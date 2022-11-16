@@ -1,0 +1,27 @@
+GET /index.html HTTP/1.1
+hOSt: localhost
+
+GET /?p1=v1&p2=v2 HTTP/1.1
+hoSt: localhost:8080
+tRANSfeR-eNcodING: chunked
+
+b
+hello world
+1c
+cello
+hello
+trello
+yellow
+0
+ACCEPT: acceptval
+Date: dateval
+
+GET /redirect HTTP/1.1
+Host: localhost
+CONteNt-lenGtH: 79
+
+hello world
+this is message body
+all newline characters
+replaced by crlf
+

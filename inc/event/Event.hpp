@@ -258,14 +258,17 @@ void Event::handle_next_event(ClientSocket* socket, State state)
 	// 	send(socket->get_fd(), socket->get_response().Body.c_str(), BUFFER_SIZE, 0);
 	// 	kq->enable_read_event(socket, socket->get_fd());
 	// }
+
 	if (state == DONE_RESPONSE)
 	{
 		// TODO : send
-		send(socket->get_fd(), socket->get_response().Body.c_str(), BUFFER_SIZE, 0);
+		std::cout << socket->get_response().toHtml() << std::endl;
+		send(socket->get_fd(), socket->get_response().toHtml().c_str(), BUFFER_SIZE, 0);
 		disconnection(socket);
 	}
 	else
 	{
+		std::cout << state << std::endl;
 		socket->update_state(state);
 		kq->set_next_event(socket, socket->get_state());
 	}

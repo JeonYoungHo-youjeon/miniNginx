@@ -116,7 +116,6 @@ struct Response
 	int makeHeader()
 	{
 		std::cout << "OK" << std::endl;
-		//Header["Content-Length"] = Util::to_string(Body.size());
 		Header["Date"] = Util::get_date();
 		Header["Server"] = "miniNginx/1.1";
 
@@ -124,7 +123,7 @@ struct Response
 		if (it == Header.end())
 			Header["Connection"] = "Keep-Alive";
 		Header["Content-Type"] = g_conf.getContentType(ext);
-		Header["Content-Length"] = Body.size();
+		Header["Content-Length"] = Util::to_string(Body.size());
 		{    /* 필요 헤더*/    }
 		return makeStartLine();
 	}
@@ -192,10 +191,10 @@ int 	Response::execute()
 		progress = contentResult->set();
 
 		if (Req->StartLine.method == "GET")
-			return statement = READ_RESPONSE;
+			return statement = this->read();
 
 		if (Req->StartLine.method == "POST")
-			return statement = WRITE_RESPONSE;
+			return statement = this->write();
 	}
 	catch (int errNo)	//	예외 발생 시 일단 객체 내에서 처리 -> 수정 O
 	{
@@ -231,8 +230,7 @@ int 	Response::read()
 	size_t	len = ::read(contentResult->outFd, buf, BUFFER_SIZE);
 
 	Body += string(buf, len);
-	//	TODO : READ 탈출 조건 정하기 - 일단 무조건 READ_RESPONSE 보내고 클라이언트에서 kill & close 하기?
-	if (!len)
+	if (len < BUFFER_SIZE)
 		return makeHeader();
 	if (len < 0)
 		throw StartLine.statusCode = 500;

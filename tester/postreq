@@ -1,0 +1,22 @@
+POST /post/file1 HTTP/1.1
+Host: localhost:8085
+Content-Length: 12
+
+helloworld
+POST /post/file1 HTTP/1.1
+Host: localhost:8085
+Transfer-Encoding: chunked
+
+5
+chunk
+5
+sizes
+3
+are
+b
+hexadecimal
+0
+f1: v1
+f2: v2
+f3: v3
+

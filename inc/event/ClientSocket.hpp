@@ -129,7 +129,7 @@ ClientSocket::ClientSocket()
 
 ClientSocket::ClientSocket(FD clientFD, const SockAddr& addr, const std::string& serverIPPort_)
 	: lastEventTime(get_current_time()), serverIPPort(serverIPPort_), \
-		readFD(0), writeFD(0), childPID(0), state(READY_REQUEST)
+		readFD(0), writeFD(0), childPID(0), state(READ_REQUEST)
 {
 	fd = clientFD;
 	ip = inet_ntoa(addr.sin_addr);

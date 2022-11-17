@@ -187,7 +187,6 @@ void Event::disconnection(const ClientSocket* socket)
  * 
  * @return None
 */
-// TODO : EOF 받을 시 DLE(Data Link Escape) 처리
 void Event::handle_client_read_event(ClientSocket* socket)
 {
 	if (socket->is_expired())
@@ -195,31 +194,33 @@ void Event::handle_client_read_event(ClientSocket* socket)
 
 	State state = socket->get_state();
 	Request* req = &(socket->get_request());
-	const Response* res = &(socket->get_response());
 
 	try
 	{
-		switch (state)
+		if (state == READ_REQUEST)
 		{
-		case READY_REQUEST:
-			req->set(socket->get_fd(), socket->get_server_ip_port());
-		case READ_REQUEST:
+			std::cout << "READ_REQUEST" << std::endl;
 			state = req->read();
-			if (state == DONE_REQUEST) {
-				std::cout << "[DONE_REQUEST]" << std::endl;
-				req->print_request();
-				state = socket->get_response().set(*req);
-			}
-			break;
+		}
+		else if (state == REPEAT_REQUEST)
+		{
+			std::cout << "REPEAT_REQUEST" << std::endl;
+			state = req->clear_read();
+
+		}
+
+		if (state == DONE_REQUEST) {
+			std::cout << "======[DONE_REQUEST]======" << std::endl;
+			req->print_request();
+			std::cout << "==========================" << std::endl;
+			state = socket->get_response().set(*req);
 		}
 	}
 	catch (int error_code)
 	{
 		std::cout << "[catch error_code] : " << error_code << std::endl;
-		disconnection(socket);
-		// state = socket->set_response(error_code);
+		state = socket->set_response(error_code);
 	}
-	// TODO: other exception
 
 	handle_next_event(socket, state);
 }
@@ -246,29 +247,29 @@ void Event::handle_client_write_event(ClientSocket* socket)
 
 void Event::handle_next_event(ClientSocket* socket, State state)
 {
-	std::string connection;
-
-	if (socket->get_request().Header.count(HEAD[CONNECTION]))
-		connection = socket->get_request().Header[HEAD[CONNECTION]];
-
-	// if (state == DONE_RESPONSE && connection != "close")
-	// {
-	// 	socket->update_state(READ_REQUEST);
-	// 	// TODO : send
-	// 	send(socket->get_fd(), socket->get_response().Body.c_str(), BUFFER_SIZE, 0);
-	// 	kq->enable_read_event(socket, socket->get_fd());
-	// }
+	Request* req = &(socket->get_request());
+	Response* res = &(socket->get_response());
 
 	if (state == DONE_RESPONSE)
 	{
 		// TODO : send
-		std::cout << socket->get_response().toHtml() << std::endl;
-		send(socket->get_fd(), socket->get_response().toHtml().c_str(), BUFFER_SIZE, 0);
-		disconnection(socket);
+		send(socket->get_fd(), res->toHtml().c_str(), res->toHtml().size(), 0);
+
+		if (req->is_empty_buffer() == false)
+		{
+			socket->update_state(REPEAT_REQUEST);
+			handle_client_read_event(socket);
+		}
+		else if (res->Header["Connection"] == "Keep-Alive")
+		{
+			socket->update_state(READ_REQUEST);
+			kq->enable_read_event(socket, socket->get_fd());
+		}
+		else
+			disconnection(socket);
 	}
 	else
 	{
-		std::cout << state << std::endl;
 		socket->update_state(state);
 		kq->set_next_event(socket, socket->get_state());
 	}

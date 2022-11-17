@@ -43,204 +43,202 @@ struct Request
 	string virtualPath;
 
 	int maxBodySize;
-	int chunkSize;
+	int readSize;
 	int contentLength;
 	bool chunkFlag;
 	int statusCode;
 	int clientFd;
+	char charBuffer[BUFFER_SIZE];
 
 	std::vector<string>	params;
 
 	/**
 	* @brief : 생성자 초기화, set()을 통한 초기화 등 임의로 다양하게 구현
 	*/
-	Request() : statusCode(200) {};
+	Request() {}
 	Request(int fd, const string& configName)
-	: statusCode(200), configName(configName)
+	: statusCode(200), configName(configName), clientFd(fd)
 	{
 		this->configName = configName;
-		this->clientFd = fd;
 		progress = START_LINE;
+		maxBodySize = MAX_BODY_SIZE;
+		// if (g_conf[configName][locationName].is_exist("client_max_body_size"))
+		// 	maxBodySize = Util::stoi(g_conf[configName][locationName]["client_max_body_size"][0]);
 	};
 
 	Request& operator=(const Request& req)
 	{
+		progress = req.progress;
+		configName = req.configName;
+		maxBodySize = req.maxBodySize;
+		clientFd = req.clientFd;
+
 		return *this;
 	}
 
-	void set(int fd, const string& configName)
+	int clear_read()
 	{
-		this->configName = configName;
-		this->clientFd = fd;
-		maxBodySize = MAX_BODY_SIZE;
 		progress = START_LINE;
+		Header.clear();
+		bodySS.str("");
+
+		return read();
 	}
 
 	int read()
 	{
-		char rcvData[BUFFER_SIZE] = {0};
-		int byte = recv(clientFd, &rcvData[0], BUFFER_SIZE, 0);
-
-		if (byte <= 0)
+		if (is_empty_buffer())
 		{
-			strerror(errno);
-			throw statusCode = 400;	//	catch (int statusCode);
-		}
-		buffer << rcvData;
+			char rcvData[BUFFER_SIZE] = {0};
+			int byte = recv(clientFd, &rcvData[0], BUFFER_SIZE, 0);
 
-		if (buffer.str().find('\n') == std::string::npos)
-			return READ_REQUEST;
+
+			if (byte < 0)
+				throw statusCode = 400;
+
+			buffer << rcvData;
+		}
 		return parse();
+	}
+	void set_header()
+	{
+		parse_url();
+
+		locationName = findLocation(virtualPath);
+		fileName = virtualPath.erase(0, locationName.size());
+		ext = findExtension(virtualPath);
+
+		if (Header.count(HEAD[CONTENT_LENGTH]))
+			contentLength = Util::stoi(Header[HEAD[CONTENT_LENGTH]]);
+		
+		if (Header.count(HEAD[TRANSFER_ENCODING]))
+			chunkFlag = true;
 	}
 
 	int parse()
 	{
-		if (progress == START_LINE)
+		while (true)
 		{
-			if (parse_startline() == false)
-				throw statusCode = 400;
+			switch (progress)
+			{
+			case START_LINE:
+				if (parse_startline() == false)
+				{
+					clear_buffer();
+					throw statusCode = 400;
+				}
+				progress = HEADER;
 
-			StartLine.out();
-			progress = HEADER;
-			
-			if (is_done_buffer() == true)
-				return READ_REQUEST;
-		}
-
-		while (progress == HEADER)
-		{
-			if (is_done_buffer() == true)
-				return READ_REQUEST;
-
-			if (is_crlf_line() == true) {
-				progress = HEADER_SET;
 				break;
-			}
-
-			std::getline(buffer, tmp);
-			make_header(tmp);
-		}
-
-		if (progress == HEADER_SET)
-		{
-			parse_url();
-
-			locationName = findLocation(virtualPath);
-			fileName = virtualPath.erase(0, locationName.size());
-			ext = findExtension(virtualPath);
-
-			if (Header.count(HEAD[CONTENT_LENGTH]))
-			{
-				contentLength = Util::stoi(Header[HEAD[CONTENT_LENGTH]]);
-				// TODO : get max body size
-				// if (g_conf[configName][locationName].is_exist("client_max_body_size"))
-				// 	maxBodySize = Util::stoi(g_conf[configName][locationName]["client_max_body_size"][0]);
-			}
-			
-			if (Header.count(HEAD[TRANSFER_ENCODING]))
-				chunkFlag = true;
-
-			if (StartLine.method != "POST")
-				return DONE_REQUEST;
-
-			progress = CRLF;
-			if (is_done_buffer() == true)
-				return READ_REQUEST;
-		}
-
-		if (progress == CRLF)
-		{
-			skip_crlf();
-			if (chunkFlag)
-				progress = CHUNK_SIZE;
-			else
-				progress = BODY;
-
-			if (is_done_buffer() == true)
-				return READ_REQUEST;
-		}
-
-		char charBuffer[BUFFER_SIZE] = {0};
-		int readSize;
-
-		if (progress == CHUNK_SIZE || progress == CHUNK_DATA)
-		{
-			while (true)
-			{
-				if (progress == CHUNK_SIZE)
+			case HEADER:
+				if (is_empty_buffer() == true)
+					return READ_REQUEST;
+				else if (is_crlf_line() == true)
+				{
+					set_header();
+					progress = CRLF;
+				}
+				else
 				{
 					std::getline(buffer, tmp);
-					Util::remove_crlf(tmp);
-
-					chunkSize = Util::to_hex(tmp);
-
-					std::cout << "[CHUNK SIZE]" << std::endl;
-					std::cout << chunkSize << std::endl;
-
-					if (chunkSize == -1)
-						throw statusCode = 400;
-
-					if (chunkSize == 0)
-						return DONE_REQUEST;
-
-					progress = CHUNK_DATA;
-					if (is_done_buffer() == true)
-						return READ_REQUEST;
+					make_header(tmp);
 				}
 
-				if (progress == CHUNK_DATA)
+				break;
+			case CRLF:
+				skip_crlf();
+
+				if (StartLine.method == "POST" && is_empty_buffer() == true)
+					return READ_REQUEST;
+				else if (StartLine.method != "POST" \
+						&& !Header.count(HEAD[CONTENT_LENGTH]) && !Header.count(HEAD[TRANSFER_ENCODING]))
 				{
-					// TODO : if occur erorr, maybe chunkSize and BUFFER_SIZE
-					buffer.read(charBuffer, chunkSize);
-					bodySS << charBuffer;
-
-					std::cout << "[CHUNK DATA]" << std::endl;
-					for (int i = 0; i < bodySS.str().size(); ++i)
-						std::cout << (int)bodySS.str()[i] << " ";
-					std::cout << std::endl;
-
-					int buffer_len = strlen(charBuffer);
-					memset(charBuffer, 0, BUFFER_SIZE);
-
-					if (buffer_len < chunkSize)
-					{
-						chunkSize -= buffer_len;
-						is_done_buffer();
-						return READ_REQUEST;
-					}
-					
-					if (is_crlf_line() == false)
-						std::getline(buffer, tmp);
-
-					progress = CHUNK_SIZE;
-					if (is_done_buffer())
-						return READ_REQUEST;
+					return DONE_REQUEST;
 				}
-			}
-		}
-		else
-		{
-			// TODO : remaining data is another request. but now read until contentLength
-			if (contentLength > MAX_BODY_SIZE)
-				contentLength = MAX_BODY_SIZE;
+				else if (StartLine.method != "POST" \
+						&& (Header.count(HEAD[CONTENT_LENGTH]) || Header.count(HEAD[TRANSFER_ENCODING])))
+				{
+					while (is_empty_buffer() == false)
+					{
+						std::getline(buffer, tmp);
+						if (tmp == "\r")
+							break;
+					}
+					return DONE_REQUEST;
+				}
+				else if (chunkFlag)
+					progress = CHUNK_SIZE;
+				else
+					progress = LENGTH_BODY;
+				
+				break;
+			case LENGTH_BODY:
+				if (is_empty_buffer() == true)
+					return READ_REQUEST;
 
-			readSize = contentLength - bodySS.str().size();
+				if (contentLength == 0)
+					return READ_REQUEST;
 
-			while (true)
-			{
+				if (contentLength > MAX_BODY_SIZE)
+					readSize = MAX_BODY_SIZE;
+				else
+					readSize = contentLength;
+				
+				memset(charBuffer, 0, BUFFER_SIZE);
 				buffer.read(charBuffer, readSize);
 				bodySS << charBuffer;
-				memset(charBuffer, 0, readSize);
 
-				if (bodySS.str().size() == contentLength)
-					break;
+				contentLength -= strlen(charBuffer);
 
-				if (is_done_buffer())
+				break;
+			case CHUNK_SIZE:
+				std::cout << "=====CHUNK_SIZE=====" << std::endl;
+				if (is_empty_buffer() == true)
 					return READ_REQUEST;
-			}	
+
+				std::getline(buffer, tmp);
+				Util::remove_crlf(tmp);
+
+				readSize = Util::to_hex(tmp);
+				if (readSize == -1)
+				{
+					clear_buffer();
+					throw statusCode = 400;
+				}
+				else if (readSize == 0)
+					return DONE_REQUEST;
+
+				progress = CHUNK_DATA;
+				
+				break;
+			case CHUNK_DATA:
+				if (is_empty_buffer() == true)
+					return READ_REQUEST;
+
+				std::getline(buffer, tmp);
+				tmp += "\n";
+				bodySS << tmp.substr(0, readSize);
+
+				int read_len = tmp.size();
+
+				if (read_len < readSize)
+				{
+					readSize -= read_len;
+					if (is_empty_buffer())
+						return READ_REQUEST;
+				}
+				else
+					progress = CHUNK_SIZE;
+				break;
+			}
 		}
-		skip_crlf();
+
 		return DONE_REQUEST;
+	}
+
+	void skip_line()
+	{
+		std::getline(buffer, tmp);
 	}
 
 	void make_header(const std::string& buf)
@@ -295,9 +293,10 @@ struct Request
 
 	bool parse_startline() {
 		buffer >> StartLine.method >> StartLine.url >> StartLine.protocol;
+
 		if (StartLine.method == "" || StartLine.url == "" || StartLine.protocol == "")
 			return false;
-		if (buffer.peek() != '\r' && buffer.peek() != '\n')
+		if (is_crlf_line() == false)
 			return false;
 		if (StartLine.url[0] != '/')
 			return false;
@@ -306,12 +305,17 @@ struct Request
 		return true;
 	}
 
-	bool is_done_buffer()
+	void clear_buffer()
+	{
+		buffer.str("");
+		buffer.clear();
+	}
+
+	bool is_empty_buffer()
 	{
 		if (buffer.peek() == -1)
 		{
-			buffer.str("");
-			buffer.clear();
+			clear_buffer();
 			return true;
 		}
 		return false;
@@ -332,11 +336,14 @@ struct Request
 			buffer.get();
 			if (buffer.peek() == '\n')
 			{
-				skip_crlf();
+				buffer.unget();
 				return true;
 			}
 			buffer.unget();
 		}
+		else if (buffer.peek() == '\n')
+			return true;
+
 		return false;
 	}
 
@@ -353,6 +360,7 @@ struct Request
 			params.push_back(param);
 		}
 	}
+
 	std::string string_to_lower(std::string s)
 	{
 		for (int i = 0; i < s.size(); ++i)

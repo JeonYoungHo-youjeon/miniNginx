@@ -9,12 +9,12 @@ enum eType
 
 enum eState
 {
-	READY_REQUEST = 0,
 	READ_REQUEST,
 	DONE_REQUEST,
 	READ_RESPONSE,
 	WRITE_RESPONSE,
-	DONE_RESPONSE
+	DONE_RESPONSE,
+	REPEAT_REQUEST
 };
 
 static const std::string HEAD[] =
@@ -37,15 +37,15 @@ enum eProg
 	READY,
 	START_LINE,
 	HEADER,
-	HEADER_SET,
 	CRLF,
 	BODY,
+	LENGTH_BODY,
 	CHUNK_SIZE,
 	CHUNK_DATA,
-	PROG_DONE
+	DONE
 };
 
-static const time_t		TIMEOUT = 30;
+static const time_t		TIMEOUT = 60;
 static const int		MAX_EVENT = 1024; // TODO: I don't know optimal MAX_EVENT yet.
 const int				BUFFER_SIZE = 8192;
 const int				MAX_BODY_SIZE = 8192;

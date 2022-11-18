@@ -11,18 +11,24 @@ class ClientSocket
 {
 public:
 	bool is_expired() const;
+
 	void update_lastEventTime();
 	void update_state(State s);
+
 	State set_response(const Request& req);
 	State set_response(int error_code);
+
 	void set_readFD(FD fd);
 	void set_writeFD(FD fd);
 	void set_PID(PID pid);
+
 	FD get_readFD() const;
 	FD get_writeFD() const;
 	PID get_PID() const;
+
 	Request& get_request();
 	Response& get_response();
+
 	const std::string& get_server_ip_port() const;
 	State get_state() const;
 

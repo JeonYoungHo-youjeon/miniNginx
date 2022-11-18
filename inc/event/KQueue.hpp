@@ -113,35 +113,19 @@ void KQueue::add_proc_event(pid_t pid)
 void KQueue::set_next_event(ClientSocket* socket, State state)
 {
 	const Response* res = &(socket->get_response());
-	FD fd;
-	PID pid;
 
 	switch (state)
 	{
-	case READ_REQUEST:
+	case READ_REQUEST:	// RECV_REQUEST 가독성 good
 		enable_read_event(socket, socket->get_fd());
 		break;
 	case READ_RESPONSE:
-		if (!socket->get_readFD())
-		{
-			std::cout << "socket->get_readFD()" << std::endl;
-			fd = socket->get_response().contentResult->outFd;
-			socket->set_readFD(fd);
-		}
-		enable_read_event(socket, socket->get_readFD());
+		enable_read_event(socket, res->contentResult->outFd);
 		break;
 	case WRITE_RESPONSE:
 		if (!socket->get_PID())
-		{
-			pid = socket->get_response().contentResult->getPid();
-			add_proc_event(pid);
-		}
-		if (!socket->get_writeFD())
-		{
-			fd = socket->get_response().contentResult->inFd;
-			socket->set_writeFD(fd);
-		}
-		enable_write_event(socket, fd);
+			add_proc_event(socket->get_response().contentResult->pid);
+		enable_write_event(socket, socket->get_response().contentResult->inFd);
 		break;
 	}
 }

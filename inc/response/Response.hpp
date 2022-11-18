@@ -167,6 +167,8 @@ Response::Response()
 {}
 Response::~Response()
 {
+	//delete contentResult;
+	//delete Html;
 	clear();
 }
 

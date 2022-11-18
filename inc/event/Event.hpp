@@ -81,10 +81,7 @@ void Event::event_loop()
 			if (socket->get_type() == SERVER)
 				handle_server_event(event, (ServerSocket*)socket);
 			else if (socket->get_type() == CLIENT)
-			{
-				std::cout << "=========== Client EVENT =============" << std::endl;
 				handle_client_event(event, (ClientSocket*)socket);
-			}
 			else if (event->filter == EVFILT_PROC)
 				handle_child_process(event);
 
@@ -150,15 +147,14 @@ void Event::accept_connection(FD serverFD)
 
 	if (clientFD == -1)
 		return;
-	
+
 	create_client_socket(clientFD, clientAddr, serverFD);
 
 	if (fcntl(clientFD, F_SETFL, O_NONBLOCK) == -1)
 	{
-		// TODO: response 500 Internal Server Error 
+		// TODO: response 500 Internal Server Error
 		ClientSocket* socket = (ClientSocket*)sockets[clientFD];
-		State state = socket->set_response(500);
-		kq->set_next_event(socket, state);
+		kq->set_next_event(socket, socket->set_response(500));
 	}
 }
 
@@ -180,7 +176,7 @@ void Event::create_client_socket(FD clientFD, const SockAddr& addr, FD serverFD)
  * @return None
 */
 void Event::disconnection(const ClientSocket* socket)
-{	
+{
 	logger.disconnection_logging(socket, LOG_YELLOW);
 	add_garbage(socket);
 }
@@ -192,6 +188,7 @@ void Event::disconnection(const ClientSocket* socket)
  * 
  * @return None
 */
+
 void Event::handle_client_read_event(ClientSocket* socket)
 {
 	if (socket->is_expired())
@@ -215,7 +212,6 @@ void Event::handle_client_read_event(ClientSocket* socket)
 			std::cout << "==========================" << std::endl;
 			state = socket->get_response().set(*req);
 		}
-		
 	}
 	catch (int error_code)
 	{
@@ -255,17 +251,15 @@ void Event::handle_next_event(ClientSocket* socket, State state)
 	{
 		// TODO : send
 		state = res->send(socket->get_fd(), BUFFER_SIZE);
-		//send(socket->get_fd(), res->toHtml().c_str(), res->toHtml().size(), 0);
 
 		//
 		if (req->is_empty_buffer() == false)
 		{
-
 			socket->update_state(REPEAT_REQUEST);
 			handle_client_read_event(socket);
 		}
 		//
-		else if (res->Header["Connection"] == "Keep-Alive" && res->clear() /* && req->clear */)
+		else if (res->Header["Connection"] == "Keep-Alive") //&& res->clear() \/* && req->clear *\/)
 		{
 			//new res, req
 			socket->update_state(READ_REQUEST);
@@ -280,8 +274,6 @@ void Event::handle_next_event(ClientSocket* socket, State state)
 		kq->set_next_event(socket, socket->get_state());
 	}
 }
-
-
 
 void Event::socket_timeout(const ClientSocket* socket)
 {
@@ -305,30 +297,14 @@ void Event::handle_server_event(const KEvent* event, const ServerSocket* socket)
 void Event::handle_client_event(const KEvent* event, const ClientSocket* socket)
 {
 	if (event->filter == EVFILT_TIMER)
-		socket_timeout((ClientSocket*)socket);				
-	// if (event->flags & EV_ERROR)
-	// {
-	// 	std::cout << "EV_ERROR" << std::endl;
-	// 	std::cout << event->data << std::endl;
-	// 	return; // TODO: response 503 Service Unavailable
-	// }
+		socket_timeout((ClientSocket*)socket);
 
 	if (event->flags & EV_EOF)
-	{
-		std::cout << "EV_EOF" << std::endl;
-		// TODO: I don't know to response anything message
 		disconnection((ClientSocket*)socket);
-	}
 	else if (event->filter == EVFILT_READ)
-	{
-		std::cout << "EVFILT_RECV" << std::endl;
 		handle_client_read_event((ClientSocket*)socket);
-	}
 	else if (event->filter == EVFILT_WRITE)
-	{
-		std::cout << "EVFILT_WRITE" << std::endl;
 		handle_client_write_event((ClientSocket*)socket);
-	}
 }
 
 void Event::handle_child_process(const KEvent* event)
@@ -344,7 +320,7 @@ void Event::clear_garbage_sockets()
 	for (GarbageCollector::const_iterator it = garbageCollector.begin(); it != garbageCollector.end(); ++it)
 	{
 		sockets.erase((*it)->get_fd());
-		delete (*it);	
+		//delete (*it);
 	}
 	garbageCollector.clear();
 }

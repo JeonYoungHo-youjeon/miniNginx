@@ -38,6 +38,7 @@ public:
 		addr.sin_addr.s_addr = inet_addr(ip_.c_str());
 		addr.sin_port = htons(std::atoi(port_.c_str()));
 
+		cout << fd << endl;
 		if (bind(fd, (struct sockaddr*)&addr, sizeof(addr)) == -1)
 			throw EventInitException("bind() error");
 

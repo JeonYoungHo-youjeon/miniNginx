@@ -21,8 +21,9 @@ struct RequestStartLine
 
 	void out()
 	{
-		cout << "[    Start Line    ]" << endl;
-		cout << "[" << method << "] " << "[" << url << "] " << "[" << protocol << "]" << endl;
+		//cout << "[    Start Line    ]" << endl;
+		//cout << "[" << method << "] " << "[" << url << "] " << "[" << protocol << "]" << endl;
+		cout << method << ' ' << url << ' ' << protocol << endl;
 	}
 };
 
@@ -97,7 +98,7 @@ struct Request
 
 			buffer << rcvData;
 			//TODO : 지우기
-			cout << buffer.str() << endl;
+			//cout << buffer.str() << endl;
 		}
 		return parse();
 	}

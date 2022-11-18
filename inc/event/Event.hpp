@@ -264,8 +264,10 @@ void Event::handle_next_event(ClientSocket* socket, State state)
 			socket->update_state(REPEAT_REQUEST);
 			handle_client_read_event(socket);
 		}
-		else if (res->Header["Connection"] == "Keep-Alive")
+		//
+		else if (res->Header["Connection"] == "Keep-Alive" && res->clear() /* && req->clear */)
 		{
+			//new res, req
 			socket->update_state(READ_REQUEST);
 			kq->enable_read_event(socket, socket->get_fd());
 		}

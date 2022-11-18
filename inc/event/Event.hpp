@@ -69,7 +69,9 @@ void Event::event_loop()
 
 	while (true)
 	{
+		std::cout << "===========EVENT WAIT============" << std::endl;
 		nEvent = kq->wait_event();
+		std::cout << "===========EVENT START============" << std::endl;
 
 		for (int i = 0; i < nEvent; ++i)
 		{
@@ -79,7 +81,10 @@ void Event::event_loop()
 			if (socket->get_type() == SERVER)
 				handle_server_event(event, (ServerSocket*)socket);
 			else if (socket->get_type() == CLIENT)
+			{
+				std::cout << "=========== Client EVENT =============" << std::endl;
 				handle_client_event(event, (ClientSocket*)socket);
+			}
 			else if (event->filter == EVFILT_PROC)
 				handle_child_process(event);
 
@@ -198,23 +203,19 @@ void Event::handle_client_read_event(ClientSocket* socket)
 	try
 	{
 		if (state == READ_REQUEST)
-		{
-			std::cout << "READ_REQUEST" << std::endl;
 			state = req->read();
-		}
 		else if (state == REPEAT_REQUEST)
-		{
-			std::cout << "REPEAT_REQUEST" << std::endl;
 			state = req->clear_read();
+		else if (state == READ_RESPONSE)
+			state = socket->get_response().read();
 
-		}
-
-		if (state == DONE_REQUEST) {
+		if (state == END_REQUEST) {
 			std::cout << "======[DONE_REQUEST]======" << std::endl;
 			req->print_request();
 			std::cout << "==========================" << std::endl;
 			state = socket->get_response().set(*req);
 		}
+		
 	}
 	catch (int error_code)
 	{
@@ -250,18 +251,23 @@ void Event::handle_next_event(ClientSocket* socket, State state)
 	Request* req = &(socket->get_request());
 	Response* res = &(socket->get_response());
 
-	if (state == DONE_RESPONSE)
+	if (state == SEND_RESPONSE)
 	{
 		// TODO : send
-		send(socket->get_fd(), res->toHtml().c_str(), res->toHtml().size(), 0);
+		state = res->send(socket->get_fd(), BUFFER_SIZE);
+		//send(socket->get_fd(), res->toHtml().c_str(), res->toHtml().size(), 0);
 
+		//
 		if (req->is_empty_buffer() == false)
 		{
+
 			socket->update_state(REPEAT_REQUEST);
 			handle_client_read_event(socket);
 		}
-		else if (res->Header["Connection"] == "Keep-Alive")
+		//
+		else if (res->Header["Connection"] == "Keep-Alive" && res->clear() /* && req->clear */)
 		{
+			//new res, req
 			socket->update_state(READ_REQUEST);
 			kq->enable_read_event(socket, socket->get_fd());
 		}
@@ -300,8 +306,12 @@ void Event::handle_client_event(const KEvent* event, const ClientSocket* socket)
 {
 	if (event->filter == EVFILT_TIMER)
 		socket_timeout((ClientSocket*)socket);				
-	if (event->flags & EV_ERROR)
-		return; // TODO: response 503 Service Unavailable
+	// if (event->flags & EV_ERROR)
+	// {
+	// 	std::cout << "EV_ERROR" << std::endl;
+	// 	std::cout << event->data << std::endl;
+	// 	return; // TODO: response 503 Service Unavailable
+	// }
 
 	if (event->flags & EV_EOF)
 	{

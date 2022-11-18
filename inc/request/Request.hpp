@@ -92,11 +92,12 @@ struct Request
 			char rcvData[BUFFER_SIZE] = {0};
 			int byte = recv(clientFd, &rcvData[0], BUFFER_SIZE, 0);
 
-
 			if (byte < 0)
 				throw statusCode = 400;
 
 			buffer << rcvData;
+			//TODO : 지우기
+			cout << buffer.str() << endl;
 		}
 		return parse();
 	}
@@ -153,7 +154,7 @@ struct Request
 				else if (StartLine.method != "POST" \
 						&& !Header.count(HEAD[CONTENT_LENGTH]) && !Header.count(HEAD[TRANSFER_ENCODING]))
 				{
-					return DONE_REQUEST;
+					return END_REQUEST;
 				}
 				else if (StartLine.method != "POST" \
 						&& (Header.count(HEAD[CONTENT_LENGTH]) || Header.count(HEAD[TRANSFER_ENCODING])))
@@ -164,7 +165,7 @@ struct Request
 						if (tmp == "\r")
 							break;
 					}
-					return DONE_REQUEST;
+					return END_REQUEST;
 				}
 				else if (chunkFlag)
 					progress = CHUNK_SIZE;
@@ -192,7 +193,6 @@ struct Request
 
 				break;
 			case CHUNK_SIZE:
-				std::cout << "=====CHUNK_SIZE=====" << std::endl;
 				if (is_empty_buffer() == true)
 					return READ_REQUEST;
 
@@ -206,7 +206,7 @@ struct Request
 					throw statusCode = 400;
 				}
 				else if (readSize == 0)
-					return DONE_REQUEST;
+					return END_REQUEST;
 
 				progress = CHUNK_DATA;
 				
@@ -233,7 +233,7 @@ struct Request
 			}
 		}
 
-		return DONE_REQUEST;
+		return END_REQUEST;
 	}
 
 	void skip_line()

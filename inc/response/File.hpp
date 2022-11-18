@@ -9,7 +9,10 @@ struct File : public Contents
 	File(const std::string& url) : Contents(url) {};
 	File(const std::string& path, const std::vector<std::string>& param)
 	: Contents(path) {};
-	~File(){};
+	~File()
+	{
+		close();
+	};
 
 	int	set();
 	int	close();

@@ -154,7 +154,7 @@ struct Request
 				else if (StartLine.method != "POST" \
 						&& !Header.count(HEAD[CONTENT_LENGTH]) && !Header.count(HEAD[TRANSFER_ENCODING]))
 				{
-					return DONE_REQUEST;
+					return END_REQUEST;
 				}
 				else if (StartLine.method != "POST" \
 						&& (Header.count(HEAD[CONTENT_LENGTH]) || Header.count(HEAD[TRANSFER_ENCODING])))
@@ -165,7 +165,7 @@ struct Request
 						if (tmp == "\r")
 							break;
 					}
-					return DONE_REQUEST;
+					return END_REQUEST;
 				}
 				else if (chunkFlag)
 					progress = CHUNK_SIZE;
@@ -206,7 +206,7 @@ struct Request
 					throw statusCode = 400;
 				}
 				else if (readSize == 0)
-					return DONE_REQUEST;
+					return END_REQUEST;
 
 				progress = CHUNK_DATA;
 				
@@ -233,7 +233,7 @@ struct Request
 			}
 		}
 
-		return DONE_REQUEST;
+		return END_REQUEST;
 	}
 
 	void skip_line()

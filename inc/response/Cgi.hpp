@@ -52,9 +52,8 @@ Cgi::~Cgi()
 			delete[] envp[i];
 		delete[] envp;
 	}
-	::close(inFd);
-	::close(outFd);
-	::kill(pid, SIGKILL);
+	close();
+	kill();
 }
 
 int     Cgi::set()

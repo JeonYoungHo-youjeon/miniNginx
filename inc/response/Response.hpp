@@ -66,6 +66,7 @@ struct Response
 			ret += Body + "\r\n";
 		return ret;
 	}
+	int clear();
 
 	int set(const std::string& configName, int error_code)
 	{
@@ -126,6 +127,7 @@ struct Response
 		map<string, string>::iterator it = Header.find("Connection");
 		if (it == Header.end())
 			Header["Connection"] = "Keep-Alive";
+		Header["Content-Type"] = "Text/html";
 		Header["Content-Type"] = g_conf.getContentType(ext);
 		Header["Content-Length"] = Util::to_string(Body.size());
 		{    /* 필요 헤더*/    }
@@ -137,11 +139,12 @@ struct Response
 		StartLine.reasonPhrase = g_conf.getStatusMsg(StartLine.statusCode);
 		StartLine.protocol = "HTTP/1.1";
 		std::cout << "STARTLINE OK" << std::endl;
-		return statement = DONE_RESPONSE;
+		return statement = SEND_RESPONSE;
 	}
 
 	int make_errorpage(int code)
 	{
+		ext = ".html";
 		if (g_conf[configName][locationName].is_exist("error_page"))
 		{
 			for (size_t i = 0; i < g_conf[configName][locationName]["error_page"].size() - 1; ++i)
@@ -153,9 +156,9 @@ struct Response
 				"<!DOCTYPE html>\n"
 				"<html>\n"
 				"  <h1>\n"
-				"    " + Util::to_string(StartLine.statusCode) + " " +  + "\n"
-																							"  </h1>\n"
-																							"</html>\n";
+				"    " + Util::to_string(StartLine.statusCode) + "\n"
+				"  </h1>\n"
+				"</html>\n";
 		return makeHeader();
 	}
 };
@@ -164,8 +167,7 @@ Response::Response()
 {}
 Response::~Response()
 {
-	if (contentResult != nullptr)
-		delete contentResult;
+	clear();
 }
 
 int 	Response::execute()
@@ -234,12 +236,34 @@ int 	Response::read()
 	size_t	len = ::read(contentResult->outFd, buf, BUFFER_SIZE);
 
 	Body += string(buf, len);
-	if (len < BUFFER_SIZE)
-		return makeHeader();
+	//	< BUFFER_SIZE 밑에 있어서 닿을 수 없던 부분 수정
 	if (len < 0)
 		throw StartLine.statusCode = 500;
+	if (len < BUFFER_SIZE)
+		return makeHeader();
 
 	return READ_RESPONSE;
+}
+
+int Response::send(int clientFd, size_t bufSize)
+{
+	if (!Html)
+		Html = new string(toHtml());
+	size_t	len = ::send(clientFd, Html->c_str(), bufSize, 0);
+	Html->erase(0, len);
+	if (len < 0)
+		throw StartLine.statusCode = 500;
+	if (len < bufSize)
+		return END_RESPONSE;
+	return SEND_RESPONSE;
+}
+
+int Response::clear()
+{
+	//	내부 객체 delete -> REPEAT REQUEST 반환 -> new Req로 연결(Req 삭제위치)
+	delete contentResult;
+	delete Html;
+	return REPEAT_REQUEST;
 }
 
 #endif

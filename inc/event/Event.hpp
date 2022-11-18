@@ -203,19 +203,11 @@ void Event::handle_client_read_event(ClientSocket* socket)
 	try
 	{
 		if (state == READ_REQUEST)
-		{
-			std::cout << "READ_REQUEST" << std::endl;
 			state = req->read();
-		}
 		else if (state == REPEAT_REQUEST)
-		{
-			std::cout << "REPEAT_REQUEST" << std::endl;
 			state = req->clear_read();
-		}
 		else if (state == READ_RESPONSE)
-		{
 			state = socket->get_response().read();
-		}
 
 		if (state == DONE_REQUEST) {
 			std::cout << "======[DONE_REQUEST]======" << std::endl;
@@ -224,7 +216,6 @@ void Event::handle_client_read_event(ClientSocket* socket)
 			state = socket->get_response().set(*req);
 		}
 		
-		std::cout << "STATE : " << state << std::endl;
 	}
 	catch (int error_code)
 	{
@@ -264,9 +255,11 @@ void Event::handle_next_event(ClientSocket* socket, State state)
 	{
 		// TODO : send
 		send(socket->get_fd(), res->toHtml().c_str(), res->toHtml().size(), 0);
+		cout << res->toHtml().size() << endl;
 
 		if (req->is_empty_buffer() == false)
 		{
+			cout << 1 << endl;
 			socket->update_state(REPEAT_REQUEST);
 			handle_client_read_event(socket);
 		}
@@ -276,7 +269,10 @@ void Event::handle_next_event(ClientSocket* socket, State state)
 			kq->enable_read_event(socket, socket->get_fd());
 		}
 		else
+		{
+			cout << 3 << endl;
 			disconnection(socket);
+		}
 	}
 	else
 	{

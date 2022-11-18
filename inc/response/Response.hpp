@@ -30,6 +30,8 @@ struct Response
 	map<string, string> Header;
 	string Body;
 
+	string* Html;
+
 	string configName;
 	string postBody;
 	int contentLength;
@@ -105,6 +107,8 @@ struct Response
 	 * @return statement
 	 */
 	int read();
+
+	int send(int clientFd, size_t bufSize);
 
 	/**
 	 * @brief : exec -> read or write로 진행 예정
@@ -228,10 +232,8 @@ int 	Response::read()
 	//	읽고 읽을것이 남아있으면 READ_RESPONSE 반환
 	char buf[BUFFER_SIZE];
 	size_t	len = ::read(contentResult->outFd, buf, BUFFER_SIZE);
-	std::cout << len << std::endl;
 
 	Body += string(buf, len);
-	std::cout << Body << std::endl;
 	if (len < BUFFER_SIZE)
 		return makeHeader();
 	if (len < 0)

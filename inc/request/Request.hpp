@@ -193,7 +193,6 @@ struct Request
 
 				break;
 			case CHUNK_SIZE:
-				std::cout << "=====CHUNK_SIZE=====" << std::endl;
 				if (is_empty_buffer() == true)
 					return READ_REQUEST;
 

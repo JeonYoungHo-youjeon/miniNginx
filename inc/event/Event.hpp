@@ -69,7 +69,9 @@ void Event::event_loop()
 
 	while (true)
 	{
+		std::cout << "===========EVENT WAIT============" << std::endl;
 		nEvent = kq->wait_event();
+		std::cout << "===========EVENT START============" << std::endl;
 
 		for (int i = 0; i < nEvent; ++i)
 		{
@@ -79,7 +81,10 @@ void Event::event_loop()
 			if (socket->get_type() == SERVER)
 				handle_server_event(event, (ServerSocket*)socket);
 			else if (socket->get_type() == CLIENT)
+			{
+				std::cout << "=========== Client EVENT =============" << std::endl;
 				handle_client_event(event, (ClientSocket*)socket);
+			}
 			else if (event->filter == EVFILT_PROC)
 				handle_child_process(event);
 
@@ -206,7 +211,10 @@ void Event::handle_client_read_event(ClientSocket* socket)
 		{
 			std::cout << "REPEAT_REQUEST" << std::endl;
 			state = req->clear_read();
-
+		}
+		else if (state == READ_RESPONSE)
+		{
+			state = socket->get_response().read();
 		}
 
 		if (state == DONE_REQUEST) {
@@ -215,6 +223,8 @@ void Event::handle_client_read_event(ClientSocket* socket)
 			std::cout << "==========================" << std::endl;
 			state = socket->get_response().set(*req);
 		}
+		
+		std::cout << "STATE : " << state << std::endl;
 	}
 	catch (int error_code)
 	{
@@ -300,8 +310,12 @@ void Event::handle_client_event(const KEvent* event, const ClientSocket* socket)
 {
 	if (event->filter == EVFILT_TIMER)
 		socket_timeout((ClientSocket*)socket);				
-	if (event->flags & EV_ERROR)
-		return; // TODO: response 503 Service Unavailable
+	// if (event->flags & EV_ERROR)
+	// {
+	// 	std::cout << "EV_ERROR" << std::endl;
+	// 	std::cout << event->data << std::endl;
+	// 	return; // TODO: response 503 Service Unavailable
+	// }
 
 	if (event->flags & EV_EOF)
 	{

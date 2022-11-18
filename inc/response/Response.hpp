@@ -231,11 +231,12 @@ int 	Response::read()
 	std::cout << len << std::endl;
 
 	Body += string(buf, len);
+	std::cout << Body << std::endl;
 	if (len < BUFFER_SIZE)
 		return makeHeader();
 	if (len < 0)
 		throw StartLine.statusCode = 500;
-	cout << "RE" << std::endl;
+
 	return READ_RESPONSE;
 }
 

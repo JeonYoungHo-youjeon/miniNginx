@@ -124,10 +124,11 @@ void KQueue::set_next_event(ClientSocket* socket, State state)
 	case READ_RESPONSE:
 		if (!socket->get_readFD())
 		{
+			std::cout << "socket->get_readFD()" << std::endl;
 			fd = socket->get_response().contentResult->outFd;
 			socket->set_readFD(fd);
 		}
-		enable_read_event(socket, fd);
+		enable_read_event(socket, socket->get_readFD());
 		break;
 	case WRITE_RESPONSE:
 		if (!socket->get_PID())

@@ -92,11 +92,12 @@ struct Request
 			char rcvData[BUFFER_SIZE] = {0};
 			int byte = recv(clientFd, &rcvData[0], BUFFER_SIZE, 0);
 
-
 			if (byte < 0)
 				throw statusCode = 400;
 
 			buffer << rcvData;
+			//TODO : 지우기
+			cout << buffer.str() << endl;
 		}
 		return parse();
 	}

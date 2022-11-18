@@ -228,13 +228,14 @@ int 	Response::read()
 	//	읽고 읽을것이 남아있으면 READ_RESPONSE 반환
 	char buf[BUFFER_SIZE];
 	size_t	len = ::read(contentResult->outFd, buf, BUFFER_SIZE);
+	std::cout << len << std::endl;
 
 	Body += string(buf, len);
 	if (len < BUFFER_SIZE)
 		return makeHeader();
 	if (len < 0)
 		throw StartLine.statusCode = 500;
-	
+	cout << "RE" << std::endl;
 	return READ_RESPONSE;
 }
 

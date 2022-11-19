@@ -21,10 +21,11 @@ public:
 	FD get_readFD() const;
 	FD get_writeFD() const;
 	PID get_PID() const;
-	Request& get_request();
-	Response& get_response();
+	Request* get_request() const;
+	Response* get_response() const;
 	const std::string& get_server_ip_port() const;
 	State get_state() const;
+	void reset();
 
 	ClientSocket(FD clientFD, const SockAddr& addr, const std::string& serverIPPort);
 	~ClientSocket();
@@ -39,8 +40,8 @@ private:
 private:
 	Time lastEventTime;
 	std::string serverIPPort;
-	Request req;
-	Response res;
+	Request* req;
+	Response* res;
 	FD readFD;
 	FD writeFD;
 	PID childPID;
@@ -65,12 +66,12 @@ void ClientSocket::update_state(State s)
 }
 State ClientSocket::set_response(const Request& req)
 {
-	return res.set(req);
+	return res->set(req);
 }
 
 State ClientSocket::set_response(int error_code)
 {
-	return res.set(req.configName, error_code);
+	return res->set(req->configName, error_code);
 }
 
 void ClientSocket::set_readFD(FD fd)
@@ -103,12 +104,12 @@ PID ClientSocket::get_PID() const
 	return childPID;
 }
 
-Request& ClientSocket::get_request()
+Request* ClientSocket::get_request() const
 {
 	return req;
 }
 
-Response& ClientSocket::get_response()
+Response* ClientSocket::get_response() const
 {
 	return res;
 }
@@ -123,23 +124,37 @@ State ClientSocket::get_state() const
 	return state;
 }
 
+void ClientSocket::reset()
+{
+	Request* tmp_req = req;
+
+	req = new Request(fd, serverIPPort);
+
+	delete tmp_req;
+}
+
+
 // private
 ClientSocket::ClientSocket()
 {}
 
 ClientSocket::ClientSocket(FD clientFD, const SockAddr& addr, const std::string& serverIPPort_)
 	: lastEventTime(get_current_time()), serverIPPort(serverIPPort_), \
-		readFD(0), writeFD(0), childPID(0), state(READ_REQUEST)
+		readFD(0), writeFD(0), childPID(0), state(READ_REQUEST), req(0), res(new Response())
 {
 	fd = clientFD;
 	ip = inet_ntoa(addr.sin_addr);
 	port = "";
 	type = CLIENT;
-	req = Request(fd, serverIPPort);
+	req = new Request(fd, serverIPPort);
 }
 
 ClientSocket::~ClientSocket()
 {
+	if (req)
+		delete req;
+	if (res)
+		delete res;
 }
 
 //private

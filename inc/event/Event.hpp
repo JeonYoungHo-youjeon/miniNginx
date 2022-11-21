@@ -288,8 +288,6 @@ void Event::handle_next_event(ClientSocket* socket, State state)
 	}
 }
 
-
-
 void Event::socket_timeout(const ClientSocket* socket)
 {
 	// TODO: CGI kill

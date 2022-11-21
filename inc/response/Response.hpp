@@ -25,7 +25,7 @@ struct ResponseStartLine
 
 struct Response
 {
-	const Request *Req;
+	Request *Req;
 	ResponseStartLine StartLine;
 	map<string, string> Header;
 	string Body;
@@ -190,7 +190,26 @@ int 	Response::execute()
 			throw 400;
 
 		if (g_conf[Req->configName][Req->locationName].is_exist(ext))
+		{
+			if (Req->cookies.count(ext) == 0)
+			{
+				Header["set-cookie"] = ext + "=" + Req->session.gen_random(12) + ";";
+			}
+			else
+			{
+				string tmp;
+				for (std::vector<string>::iterator it = Req->session.Session[Req->cookies[ext]].begin(); it != Req->session.Session[Req->cookies[ext]].end(); ++it)
+					tmp += *it + ":";
+				if (!tmp.empty())
+				{
+					tmp.insert(0, "COOKIE=");	
+					tmp.erase(tmp.size() - 1);
+					params.push_back(tmp);
+				}
+			}
+
 			contentResult = new Cgi(path, ext, params);
+		}
 		else
 			contentResult = new File(path);
 

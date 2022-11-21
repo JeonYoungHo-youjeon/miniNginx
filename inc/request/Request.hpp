@@ -6,6 +6,7 @@
 # include "../parse/Config.hpp"
 # include "../parse/Util.hpp"
 # include "../response/Cgi.hpp"
+# include "Session.hpp"
 
 using std::string;
 using std::cout;
@@ -41,6 +42,9 @@ struct Request
 	std::string					tmp;
 
 	string virtualPath;
+
+	std::map<string, string> cookies;
+	Session session;
 
 	int maxBodySize;
 	int readSize;
@@ -108,10 +112,23 @@ struct Request
 			fileName = g_conf[configName][locationName]["index"].front();
 		ext = findExtension(fileName);
 
+		if (Header.count(HEAD[COOKIE]))
+			get_cookie();
+
 		if (Header.count(HEAD[CONTENT_LENGTH]))
 			contentLength = Util::stoi(Header[HEAD[CONTENT_LENGTH]]);
 		if (Header.count(HEAD[TRANSFER_ENCODING]))
 			chunkFlag = true;
+	}
+
+	void get_cookie()
+	{
+		vector<string> splited = Util::split(Header[HEAD[COOKIE]], ';');
+		for (std::vector<string>::iterator it = splited.begin(); it != splited.end(); ++it)
+		{
+			vector<string> tmp = Util::split(*it, '=');
+			cookies[tmp[0]] = tmp[1];
+		}
 	}
 
 	int parse()

@@ -22,14 +22,16 @@ static const std::string HEAD[] =
 {
 	"transfer-encoding",
 	"content-length",
-	"connection"
+	"connection",
+	"cookie"
 };
 
 enum eHeader
 {
 	TRANSFER_ENCODING,
 	CONTENT_LENGTH,
-	CONNECTION
+	CONNECTION,
+	COOKIE
 };
 
 

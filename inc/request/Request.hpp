@@ -94,10 +94,7 @@ struct Request
 
 			if (byte < 0)
 				throw statusCode = 400;
-
 			buffer << rcvData;
-			//TODO : 지우기
-			cout << buffer.str() << endl;
 		}
 		return parse();
 	}
@@ -107,11 +104,12 @@ struct Request
 
 		locationName = findLocation(virtualPath);
 		fileName = virtualPath.erase(0, locationName.size());
-		ext = findExtension(virtualPath);
+		if (fileName.empty() && g_conf[configName][locationName].is_exist("index"))
+			fileName = g_conf[configName][locationName]["index"].front();
+		ext = findExtension(fileName);
 
 		if (Header.count(HEAD[CONTENT_LENGTH]))
 			contentLength = Util::stoi(Header[HEAD[CONTENT_LENGTH]]);
-		
 		if (Header.count(HEAD[TRANSFER_ENCODING]))
 			chunkFlag = true;
 	}
@@ -190,7 +188,6 @@ struct Request
 				bodySS << charBuffer;
 
 				contentLength -= strlen(charBuffer);
-
 				break;
 			case CHUNK_SIZE:
 				if (is_empty_buffer() == true)
@@ -268,6 +265,7 @@ struct Request
 
 	std::string findExtension(const std::string& url)
 	{
+		cout << "URL : " << url << endl;
 		std::string::size_type pos = url.rfind('.');
 		if (pos == std::string::npos)
 			return "";

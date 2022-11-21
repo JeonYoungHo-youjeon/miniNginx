@@ -17,6 +17,8 @@ public:
 	void enable_write_event(const Socket* socket, FD fd);
 	void add_proc_event(pid_t pid);
 	void set_next_event(ClientSocket* socket, State state);
+	void add_read_event(const Socket* socket, FD fd);
+	void add_write_event(const Socket* socket, FD fd);
 
 	KQueue();
 	~KQueue();
@@ -86,10 +88,21 @@ void KQueue::add_server_io_event(const Socket* socket, FD fd)
 
 void KQueue::add_client_io_event(const Socket* socket, FD fd)
 {
-	update_event(fd, EVFILT_READ, EV_ADD | EV_CLEAR, 0, 0, (void*)socket);
-	update_event(fd, EVFILT_WRITE, EV_ADD | EV_DISABLE, 0, 0, (void*)socket);
+	add_read_event(socket, fd);
+	add_write_event(socket, fd);
 	// update_event(fd, EVFILT_WRITE, EV_DISPATCH, 0, 0, (void*)socket);
 	set_timeout(socket);
+}
+
+void KQueue::add_read_event(const Socket* socket, FD fd)
+{
+	update_event(fd, EVFILT_READ, EV_ADD | EV_CLEAR, 0, 0, (void*)socket);
+}
+
+void KQueue::add_write_event(const Socket* socket, FD fd)
+{
+	update_event(fd, EVFILT_WRITE, EV_ADD | EV_DISABLE, 0, 0, (void*)socket);
+	// update_event(fd, EVFILT_WRITE, EV_ADD | EV_CLEAR, 0, 0, (void*)socket);
 }
 
 void KQueue::enable_read_event(const Socket* socket, FD fd)
@@ -112,36 +125,46 @@ void KQueue::add_proc_event(pid_t pid)
 
 void KQueue::set_next_event(ClientSocket* socket, State state)
 {
-	const Response* res = &(socket->get_response());
+	const Response* res = socket->get_response();
 	FD fd;
 	PID pid;
 
 	switch (state)
 	{
 	case READ_REQUEST:
+		std::cout << "\t==========[NEXT READ_REQUEST]==========" << std::endl;
+
 		enable_read_event(socket, socket->get_fd());
 		break;
 	case READ_RESPONSE:
+		std::cout << "\t==========[NEXT READ_RESPONSE]==========" << std::endl;
 		if (!socket->get_readFD())
 		{
-			std::cout << "socket->get_readFD()" << std::endl;
-			fd = socket->get_response().contentResult->outFd;
+			fd = res->contentResult->outFd;
 			socket->set_readFD(fd);
+			// TODO: change function name
+			add_client_io_event(socket, socket->get_readFD());
 		}
-		enable_read_event(socket, socket->get_readFD());
+		else
+			enable_read_event(socket, socket->get_readFD());
 		break;
 	case WRITE_RESPONSE:
+		std::cout << "\t==========[NEXT WRITE_RESPONSE]==========" << std::endl;
 		if (!socket->get_PID())
 		{
-			pid = socket->get_response().contentResult->getPid();
+			pid = res->contentResult->getPid();
 			add_proc_event(pid);
 		}
 		if (!socket->get_writeFD())
 		{
-			fd = socket->get_response().contentResult->inFd;
+			fd = res->contentResult->inFd;
 			socket->set_writeFD(fd);
+			add_write_event(socket, socket->get_writeFD());
+
 		}
-		enable_write_event(socket, fd);
+		enable_write_event(socket, socket->get_writeFD());
+			
+		
 		break;
 	}
 }

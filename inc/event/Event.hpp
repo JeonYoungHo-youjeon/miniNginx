@@ -69,9 +69,7 @@ void Event::event_loop()
 
 	while (true)
 	{
-		std::cout << "===========EVENT WAIT============" << std::endl;
 		nEvent = kq->wait_event();
-		std::cout << "===========EVENT START============" << std::endl;
 
 		for (int i = 0; i < nEvent; ++i)
 		{
@@ -81,10 +79,7 @@ void Event::event_loop()
 			if (socket->get_type() == SERVER)
 				handle_server_event(event, (ServerSocket*)socket);
 			else if (socket->get_type() == CLIENT)
-			{
-				std::cout << "=========== Client EVENT =============" << std::endl;
 				handle_client_event(event, (ClientSocket*)socket);
-			}
 			else if (event->filter == EVFILT_PROC)
 				handle_child_process(event);
 
@@ -130,7 +125,7 @@ void Event::create_server_socket(const ConfigType::iterator it)
 	ServerSocket* socket = new ServerSocket(temp[0], temp[1]);
 
 	sockets.insert(std::pair<FD, Socket*>(socket->get_fd(), socket));
-	kq->add_server_io_event(socket, socket->get_fd());
+	kq->add_read_event(socket, socket->get_fd());
 
 	logger.add_server(socket->get_fd(), it->first); // REMOVE
 }
@@ -198,28 +193,38 @@ void Event::handle_client_read_event(ClientSocket* socket)
 		return;
 
 	State state = socket->get_state();
-	Request* req = &(socket->get_request());
+	Request* req = socket->get_request();
+	Response* res = socket->get_response();
 
 	try
 	{
 		if (state == READ_REQUEST)
+		{
+			std::cout << "\t==========[READ_REQUEST]==========" << std::endl;
 			state = req->read();
+		}
 		else if (state == REPEAT_REQUEST)
+		{
+			std::cout << "\t==========[REPEAT_REQUEST]==========" << std::endl;
 			state = req->clear_read();
+		}
 		else if (state == READ_RESPONSE)
-			state = socket->get_response().read();
+		{
+			std::cout << "\t==========[READ_RESPONSE]==========" << std::endl;
+			state = res->read();
+		}
 
 		if (state == END_REQUEST) {
-			std::cout << "======[DONE_REQUEST]======" << std::endl;
+			std::cout << "\t==========[END_REQUEST]==========" << std::endl;
 			req->print_request();
-			std::cout << "==========================" << std::endl;
-			state = socket->get_response().set(*req);
+			state = socket->set_response(*req);
+			std::cout << "state : " << state << std::endl;
 		}
 		
 	}
 	catch (int error_code)
 	{
-		std::cout << "[catch error_code] : " << error_code << std::endl;
+		std::cout << "\t==========[CATCH ERROR_CODE : " << error_code << "]==========" << std::endl;
 		state = socket->set_response(error_code);
 	}
 
@@ -232,7 +237,7 @@ void Event::handle_client_write_event(ClientSocket* socket)
 		return;
 		
 	State state = socket->get_state();
-	Response* res = &(socket->get_response());
+	Response* res = socket->get_response();
 
 	try
 	{
@@ -248,31 +253,33 @@ void Event::handle_client_write_event(ClientSocket* socket)
 
 void Event::handle_next_event(ClientSocket* socket, State state)
 {
-	Request* req = &(socket->get_request());
-	Response* res = &(socket->get_response());
+	Request* req = socket->get_request();
+	Response* res = socket->get_response();
 
 	if (state == SEND_RESPONSE)
 	{
-		// TODO : send
-		state = res->send(socket->get_fd(), BUFFER_SIZE);
-		//send(socket->get_fd(), res->toHtml().c_str(), res->toHtml().size(), 0);
+		std::cout << "\t==========[SEND_RESPONSE]==========" << std::endl;
+		state = res->send(socket->get_fd());
+		// send(socket->get_fd(), res->toHtml().c_str(), res->toHtml().size(), 0);
 
-		//
 		if (req->is_empty_buffer() == false)
 		{
-
+			std::cout << "\t==========[IS NOT EMPTY BUFFER]==========" << std::endl;
 			socket->update_state(REPEAT_REQUEST);
 			handle_client_read_event(socket);
 		}
-		//
-		else if (res->Header["Connection"] == "Keep-Alive" && res->clear() /* && req->clear */)
+		else if (res->Header["Connection"] == "keep-alive")
 		{
-			//new res, req
+			std::cout << "\t==========[KEEP_ALIVE]==========" << std::endl;
+			socket->reset();
 			socket->update_state(READ_REQUEST);
 			kq->enable_read_event(socket, socket->get_fd());
 		}
 		else
+		{
+			std::cout << "\t==========[DISCONNECTION]==========" << std::endl;
 			disconnection(socket);
+		}
 	}
 	else
 	{
@@ -294,8 +301,7 @@ void Event::socket_timeout(const ClientSocket* socket)
 
 void Event::handle_server_event(const KEvent* event, const ServerSocket* socket)
 {
-	// TODO: 서버 하나 죽으면 모두 죽기
-	// 서버를 종료시키면 모든 clientdprp 500 response
+	// 서버를 종료시키면 모든 client 500 response
 	if (event->flags & EV_ERROR)
 		return; // TODO: response 500 Internal Server Error
 
@@ -305,28 +311,41 @@ void Event::handle_server_event(const KEvent* event, const ServerSocket* socket)
 void Event::handle_client_event(const KEvent* event, const ClientSocket* socket)
 {
 	if (event->filter == EVFILT_TIMER)
-		socket_timeout((ClientSocket*)socket);				
-	// if (event->flags & EV_ERROR)
-	// {
-	// 	std::cout << "EV_ERROR" << std::endl;
-	// 	std::cout << event->data << std::endl;
-	// 	return; // TODO: response 503 Service Unavailable
-	// }
+	{
+		std::cout << "\t==========[EVFILT_TIMER]==========" << std::endl;
+
+		socket_timeout((ClientSocket*)socket);	
+	}
+		
+	if (event->flags & EV_ERROR)
+	{
+		std::cout << "\t==========[EV_ERROR]==========" << std::endl;
+		system("lsof | grep www/");
+
+		std::cout << event->data << std::endl;
+		std::cout << socket->get_response()->contentResult->inFd << std::endl;
+		std::cout << socket->get_response()->contentResult->outFd << std::endl;
+		std::cout << socket->get_readFD() << std::endl;
+		std::cout << socket->get_writeFD() << std::endl;
+		return; // TODO: response 503 Service Unavailable
+	}
 
 	if (event->flags & EV_EOF)
 	{
-		std::cout << "EV_EOF" << std::endl;
+		std::cout << "\t==========[EV_EOF]==========" << std::endl;
+
 		// TODO: I don't know to response anything message
-		disconnection((ClientSocket*)socket);
+		// disconnection((ClientSocket*)socket);
 	}
 	else if (event->filter == EVFILT_READ)
 	{
-		std::cout << "EVFILT_RECV" << std::endl;
+		std::cout << "\t==========[EVFILT_READ]==========" << std::endl;
+
 		handle_client_read_event((ClientSocket*)socket);
 	}
 	else if (event->filter == EVFILT_WRITE)
 	{
-		std::cout << "EVFILT_WRITE" << std::endl;
+		std::cout << "\t==========[EVFILT_WRITE]==========" << std::endl;
 		handle_client_write_event((ClientSocket*)socket);
 	}
 }

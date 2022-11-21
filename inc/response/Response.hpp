@@ -109,7 +109,7 @@ struct Response
 	 */
 	int read();
 
-	int send(int clientFd, size_t bufSize);
+	int send(int clientFd);
 
 	/**
 	 * @brief : exec -> read or write로 진행 예정
@@ -126,7 +126,7 @@ struct Response
 
 		map<string, string>::iterator it = Header.find("Connection");
 		if (it == Header.end())
-			Header["Connection"] = "Keep-Alive";
+			Header["Connection"] = "keep-alive";
 		Header["Content-Type"] = "Text/html";
 		Header["Content-Type"] = g_conf.getContentType(ext);
 		Header["Content-Length"] = Util::to_string(Body.size());
@@ -197,10 +197,10 @@ int 	Response::execute()
 		progress = contentResult->set();
 
 		if (Req->StartLine.method == "GET")
-			return statement = this->read();
+			return statement = READ_RESPONSE;
 
 		if (Req->StartLine.method == "POST")
-			return statement = this->write();
+			return statement = WRITE_RESPONSE;
 	}
 	catch (int errNo)	//	예외 발생 시 일단 객체 내에서 처리 -> 수정 O
 	{
@@ -245,10 +245,11 @@ int 	Response::read()
 	return READ_RESPONSE;
 }
 
-int Response::send(int clientFd, size_t bufSize)
+int Response::send(int clientFd)
 {
 	if (!Html)
 		Html = new string(toHtml());
+	size_t bufSize = Html->size();
 	size_t	len = ::send(clientFd, Html->c_str(), bufSize, 0);
 	Html->erase(0, len);
 	if (len < 0)

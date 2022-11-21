@@ -207,6 +207,9 @@ int 	Response::execute()
 					params.push_back(tmp);
 				}
 			}
+			if (Req->StartLine.method == "POST")
+				Req->session.Session[Req->cookies[ext]].push_back(Req->bodySS.str());
+
 
 			contentResult = new Cgi(path, ext, params);
 		}

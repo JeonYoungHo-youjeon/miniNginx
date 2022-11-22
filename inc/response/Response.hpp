@@ -3,6 +3,8 @@
 
 # include <cstdio>
 # include <sstream>
+# include <dirent.h>
+# include <sys/stat.h>
 
 # include "Cgi.hpp"
 # include "File.hpp"
@@ -163,6 +165,76 @@ struct Response
 				"  </h1>\n"
 				"</html>\n";
 		return makeHeader();
+	}
+
+
+//TODO : 슬래시 여부에 따른 분기 구현
+//디렉토리일때 슬래쉬 유무 확인해서 슬래쉬 있을때만 index/autoindex 바로 보여주고,
+//슬래쉬 없는데 디렉토리면 301 + 헤더에 location 첨부.
+//해당 디렉토리가 없을때 404
+//해당 디렉토리가 있으나 index/autoindex가 꺼져있으면 403
+//엔진엑스에서는 autoindex 와 index가 같이 있으면 index만 동작함
+
+	int isDir(string path)
+	{
+		DIR *dir;
+		if ((dir = opendir(path.c_str()))) 
+		{
+			closedir(dir);
+			return 1;
+		}
+		switch (errno)
+		{
+		case EMFILE:
+			return 0;
+		case EACCES:
+			return 403;
+		default:
+			return 500;
+		}
+		closedir(dir);
+		return -1;
+	}
+
+	string get_dirlist_page(string head)
+	{
+		string ret;
+		string page;
+		string path; // 상대경로였던걸로 기억나긴하는데 확인 필요
+
+		//TODO:path 할당해야함
+		DIR *dir;
+		struct dirent *ent;
+		if ((dir = opendir(path.c_str()))) 
+		{
+			while ((ent = readdir(dir))) 
+			{
+				struct stat statbuf;
+				std::string tmp = ent->d_name;
+				std::string checker = path + tmp;
+				stat(checker.c_str(), &statbuf);
+				if (S_ISDIR(statbuf.st_mode))
+					tmp += "/" ;
+
+				page += "<a href=\"";
+				page += tmp;
+				page += "\">";
+				page += tmp;
+				page += "</a>\n" ;
+			}
+			closedir (dir);
+		} 
+	
+		ret =
+			"<html>\n"
+			"<head><title>Index of " + head + " </title></head>\n"
+			"<body>\n"
+			"<h1>Index of " + head + " </h1><hr><pre>\n" +
+			page +
+			"</pre><hr></body>\n"
+			"</html>\n";
+			
+		return ret;
 	}
 };
 

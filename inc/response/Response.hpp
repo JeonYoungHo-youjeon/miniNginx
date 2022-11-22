@@ -237,7 +237,7 @@ int 	Response::write()
 		return READ_RESPONSE;
 
 	//	쓰고 쓸 것이 남아있으면 WRITE_RESPONSE 반환
-	ssize_t	len = ::write(contentResult->inFd, postBody.c_str(), BUFFER_SIZE);
+	size_t	len = ::write(contentResult->inFd, postBody.c_str(), BUFFER_SIZE);
 
 	if (len < 0)
 		throw StartLine.statusCode = 500;
@@ -254,11 +254,11 @@ int 	Response::write()
 int 	Response::read()
 {
 	//	읽고 읽을것이 남아있으면 READ_RESPONSE 반환
-	char buf[BUFFER_SIZE] = {0};
-	ssize_t	len = ::read(contentResult->outFd, buf, BUFFER_SIZE);
+	char buf[BUFFER_SIZE];
+	size_t	len = ::read(contentResult->outFd, buf, BUFFER_SIZE);
 
 	Body += string(buf, len);
-	cout << len << endl;
+	//	< BUFFER_SIZE 밑에 있어서 닿을 수 없던 부분 수정
 	if (len < 0)
 		throw StartLine.statusCode = 500;
 	if (len < BUFFER_SIZE)
@@ -271,12 +271,18 @@ int Response::send(int clientFd)
 {
 	if (!Html)
 		Html = new string(toHtml());
+
 	ssize_t bufSize = Html->size();
 	ssize_t	len = ::send(clientFd, Html->c_str(), bufSize, 0);
-	Html->erase(0, len);
+	std::cout << "\t==========[SEND SIZE]==========" << std::endl;
+	std::cout << "len : " << len << ", bufSize : " << bufSize << std::endl;
+
+	if (len > 0)
+		Html->erase(0, len);
+
 	if (len < 0)
 		throw StartLine.statusCode = 500;
-	if (len < bufSize)
+	if (len == bufSize)
 		return END_RESPONSE;
 	return SEND_RESPONSE;
 }

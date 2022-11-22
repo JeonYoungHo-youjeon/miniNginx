@@ -93,7 +93,9 @@ struct Request
 	{
 		if (is_empty_buffer())
 		{
-			char rcvData[BUFFER_SIZE] = {0};
+			char rcvData[BUFFER_SIZE];
+			memset(rcvData, 0, BUFFER_SIZE);
+
 			int byte = recv(clientFd, &rcvData[0], BUFFER_SIZE, 0);
 
 			if (byte < 0)

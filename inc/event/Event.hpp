@@ -218,7 +218,6 @@ void Event::handle_client_read_event(ClientSocket* socket)
 			std::cout << "\t==========[END_REQUEST]==========" << std::endl;
 			req->print_request();
 			state = socket->set_response(*req);
-			std::cout << "state : " << state << std::endl;
 		}
 		
 	}
@@ -239,9 +238,21 @@ void Event::handle_client_write_event(ClientSocket* socket)
 	State state = socket->get_state();
 	Response* res = socket->get_response();
 
+
 	try
 	{
-		state = res->write();
+		switch (state)
+		{
+		case WRITE_RESPONSE:
+			std::cout << "\t==========[WRITE_RESPONSE]==========" << std::endl;
+			state = res->write();
+			break;
+		case SEND_RESPONSE:
+			std::cout << "\t==========[SEND_RESPONSE]==========" << std::endl;
+			state = res->send(socket->get_fd());
+			break;	
+		}
+
 	}
 	catch (int error_code)
 	{
@@ -256,9 +267,10 @@ void Event::handle_next_event(ClientSocket* socket, State state)
 	Request* req = socket->get_request();
 	Response* res = socket->get_response();
 
-	if (state == SEND_RESPONSE)
+
+	if (state == END_RESPONSE)
 	{
-		std::cout << "\t==========[SEND_RESPONSE]==========" << std::endl;
+		std::cout << "\t==========[END_RESPONSE]==========" << std::endl;
 		state = res->send(socket->get_fd());
 		// send(socket->get_fd(), res->toHtml().c_str(), res->toHtml().size(), 0);
 
@@ -283,6 +295,7 @@ void Event::handle_next_event(ClientSocket* socket, State state)
 	}
 	else
 	{
+		std::cout << "\t==========[SET NEXT EVENT]==========" << std::endl;
 		socket->update_state(state);
 		kq->set_next_event(socket, socket->get_state());
 	}

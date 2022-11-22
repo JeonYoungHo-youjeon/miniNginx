@@ -208,6 +208,7 @@ int 	Response::execute()
 				if (!tmp.empty())
 				{
 					tmp.insert(0, "COOKIE=");
+					tmp += ";";
 					params.push_back(tmp);
 				}
 			}

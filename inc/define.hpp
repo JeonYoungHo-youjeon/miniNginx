@@ -52,5 +52,6 @@ static const time_t		TIMEOUT = 60;
 static const int		MAX_EVENT = 1024; // TODO: I don't know optimal MAX_EVENT yet.
 const int				BUFFER_SIZE = 8192;
 const int				MAX_BODY_SIZE = 8192;
+const int				SESSION_TIMEOUT = 120; // second
 
 #endif	//	DEFINE_HPP

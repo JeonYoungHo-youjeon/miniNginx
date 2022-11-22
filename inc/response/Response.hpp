@@ -199,14 +199,17 @@ int 	Response::execute()
 
 			if (Req->cookies.count(ext) == 0)
 			{
-				Header["set-cookie"] = ext + "=" + session->gen_random(12) + ";";
+				Header["set-cookie"] = ext + "=" + session->set("") + ";";
 			}
 			else
 			{
-				string tmp;
+				string tmp = session->get(cookies[ext]);
 
-				tmp = "COOKIE=" + session->Session[cookies[ext]];
-				params.push_back(tmp);
+				if (!tmp.empty())
+				{
+					tmp.insert(0, "COOKIE=");
+					params.push_back(tmp);
+				}
 			}
 			if (Req->StartLine.method == "POST")
 				session->Session[cookies[ext]] = Req->bodySS.str();

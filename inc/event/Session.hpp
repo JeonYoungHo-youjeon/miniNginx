@@ -4,6 +4,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <time.h>
 
 struct Session
 {
@@ -14,6 +15,29 @@ struct Session
     // TODO:cookie.php을 이용해서 로그인 구현
 
 	std::map<std::string, std::string> Session;
+	std::map<std::string, time_t> expireInfo;
+
+	std::string get(std::string key)
+	{
+		if (Session.count(key) > 0 && expireInfo[key] > time(NULL))
+		{
+			expireInfo[key] = time(NULL) + SESSION_TIMEOUT;
+			return Session[key];
+		}
+		return "";
+		
+	}
+
+	std::string set(std::string val)
+	{
+		std::string key;
+
+		key = gen_random(12);
+		Session[key] = val;
+		expireInfo[key] = time(NULL) + SESSION_TIMEOUT;
+
+		return key;
+	}
  
 	std::string gen_random(const int len) const
 	{

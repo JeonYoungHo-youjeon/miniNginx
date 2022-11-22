@@ -23,10 +23,10 @@ public:
 	KQueue();
 	~KQueue();
 
-private:
-	void init_kqueue();
 	void update_event(uintptr_t ident, int16_t filter, \
 					uint16_t flags, uint32_t fflags, intptr_t data, void* udata);
+private:
+	void init_kqueue();
 	void set_timeout(const Socket* socket);
 
 	KQueue(const KQueue& other);
@@ -163,8 +163,10 @@ void KQueue::set_next_event(ClientSocket* socket, State state)
 
 		}
 		enable_write_event(socket, socket->get_writeFD());
-			
-		
+		break;
+	case SEND_RESPONSE:
+		std::cout << "\t==========[NEXT SEND_RESPONSE]==========" << std::endl;
+		enable_write_event(socket, socket->get_fd());
 		break;
 	}
 }

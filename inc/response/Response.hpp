@@ -8,6 +8,7 @@
 # include "File.hpp"
 # include "../http.hpp"
 # include "../parse/Util.hpp"
+# include "../event/Session.hpp"
 
 /*
  *  Http Test
@@ -25,7 +26,7 @@ struct ResponseStartLine
 
 struct Response
 {
-	Request *Req;
+	const Request *Req;
 	ResponseStartLine StartLine;
 	map<string, string> Header;
 	string Body;
@@ -127,10 +128,12 @@ struct Response
 		map<string, string>::iterator it = Header.find("Connection");
 		if (it == Header.end())
 			Header["Connection"] = "keep-alive";
-		Header["Content-Type"] = "Text/html";
-		Header["Content-Type"] = g_conf.getContentType(ext);
+		it = Header.find("Content-Type");
+		if (it == Header.end())
+			Header["Content-Type"] = g_conf.getContentType(ext);
 		Header["Content-Length"] = Util::to_string(Body.size());
 		{    /* 필요 헤더*/    }
+		std::cerr << Header["Content-Type"] << std::endl;
 		return makeStartLine();
 	}
 
@@ -191,26 +194,24 @@ int 	Response::execute()
 
 		if (g_conf[Req->configName][Req->locationName].is_exist(ext))
 		{
+			Session *session = Req->session;
+			std::map<string, string> cookies = Req->cookies;
+
 			if (Req->cookies.count(ext) == 0)
 			{
-				Header["set-cookie"] = ext + "=" + Req->session.gen_random(12) + ";";
+				Header["set-cookie"] = ext + "=" + session->gen_random(12) + ";";
 			}
 			else
 			{
 				string tmp;
-				for (std::vector<string>::iterator it = Req->session.Session[Req->cookies[ext]].begin(); it != Req->session.Session[Req->cookies[ext]].end(); ++it)
-					tmp += *it + ":";
-				if (!tmp.empty())
-				{
-					tmp.insert(0, "COOKIE=");	
-					tmp.erase(tmp.size() - 1);
-					params.push_back(tmp);
-				}
+
+				tmp = "COOKIE=" + session->Session[cookies[ext]];
+				params.push_back(tmp);
 			}
 			if (Req->StartLine.method == "POST")
-				Req->session.Session[Req->cookies[ext]].push_back(Req->bodySS.str());
-
-
+				session->Session[cookies[ext]] = Req->bodySS.str();
+	
+			Header["Content-Type"] = "Text/html";
 			contentResult = new Cgi(path, ext, params);
 		}
 		else

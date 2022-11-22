@@ -4,6 +4,7 @@
 
 # include "Type.hpp"
 # include "Socket.hpp"
+# include "Session.hpp"
 
 
 class ClientSocket
@@ -27,7 +28,7 @@ public:
 	State get_state() const;
 	void reset();
 
-	ClientSocket(FD clientFD, const SockAddr& addr, const std::string& serverIPPort);
+	ClientSocket(FD clientFD, const SockAddr& addr, const std::string& serverIPPort_, Session* ses);
 	~ClientSocket();
 
 private:
@@ -46,6 +47,7 @@ private:
 	FD writeFD;
 	PID childPID;
 	State state;
+	Session *session;
 };
 
 // ClientSocket implementation
@@ -128,7 +130,7 @@ void ClientSocket::reset()
 {
 	Request* tmp_req = req;
 
-	req = new Request(fd, serverIPPort);
+	req = new Request(fd, serverIPPort, session);
 
 	delete tmp_req;
 }
@@ -138,7 +140,7 @@ void ClientSocket::reset()
 ClientSocket::ClientSocket()
 {}
 
-ClientSocket::ClientSocket(FD clientFD, const SockAddr& addr, const std::string& serverIPPort_)
+ClientSocket::ClientSocket(FD clientFD, const SockAddr& addr, const std::string& serverIPPort_, Session* ses)
 	: lastEventTime(get_current_time()), serverIPPort(serverIPPort_), \
 		readFD(0), writeFD(0), childPID(0), state(READ_REQUEST), req(0), res(new Response())
 {
@@ -146,7 +148,8 @@ ClientSocket::ClientSocket(FD clientFD, const SockAddr& addr, const std::string&
 	ip = inet_ntoa(addr.sin_addr);
 	port = "";
 	type = CLIENT;
-	req = new Request(fd, serverIPPort);
+	session = ses;
+	req = new Request(fd, serverIPPort, session);
 }
 
 ClientSocket::~ClientSocket()

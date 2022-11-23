@@ -175,34 +175,13 @@ struct Response
 //해당 디렉토리가 있으나 index/autoindex가 꺼져있으면 403
 //엔진엑스에서는 autoindex 와 index가 같이 있으면 index만 동작함
 
-	int isDir(string path)
-	{
-		DIR *dir;
-		if ((dir = opendir(path.c_str()))) 
-		{
-			closedir(dir);
-			return 1;
-		}
-		switch (errno)
-		{
-		case EMFILE:
-			return 0;
-		case EACCES:
-			return 403;
-		default:
-			return 500;
-		}
-		closedir(dir);
-		return -1;
-	}
 
-	string get_dirlist_page(string head)
+
+	string get_dirlist_page(string path, string head)
 	{
 		string ret;
 		string page;
-		string path; // 상대경로였던걸로 기억나긴하는데 확인 필요
 
-		//TODO:path 할당해야함
 		DIR *dir;
 		struct dirent *ent;
 		if ((dir = opendir(path.c_str()))) 

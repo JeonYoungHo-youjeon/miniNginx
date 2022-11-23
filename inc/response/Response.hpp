@@ -84,11 +84,20 @@ struct Response
 		Req = &req;
 		postBody = req.bodySS.str();
 		locationName = path = req.locationName;
+
+		//	root 설정
+		if (g_conf[Req->configName][locationName].is_exist("root"))
+			path = g_conf[Req->configName][path]["root"][0];
+		if (g_conf[Req->configName][locationName].is_exist("return"))
+			return redirect(
+					Util::stoi(g_conf[Req->configName][locationName]["return"][0]),
+					g_conf[Req->configName][locationName]["return"][1]
+					);
+		//	upload
 		if (g_conf[configName][locationName].is_exist("upload") && req.StartLine.method == "POST")
 			path = Util::join(path, g_conf[configName][locationName]["upload"][0], '/');
 		fileName = req.fileName;
-		if (!req.locationName.empty() && g_conf[Req->configName][path].is_exist("root"))
-			path = g_conf[Req->configName][path]["root"][0];
+
 		path = Util::join(path, fileName, '/');
 		ext = req.ext;
 
@@ -161,8 +170,6 @@ struct Response
 					path = g_conf[configName][locationName]["error_page"].back();
 			return execute();
 		}
-		if (code / 100 == 3)
-			return makeHeader();
 		Body =
 				"<!DOCTYPE html>\n"
 				"<html>\n"
@@ -343,7 +350,9 @@ int 	Response::read()
 int Response::redirect(int code, const string& location)
 {
 	Header["Location"] = location;
-	return make_errorpage(code);
+	StartLine.statusCode = code;
+	StartLine.reasonPhrase = g_conf.getStatusMsg(code);
+	return makeHeader();
 }
 
 
@@ -362,7 +371,7 @@ int Response::send(int clientFd)
 
 	if (len < 0)
 		throw StartLine.statusCode = 500;
-	if (len == bufSize)
+	if (Html->empty())
 		return END_RESPONSE;
 	return SEND_RESPONSE;
 }

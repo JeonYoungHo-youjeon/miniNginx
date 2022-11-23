@@ -79,7 +79,7 @@ struct Response
 	{
 		StartLine.statusCode = 200;
 		Req = &req;
-		postBody = req.buffer.str();
+		postBody = req.bodySS.str();
 		locationName = path = req.locationName;
 		fileName = req.fileName;
 		if (!req.locationName.empty() && g_conf[Req->configName][path].is_exist("root"))
@@ -188,7 +188,7 @@ int 	Response::execute()
 		//	Method Error -> Bad Request
 		if (Req->StartLine.method != "GET" && Req->StartLine.method != "POST")
 			throw 400;
-
+		
 		if (g_conf[Req->configName][Req->locationName].is_exist(ext))
 			contentResult = new Cgi(path, ext, params);
 		else
@@ -215,16 +215,22 @@ int 	Response::write()
 		return READ_RESPONSE;
 
 	//	쓰고 쓸 것이 남아있으면 WRITE_RESPONSE 반환
-	size_t	len = ::write(contentResult->inFd, postBody.c_str(), BUFFER_SIZE);
+	std::cout << "=========[RESPONSE WRTIE]==========" << std::endl;
+	ssize_t	len = ::write(contentResult->inFd, postBody.c_str(), postBody.size());
+	std::cout << "len : " << len << std::endl;
 
 	if (len < 0)
 		throw StartLine.statusCode = 500;
-	else if (len == 0)
+
+	if (len == postBody.size())
+	{
+		postBody.erase(0, len);
 		return makeHeader();
+	}
 
 	postBody.erase(0, len);
 	//	전부 보냈으면 결과 값 받아오기 위해 READ_RESPONSE 반환
-	if (len < BUFFER_SIZE)
+	if (len < postBody.size())
 		return READ_RESPONSE;
 	return WRITE_RESPONSE;
 }

@@ -126,8 +126,6 @@ void KQueue::add_proc_event(pid_t pid)
 void KQueue::set_next_event(ClientSocket* socket, State state)
 {
 	const Response* res = socket->get_response();
-	FD fd;
-	PID pid;
 
 	switch (state)
 	{
@@ -140,9 +138,12 @@ void KQueue::set_next_event(ClientSocket* socket, State state)
 		std::cout << "\t==========[NEXT READ_RESPONSE]==========" << std::endl;
 		if (!socket->get_readFD())
 		{
-			fd = res->contentResult->outFd;
-			socket->set_readFD(fd);
+			std::cout << "!readFD" << std::endl;
+			socket->set_readFD(res->contentResult->outFd);
+			socket->set_writeFD(res->contentResult->inFd);
 			// TODO: change function name
+			// add_write_event(socket, socket->get_writeFD());
+			// add_read_event(socket, socket->get_readFD());
 			add_client_io_event(socket, socket->get_readFD());
 		}
 		else
@@ -150,19 +151,23 @@ void KQueue::set_next_event(ClientSocket* socket, State state)
 		break;
 	case WRITE_RESPONSE:
 		std::cout << "\t==========[NEXT WRITE_RESPONSE]==========" << std::endl;
-		if (!socket->get_PID())
+		if (socket->get_PID())
 		{
-			pid = res->contentResult->getPid();
-			add_proc_event(pid);
+
+			std::cout << "socket->get_pid()" << std::endl;
+			add_proc_event(res->contentResult->getPid());
 		}
 		if (!socket->get_writeFD())
 		{
-			fd = res->contentResult->inFd;
-			socket->set_writeFD(fd);
+			socket->set_readFD(res->contentResult->outFd);
+			socket->set_writeFD(res->contentResult->inFd);
+			// TODO: change function name
 			add_write_event(socket, socket->get_writeFD());
-
+			update_event(socket->get_readFD(), EVFILT_READ, EV_ADD | EV_DISABLE, 0, 0, (void*)socket);
+			update_event(socket->get_writeFD(), EVFILT_WRITE, EV_ENABLE | EV_CLEAR, 0, 0, (void*)socket);
 		}
-		enable_write_event(socket, socket->get_writeFD());
+		else
+			enable_write_event(socket, socket->get_writeFD());
 		break;
 	case SEND_RESPONSE:
 		std::cout << "\t==========[NEXT SEND_RESPONSE]==========" << std::endl;

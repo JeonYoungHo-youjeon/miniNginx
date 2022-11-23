@@ -23,7 +23,7 @@ struct Util
 	static std::string get_date();
 	static std::string to_string(int num);
 	static void getline(std::string& buffer, std::string& to, const char c);
-	static int is_dir(std::string& path)
+	static int is_dir(std::string& path);
 };
 
 std::string Util::remover(const std::string& input, const char rmchar)

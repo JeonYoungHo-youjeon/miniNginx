@@ -81,62 +81,7 @@ struct Response
 		return make_errorpage(error_code);
 	}
 
-	int set(const Request& req)
-	{
-		StartLine.statusCode = 200;
-		Req = &req;
-		url = req.StartLine.url;
-		confName = req.configName;
-		locName = req.locationName;
-		postBody = req.bodySS.str();
-		fileName = url;
-		fileName.erase(0, locName.size());
-		//	root 설정
-		path = getcwd(0, 0);
-		try
-		{
-			//	Redirect Uri
-			if (g_conf[confName][locName].is_exist("return"))
-				return redirect(
-						StartLine.statusCode = Util::stoi(g_conf[confName][locName]["return"][0]),
-						g_conf[confName][locName]["return"][1]);
-			//	Root Directory
-			if (g_conf[confName][locName].is_exist("root"))
-				path = Util::join(path, g_conf[confName][locName]["root"].front(), '/');
-			if (g_conf[confName][locName].is_exist("limit_except"))
-				for (vector<string>::const_iterator it = g_conf[confName][locName]["limit_except"].begin();
-					 it != g_conf[confName][locName]["limit_except"].end(); ++it)
-					if (*it == Req->StartLine.method)
-						throw 500;
-			//	Upload Path
-			if (g_conf[confName][locName].is_exist("upload"))
-				path = Util::join(path, g_conf[confName][locName]["upload"][0], '/');
-			//	Uri Check Dir is or not
-			if (!fileName.empty())
-				path = Util::join(path, fileName, '/');
-			cout << path << endl;
-			if (Util::is_dir(path))
-			{
-				if (*url.rbegin() != '/')
-					return redirect(301, url + '/');
-				else if (g_conf[confName][locName].is_exist("index"))
-					path = Util::join(path, g_conf[confName][locName]["index"][0], '/');
-				else if (g_conf[confName][locName].is_exist("autoindex") && g_conf[confName][locName]["autoindex"][0] == "on")
-					return listing(path, url);
-				else
-					throw 403;
-			}
-
-			//	get Extension
-			ext = findExtension(path);
-		}
-		catch (int errNo)
-		{
-			return make_errorpage(StartLine.statusCode = errNo);
-		}
-		return statement = execute();
-	}
-
+	int set(const Request& req);
 	int redirect(int code, const string& location);
 	int execute();
 	int write();
@@ -285,7 +230,6 @@ int Response::redirect(int code, const string& location)
 	return makeHeader();
 }
 
-
 int Response::send(int clientFd)
 {
 	if (!Html)
@@ -389,6 +333,61 @@ int Response::clear()
 	delete contentResult;
 	delete Html;
 	return REPEAT_REQUEST;
+}
+
+int Response::set(const Request& req)
+{
+	StartLine.statusCode = 200;
+	Req = &req;
+	url = req.virtualPath;
+	confName = req.configName;
+	locName = req.locationName;
+	postBody = req.bodySS.str();
+	fileName = url;
+	//	root 설정
+	path = getcwd(0, 0);
+	try
+	{
+		//	Redirect Uri
+		if (g_conf[confName][locName].is_exist("return"))
+			return redirect(
+					StartLine.statusCode = Util::stoi(g_conf[confName][locName]["return"][0]),
+					g_conf[confName][locName]["return"][1]);
+		//	Root Directory
+		if (g_conf[confName][locName].is_exist("root"))
+			path = Util::join(path, g_conf[confName][locName]["root"].front(), '/');
+		if (g_conf[confName][locName].is_exist("limit_except"))
+			for (vector<string>::const_iterator it = g_conf[confName][locName]["limit_except"].begin();
+				 it != g_conf[confName][locName]["limit_except"].end(); ++it)
+				if (*it == Req->StartLine.method)
+					throw 500;
+		//	Upload Path
+		if (g_conf[confName][locName].is_exist("upload"))
+			path = Util::join(path, g_conf[confName][locName]["upload"][0], '/');
+		//	Uri Check Dir is or not
+		if (!fileName.empty())
+			path = Util::join(path, fileName, '/');
+		if (Util::is_dir(path))
+		{
+			if (g_conf[confName][locName].is_exist("index"))
+				path = Util::join(path, g_conf[confName][locName]["index"][0], '/');
+			else if (*req.StartLine.url.rbegin() != '/')
+				return redirect(301, req.StartLine.url + '/');
+			else if (g_conf[confName][locName].is_exist("autoindex") && g_conf[confName][locName]["autoindex"][0] == "on")
+				return listing(path, url);
+			else
+				throw 403;
+		}
+
+		//	get Extension
+		cout << path << endl;
+		ext = findExtension(path);
+	}
+	catch (int errNo)
+	{
+		return make_errorpage(StartLine.statusCode = errNo);
+	}
+	return statement = execute();
 }
 
 #endif

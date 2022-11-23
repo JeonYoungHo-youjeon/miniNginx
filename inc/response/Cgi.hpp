@@ -12,9 +12,9 @@
 
 struct Cgi : public Contents
 {
-    Cgi(const std::string& url) : Contents(url) {};
+    Cgi(const std::string& url) : Contents(url) { std::cout << url << std::endl;};
     Cgi(const std::string& path, const string& excutor, const vector<std::string>& params);
-    ~Cgi();
+	~Cgi();
 
     int         set();
     int			close();
@@ -28,6 +28,8 @@ struct Cgi : public Contents
 	}
 
 	char**		envp;
+	char*		pwd;
+
 	string		excutor;
 	int 		_fdin;
 	int 		_fdout;
@@ -43,7 +45,11 @@ Cgi::Cgi(const std::string& path, const string& excutor, const vector<std::strin
 		strcpy(envp[i], params[i].c_str());
 	}
 	envp[params.size()] = NULL;
+	pwd = getcwd(0, 0);
+	if (!pwd)
+		return ;
 }
+
 Cgi::~Cgi()
 {
 	if (envp)
@@ -60,7 +66,7 @@ int     Cgi::set()
 {
     int inPipe[2];
 	int	outPipe[2];
-	
+
     char* argv[3] = {
 			(char*)excutor.c_str(),
 			(char*)url.c_str(),

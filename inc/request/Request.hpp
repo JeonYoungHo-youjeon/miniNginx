@@ -6,7 +6,6 @@
 # include "../parse/Config.hpp"
 # include "../parse/Util.hpp"
 # include "../response/Cgi.hpp"
-# include "../event/Session.hpp"
 
 using std::string;
 using std::cout;
@@ -43,9 +42,6 @@ struct Request
 
 	string virtualPath;
 
-	std::map<string, string> cookies;
-	Session *session;
-
 	int maxBodySize;
 	int readSize;
 	int contentLength;
@@ -61,13 +57,12 @@ struct Request
 	* @brief : 생성자 초기화, set()을 통한 초기화 등 임의로 다양하게 구현
 	*/
 	Request() {}
-	Request(int fd, const string& configName, Session* ses)
+	Request(int fd, const string& configName)
 	: statusCode(200), configName(configName), clientFd(fd)
 	{
 		this->configName = configName;
 		progress = START_LINE;
 		maxBodySize = MAX_BODY_SIZE;
-		session = ses;
 		// if (g_conf[configName][locationName].is_exist("client_max_body_size"))
 		// 	maxBodySize = Util::stoi(g_conf[configName][locationName]["client_max_body_size"][0]);
 	};
@@ -117,9 +112,6 @@ struct Request
 			fileName = g_conf[configName][locationName]["index"].front();
 		ext = findExtension(fileName);
 
-		if (Header.count(HEAD[COOKIE]))
-			get_cookie();
-
 		if (Header.count(HEAD[CONTENT_LENGTH]))
 		{
 			contentLength = Util::stoi(Header[HEAD[CONTENT_LENGTH]]);
@@ -127,16 +119,6 @@ struct Request
 		}
 		if (Header.count(HEAD[TRANSFER_ENCODING]))
 			chunkFlag = true;
-	}
-
-	void get_cookie()
-	{
-		vector<string> splited = Util::split(Header[HEAD[COOKIE]], ';');
-		for (std::vector<string>::iterator it = splited.begin(); it != splited.end(); ++it)
-		{
-			vector<string> tmp = Util::split(*it, '=');
-			cookies[tmp[0]] = tmp[1];
-		}
 	}
 
 	int parse()

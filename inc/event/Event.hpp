@@ -8,7 +8,6 @@
 # include "ClientSocket.hpp"
 # include "ServerSocket.hpp"
 # include "Logger.hpp" // REMOVE
-# include "Session.hpp"
 
 extern Config g_conf;
 
@@ -48,7 +47,6 @@ private:
 	SocketMap sockets;
 	GarbageCollector garbageCollector;
 	Logger logger; // REMOVE
-	Session session;
 };
 
 // Event implementation
@@ -161,7 +159,7 @@ void Event::accept_connection(FD serverFD)
 void Event::create_client_socket(FD clientFD, const SockAddr& addr, FD serverFD)
 {
 	const std::string s = sockets[serverFD]->get_ip() + ":" + sockets[serverFD]->get_port();
-	ClientSocket* socket = new ClientSocket(clientFD, addr, s, &session);
+	ClientSocket* socket = new ClientSocket(clientFD, addr, s);
 	kq->add_client_io_event(socket, socket->get_fd());
 	sockets.insert(std::pair<FD, Socket*>(socket->get_fd(), socket));
 

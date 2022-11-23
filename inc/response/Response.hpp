@@ -11,7 +11,6 @@
 # include "File.hpp"
 # include "../http.hpp"
 # include "../parse/Util.hpp"
-# include "../event/Session.hpp"
 
 /*
  *  Http Test
@@ -243,6 +242,11 @@ int 	Response::execute()
 	/**
 	 * @brief try remove file, throw error if catch error 
 	 */
+
+	string test = path + fileName;
+	int i = Util::is_dir(test);
+	std::cerr << test << i << std::endl;
+	std::cerr << path <<" "<< fileName << std::endl;
 	
 	try
 	{
@@ -263,41 +267,8 @@ int 	Response::execute()
 		
 		if (g_conf[Req->configName][Req->locationName].is_exist(ext))
 		{
-			Session *session = Req->session;
-			std::map<string, string> cookies = Req->cookies;
-
-			if (Req->cookies.count(ext) == 0)
-			{
-				time_t now = time(NULL) + SESSION_TIMEOUT;
-				struct tm *tm = gmtime(&now);
-				char expires[80];
-				strftime(expires, 80, "%a, %d %b %Y %H:%M:%S GMT", tm);
-
-				Header["set-cookie"] = ext + "=" + session->set("") + ";" + " Expires=" + expires + ";";
-			}
-			else
-			{
-				string tmp = session->get(cookies[ext]);
-
-				if (!tmp.empty())
-				{
-					tmp.insert(0, "COOKIE=");
-					tmp += ";";
-					params.push_back(tmp);
-				
-					time_t now = time(NULL) + SESSION_TIMEOUT;
-					struct tm *tm = gmtime(&now);
-					char expires[80];
-					strftime(expires, 80, "%a, %d %b %Y %H:%M:%S GMT", tm);
-
-					Header["set-cookie"] = ext + "=" + cookies[ext] + ";" + " Expires=" + expires + ";";
-				}
-			}
-			if (Req->StartLine.method == "POST")
-				session->Session[cookies[ext]] = Req->bodySS.str();
-	
 			Header["Content-Type"] = "Text/html";
-			contentResult = new Cgi(path, ext, params);
+			contentResult = new Cgi(path, ext);
 		}
 		else
 			contentResult = new File(path);

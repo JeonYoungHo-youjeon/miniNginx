@@ -81,6 +81,8 @@ struct Response
 		Req = &req;
 		postBody = req.buffer.str();
 		locationName = path = req.locationName;
+		if (g_conf[configName][locationName].is_exist("upload") && req.StartLine.method == "POST")
+			path = Util::join(path, g_conf[configName][locationName]["upload"][0], '/');
 		fileName = req.fileName;
 		if (!req.locationName.empty() && g_conf[Req->configName][path].is_exist("root"))
 			path = g_conf[Req->configName][path]["root"][0];
@@ -90,6 +92,8 @@ struct Response
 		progress = READY;
 		return statement = execute();
 	}
+
+	int redirect(int code, const string& location);
 
 	/**
 	 * @brief Set & return nextToDo
@@ -152,6 +156,8 @@ struct Response
 					path = g_conf[configName][locationName]["error_page"].back();
 			return execute();
 		}
+		if (code / 100 == 3)
+			return makeHeader();
 		Body =
 				"<!DOCTYPE html>\n"
 				"<html>\n"
@@ -186,6 +192,10 @@ int 	Response::execute()
 			return 	makeHeader();
 		}
 		//	Method Error -> Bad Request
+		if (g_conf[configName][locationName].is_exist("return"))
+			return redirect(
+					StartLine.statusCode = Util::stoi(g_conf[configName][locationName]["return"][0]),
+					g_conf[configName][locationName]["return"][1]);
 		if (Req->StartLine.method != "GET" && Req->StartLine.method != "POST")
 			throw 400;
 
@@ -215,17 +225,14 @@ int 	Response::write()
 		return READ_RESPONSE;
 
 	//	쓰고 쓸 것이 남아있으면 WRITE_RESPONSE 반환
-	size_t	len = ::write(contentResult->inFd, postBody.c_str(), BUFFER_SIZE);
+	ssize_t	len = ::write(contentResult->inFd, postBody.c_str(), postBody.size());
 
 	if (len < 0)
 		throw StartLine.statusCode = 500;
-	else if (len == 0)
-		return makeHeader();
-
 	postBody.erase(0, len);
-	//	전부 보냈으면 결과 값 받아오기 위해 READ_RESPONSE 반환
-	if (len < BUFFER_SIZE)
+	if (postBody.empty())
 		return READ_RESPONSE;
+
 	return WRITE_RESPONSE;
 }
 
@@ -244,6 +251,13 @@ int 	Response::read()
 
 	return READ_RESPONSE;
 }
+
+int Response::redirect(int code, const string& location)
+{
+	Header["Location"] = location;
+	return make_errorpage(code);
+}
+
 
 int Response::send(int clientFd)
 {

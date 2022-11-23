@@ -257,6 +257,8 @@ struct Request
 	{
 		std::string ret;
 		std::string tmp;
+		if (g_conf[configName].is_exist(path))
+			return path;
 		vector<std::string> pathTree = Util::split(path, '/');
 
 		for (std::vector<std::string>::iterator it = pathTree.begin(); it != pathTree.end(); ++it)
@@ -267,7 +269,6 @@ struct Request
 
 	std::string findExtension(const std::string& url)
 	{
-		cout << "URL : " << url << endl;
 		std::string::size_type pos = url.rfind('.');
 		if (pos == std::string::npos)
 			return "";

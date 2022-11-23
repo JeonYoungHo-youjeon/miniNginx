@@ -49,6 +49,7 @@ struct Request
 	int maxBodySize;
 	int readSize;
 	int contentLength;
+	int remainReadLength;
 	bool chunkFlag;
 	int statusCode;
 	int clientFd;
@@ -120,7 +121,10 @@ struct Request
 			get_cookie();
 
 		if (Header.count(HEAD[CONTENT_LENGTH]))
+		{
 			contentLength = Util::stoi(Header[HEAD[CONTENT_LENGTH]]);
+			remainReadLength = contentLength;
+		}
 		if (Header.count(HEAD[TRANSFER_ENCODING]))
 			chunkFlag = true;
 	}
@@ -148,7 +152,6 @@ struct Request
 					throw statusCode = 400;
 				}
 				progress = HEADER;
-
 				break;
 			case HEADER:
 				if (is_empty_buffer() == true)
@@ -193,22 +196,25 @@ struct Request
 				
 				break;
 			case LENGTH_BODY:
+				if (contentLength == 0)
+					return END_REQUEST;
+				if (remainReadLength == 0)
+					return END_REQUEST;
+
 				if (is_empty_buffer() == true)
 					return READ_REQUEST;
 
-				if (contentLength == 0)
-					return READ_REQUEST;
 
-				if (contentLength > MAX_BODY_SIZE)
+				if (remainReadLength > MAX_BODY_SIZE)
 					readSize = MAX_BODY_SIZE;
 				else
-					readSize = contentLength;
+					readSize = remainReadLength;
 				
 				memset(charBuffer, 0, BUFFER_SIZE);
 				buffer.read(charBuffer, readSize);
 				bodySS << charBuffer;
 
-				contentLength -= strlen(charBuffer);
+				remainReadLength -= strlen(charBuffer);
 				break;
 			case CHUNK_SIZE:
 				if (is_empty_buffer() == true)
@@ -230,6 +236,7 @@ struct Request
 				
 				break;
 			case CHUNK_DATA:
+				std::cout << "CHUNK_DATA" << std::endl;
 				if (is_empty_buffer() == true)
 					return READ_REQUEST;
 

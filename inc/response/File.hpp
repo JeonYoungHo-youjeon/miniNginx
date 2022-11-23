@@ -24,6 +24,7 @@ int	File::set()
 {
 	outFd = ::open(url.c_str(), O_RDONLY);
 	inFd = ::open(url.c_str(), O_WRONLY);
+
 	if (outFd < 0 || inFd < 0)
 		throw 404;
 	pid = 0;

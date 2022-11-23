@@ -82,7 +82,7 @@ struct Response
 	{
 		StartLine.statusCode = 200;
 		Req = &req;
-		postBody = req.buffer.str();
+		postBody = req.bodySS.str();
 		locationName = path = req.locationName;
 		if (g_conf[configName][locationName].is_exist("upload") && req.StartLine.method == "POST")
 			path = Util::join(path, g_conf[configName][locationName]["upload"][0], '/');
@@ -252,7 +252,7 @@ int 	Response::execute()
 					g_conf[configName][locationName]["return"][1]);
 		if (Req->StartLine.method != "GET" && Req->StartLine.method != "POST")
 			throw 400;
-
+		
 		if (g_conf[Req->configName][Req->locationName].is_exist(ext))
 		{
 			Session *session = Req->session;
@@ -303,12 +303,22 @@ int 	Response::write()
 		return READ_RESPONSE;
 
 	//	쓰고 쓸 것이 남아있으면 WRITE_RESPONSE 반환
+	std::cout << "=========[RESPONSE WRTIE]==========" << std::endl;
 	ssize_t	len = ::write(contentResult->inFd, postBody.c_str(), postBody.size());
+	std::cout << "len : " << len << std::endl;
 
 	if (len < 0)
 		throw StartLine.statusCode = 500;
+
+	if (len == postBody.size())
+	{
+		postBody.erase(0, len);
+		return makeHeader();
+	}
+
 	postBody.erase(0, len);
-	if (postBody.empty())
+	//	전부 보냈으면 결과 값 받아오기 위해 READ_RESPONSE 반환
+	if (len < postBody.size())
 		return READ_RESPONSE;
 
 	return WRITE_RESPONSE;

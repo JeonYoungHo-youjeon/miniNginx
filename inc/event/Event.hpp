@@ -35,7 +35,7 @@ private:
 	void add_garbage(const Socket* socket);
 
 	void handle_server_event(const KEvent* event, const ServerSocket* socket);
-	void handle_client_event(const KEvent* event, const ClientSocket* socket);
+	void handle_client_event(const KEvent* event, ClientSocket* socket);
 	void handle_child_process(const KEvent* event);
 	void clear_garbage_sockets();
 	void set_next_event(State state);
@@ -72,7 +72,6 @@ void Event::event_loop()
 	while (true)
 	{
 		nEvent = kq->wait_event();
-
 		for (int i = 0; i < nEvent; ++i)
 		{
 			event = &(kq->get_eventList()[i]);
@@ -240,7 +239,6 @@ void Event::handle_client_write_event(ClientSocket* socket)
 	State state = socket->get_state();
 	Response* res = socket->get_response();
 
-
 	try
 	{
 		switch (state)
@@ -260,7 +258,6 @@ void Event::handle_client_write_event(ClientSocket* socket)
 	{
 		state = socket->set_response(error_code);
 	}
-
 	handle_next_event(socket, state);
 }
 
@@ -273,8 +270,7 @@ void Event::handle_next_event(ClientSocket* socket, State state)
 	if (state == END_RESPONSE)
 	{
 		std::cout << "\t==========[END_RESPONSE]==========" << std::endl;
-		state = res->send(socket->get_fd());
-		// send(socket->get_fd(), res->toHtml().c_str(), res->toHtml().size(), 0);
+		// state = res->send(socket->get_fd());
 
 		if (req->is_empty_buffer() == false)
 		{
@@ -321,13 +317,13 @@ void Event::handle_server_event(const KEvent* event, const ServerSocket* socket)
 	accept_connection(socket->get_fd());
 }
 
-void Event::handle_client_event(const KEvent* event, const ClientSocket* socket)
+void Event::handle_client_event(const KEvent* event, ClientSocket* socket)
 {
 	if (event->filter == EVFILT_TIMER)
 	{
 		std::cout << "\t==========[EVFILT_TIMER]==========" << std::endl;
 
-		socket_timeout((ClientSocket*)socket);	
+		socket_timeout(socket);	
 	}
 		
 	if (event->flags & EV_ERROR)
@@ -354,12 +350,12 @@ void Event::handle_client_event(const KEvent* event, const ClientSocket* socket)
 	{
 		std::cout << "\t==========[EVFILT_READ]==========" << std::endl;
 
-		handle_client_read_event((ClientSocket*)socket);
+		handle_client_read_event(socket);
 	}
 	else if (event->filter == EVFILT_WRITE)
 	{
 		std::cout << "\t==========[EVFILT_WRITE]==========" << std::endl;
-		handle_client_write_event((ClientSocket*)socket);
+		handle_client_write_event(socket);
 	}
 }
 

@@ -20,6 +20,10 @@ public:
 
 	const bool is_exist(const string& key) const;
 	const Location& operator[](const string& key) const;
+	Location& operator[](const string& key)
+	{
+		return mLocation.find(key)->second;
+	};
 	const map<string, Location>& getLocations() const;
 
     //  Access Attribution

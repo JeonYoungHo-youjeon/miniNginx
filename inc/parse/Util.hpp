@@ -25,7 +25,7 @@ struct Util
 	static std::string get_date();
 	static std::string to_string(int num);
 	static void getline(std::string& buffer, std::string& to, const char c);
-	static int is_dir(std::string& path);
+	static int is_dir(const std::string& path);
 };
 
 std::string Util::remover(const std::string& input, const char rmchar)
@@ -154,25 +154,26 @@ void Util::getline(std::string& buffer, std::string& to, const char c = '\n')
 	std::cout << "TO BUF : " << to << std::endl;
 }
 
-int Util::is_dir(std::string& path)
+int Util::is_dir(const std::string& path)
 {
 	DIR *dir;
-	if ((dir = opendir(path.c_str()))) 
+	if ((dir = opendir(path.c_str())))
 	{
 		closedir(dir);
 		return 1;
 	}
+	std::cout << "TEST" <<errno << std::endl;
 	switch (errno)
 	{
-	case EMFILE:
+	case ENOTDIR:
 		return 0;
+	case ENOENT:
+		throw 404;
 	case EACCES:
-		return 403;
+		throw 403;
 	default:
-		return 500;
+		throw 500;
 	}
-	closedir(dir);
-	return -1;
 }
 
 #endif

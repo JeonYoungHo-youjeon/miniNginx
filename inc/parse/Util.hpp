@@ -6,6 +6,8 @@
 # include <vector>
 # include <string>
 # include <map>
+# include <dirent.h>
+# include <sys/stat.h>
 
 struct Util
 {

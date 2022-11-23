@@ -47,6 +47,7 @@ private:
 	FD writeFD;
 	PID childPID;
 	State state;
+	
 	Session *session;
 };
 
@@ -131,7 +132,7 @@ void ClientSocket::reset()
 	Request* tmp_req = req;
 	Response* tmp_res = res;
 
-	req = new Request(fd, serverIPPort);
+	req = new Request(fd, serverIPPort, session);
 	res = new Response();
 
 	delete tmp_req;

@@ -3,11 +3,14 @@
 
 # include <cstdio>
 # include <sstream>
+# include <dirent.h>
+# include <sys/stat.h>
 
 # include "Cgi.hpp"
 # include "File.hpp"
 # include "../http.hpp"
 # include "../parse/Util.hpp"
+# include "../event/Session.hpp"
 
 /*
  *  Http Test
@@ -81,6 +84,8 @@ struct Response
 		Req = &req;
 		postBody = req.bodySS.str();
 		locationName = path = req.locationName;
+		if (g_conf[configName][locationName].is_exist("upload") && req.StartLine.method == "POST")
+			path = Util::join(path, g_conf[configName][locationName]["upload"][0], '/');
 		fileName = req.fileName;
 		if (!req.locationName.empty() && g_conf[Req->configName][path].is_exist("root"))
 			path = g_conf[Req->configName][path]["root"][0];
@@ -90,6 +95,8 @@ struct Response
 		progress = READY;
 		return statement = execute();
 	}
+
+	int redirect(int code, const string& location);
 
 	/**
 	 * @brief Set & return nextToDo
@@ -127,10 +134,12 @@ struct Response
 		map<string, string>::iterator it = Header.find("Connection");
 		if (it == Header.end())
 			Header["Connection"] = "keep-alive";
-		Header["Content-Type"] = "Text/html";
-		Header["Content-Type"] = g_conf.getContentType(ext);
+		it = Header.find("Content-Type");
+		if (it == Header.end())
+			Header["Content-Type"] = g_conf.getContentType(ext);
 		Header["Content-Length"] = Util::to_string(Body.size());
 		{    /* 필요 헤더*/    }
+		std::cerr << Header["Content-Type"] << std::endl;
 		return makeStartLine();
 	}
 
@@ -152,6 +161,8 @@ struct Response
 					path = g_conf[configName][locationName]["error_page"].back();
 			return execute();
 		}
+		if (code / 100 == 3)
+			return makeHeader();
 		Body =
 				"<!DOCTYPE html>\n"
 				"<html>\n"
@@ -160,6 +171,55 @@ struct Response
 				"  </h1>\n"
 				"</html>\n";
 		return makeHeader();
+	}
+
+
+//TODO : 슬래시 여부에 따른 분기 구현
+//디렉토리일때 슬래쉬 유무 확인해서 슬래쉬 있을때만 index/autoindex 바로 보여주고,
+//슬래쉬 없는데 디렉토리면 301 + 헤더에 location 첨부.
+//해당 디렉토리가 없을때 404
+//해당 디렉토리가 있으나 index/autoindex가 꺼져있으면 403
+//엔진엑스에서는 autoindex 와 index가 같이 있으면 index만 동작함
+
+
+
+	string get_dirlist_page(string path, string head)
+	{
+		string ret;
+		string page;
+
+		DIR *dir;
+		struct dirent *ent;
+		if ((dir = opendir(path.c_str()))) 
+		{
+			while ((ent = readdir(dir))) 
+			{
+				struct stat statbuf;
+				std::string tmp = ent->d_name;
+				std::string checker = path + tmp;
+				stat(checker.c_str(), &statbuf);
+				if (S_ISDIR(statbuf.st_mode))
+					tmp += "/" ;
+
+				page += "<a href=\"";
+				page += tmp;
+				page += "\">";
+				page += tmp;
+				page += "</a>\n" ;
+			}
+			closedir (dir);
+		} 
+	
+		ret =
+			"<html>\n"
+			"<head><title>Index of " + head + " </title></head>\n"
+			"<body>\n"
+			"<h1>Index of " + head + " </h1><hr><pre>\n" +
+			page +
+			"</pre><hr></body>\n"
+			"</html>\n";
+			
+		return ret;
 	}
 };
 
@@ -186,11 +246,39 @@ int 	Response::execute()
 			return 	makeHeader();
 		}
 		//	Method Error -> Bad Request
+		if (g_conf[configName][locationName].is_exist("return"))
+			return redirect(
+					StartLine.statusCode = Util::stoi(g_conf[configName][locationName]["return"][0]),
+					g_conf[configName][locationName]["return"][1]);
 		if (Req->StartLine.method != "GET" && Req->StartLine.method != "POST")
 			throw 400;
 		
 		if (g_conf[Req->configName][Req->locationName].is_exist(ext))
+		{
+			Session *session = Req->session;
+			std::map<string, string> cookies = Req->cookies;
+
+			if (Req->cookies.count(ext) == 0)
+			{
+				Header["set-cookie"] = ext + "=" + session->set("") + ";";
+			}
+			else
+			{
+				string tmp = session->get(cookies[ext]);
+
+				if (!tmp.empty())
+				{
+					tmp.insert(0, "COOKIE=");
+					tmp += ";";
+					params.push_back(tmp);
+				}
+			}
+			if (Req->StartLine.method == "POST")
+				session->Session[cookies[ext]] = Req->bodySS.str();
+	
+			Header["Content-Type"] = "Text/html";
 			contentResult = new Cgi(path, ext, params);
+		}
 		else
 			contentResult = new File(path);
 
@@ -232,6 +320,7 @@ int 	Response::write()
 	//	전부 보냈으면 결과 값 받아오기 위해 READ_RESPONSE 반환
 	if (len < postBody.size())
 		return READ_RESPONSE;
+
 	return WRITE_RESPONSE;
 }
 
@@ -250,6 +339,13 @@ int 	Response::read()
 
 	return READ_RESPONSE;
 }
+
+int Response::redirect(int code, const string& location)
+{
+	Header["Location"] = location;
+	return make_errorpage(code);
+}
+
 
 int Response::send(int clientFd)
 {

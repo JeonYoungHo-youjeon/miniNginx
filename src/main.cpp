@@ -21,7 +21,8 @@ int main(int argc, char** argv)
 		return 1;
 	}
 	Event event;
-		
+	
+	srand((unsigned)time(NULL) * getpid());
 	event.event_loop();
 	// system("leaks miniNginx");
     return 0;

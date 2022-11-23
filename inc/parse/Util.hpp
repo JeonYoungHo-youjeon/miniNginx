@@ -23,6 +23,7 @@ struct Util
 	static std::string get_date();
 	static std::string to_string(int num);
 	static void getline(std::string& buffer, std::string& to, const char c);
+	static int is_dir(std::string& path);
 };
 
 std::string Util::remover(const std::string& input, const char rmchar)
@@ -149,6 +150,27 @@ void Util::getline(std::string& buffer, std::string& to, const char c = '\n')
 	buffer.erase(0, pos);
 	std::cout << "ORIGIN BUF : " << buffer << std::endl;
 	std::cout << "TO BUF : " << to << std::endl;
+}
+
+int Util::is_dir(std::string& path)
+{
+	DIR *dir;
+	if ((dir = opendir(path.c_str()))) 
+	{
+		closedir(dir);
+		return 1;
+	}
+	switch (errno)
+	{
+	case EMFILE:
+		return 0;
+	case EACCES:
+		return 403;
+	default:
+		return 500;
+	}
+	closedir(dir);
+	return -1;
 }
 
 #endif

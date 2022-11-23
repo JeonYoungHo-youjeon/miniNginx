@@ -6,6 +6,7 @@
 # include "../parse/Config.hpp"
 # include "../parse/Util.hpp"
 # include "../response/Cgi.hpp"
+# include "../event/Session.hpp"
 
 using std::string;
 using std::cout;
@@ -42,6 +43,9 @@ struct Request
 
 	string virtualPath;
 
+	std::map<string, string> cookies;
+	Session *session;
+
 	int maxBodySize;
 	int readSize;
 	int contentLength;
@@ -57,12 +61,13 @@ struct Request
 	* @brief : 생성자 초기화, set()을 통한 초기화 등 임의로 다양하게 구현
 	*/
 	Request() {}
-	Request(int fd, const string& configName)
+	Request(int fd, const string& configName, Session* ses)
 	: statusCode(200), configName(configName), clientFd(fd)
 	{
 		this->configName = configName;
 		progress = START_LINE;
 		maxBodySize = MAX_BODY_SIZE;
+		session = ses;
 		// if (g_conf[configName][locationName].is_exist("client_max_body_size"))
 		// 	maxBodySize = Util::stoi(g_conf[configName][locationName]["client_max_body_size"][0]);
 	};
@@ -106,10 +111,14 @@ struct Request
 		parse_url();
 
 		locationName = findLocation(virtualPath);
+		std::cerr << locationName << std::endl;
 		fileName = virtualPath.erase(0, locationName.size());
 		if (fileName.empty() && g_conf[configName][locationName].is_exist("index"))
 			fileName = g_conf[configName][locationName]["index"].front();
 		ext = findExtension(fileName);
+
+		if (Header.count(HEAD[COOKIE]))
+			get_cookie();
 
 		if (Header.count(HEAD[CONTENT_LENGTH]))
 		{
@@ -118,6 +127,16 @@ struct Request
 		}
 		if (Header.count(HEAD[TRANSFER_ENCODING]))
 			chunkFlag = true;
+	}
+
+	void get_cookie()
+	{
+		vector<string> splited = Util::split(Header[HEAD[COOKIE]], ';');
+		for (std::vector<string>::iterator it = splited.begin(); it != splited.end(); ++it)
+		{
+			vector<string> tmp = Util::split(*it, '=');
+			cookies[tmp[0]] = tmp[1];
+		}
 	}
 
 	int parse()
@@ -264,17 +283,21 @@ struct Request
 	{
 		std::string ret;
 		std::string tmp;
+		if (g_conf[configName].is_exist(path))
+			return path;
 		vector<std::string> pathTree = Util::split(path, '/');
 
 		for (std::vector<std::string>::iterator it = pathTree.begin(); it != pathTree.end(); ++it)
-			if (g_conf[configName].is_exist(tmp = Util::join(tmp, *it, '/')))
-				ret = tmp;
+			{
+				tmp = '/' + *it;
+				if (g_conf[configName].is_exist(tmp))
+					ret = tmp;
+			}
 		return ret;
 	};
 
 	std::string findExtension(const std::string& url)
 	{
-		cout << "URL : " << url << endl;
 		std::string::size_type pos = url.rfind('.');
 		if (pos == std::string::npos)
 			return "";

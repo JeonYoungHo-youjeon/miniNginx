@@ -19,7 +19,18 @@ struct Session
 
 	std::string get(std::string key)
 	{
-		if (Session.count(key) > 0 && expireInfo[key] > time(NULL))
+		std::map<std::string, time_t>::iterator it = expireInfo.begin();
+		for (; it == expireInfo.end(); it++)
+		{
+			if (it->second < time(NULL))
+			{
+				string key = it->first;
+				expireInfo.erase(key);
+				Session.erase(key);
+			}
+		}
+		
+		if (Session.count(key) > 0)
 		{
 			expireInfo[key] = time(NULL) + SESSION_TIMEOUT;
 			return Session[key];

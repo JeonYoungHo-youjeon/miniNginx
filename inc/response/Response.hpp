@@ -5,6 +5,7 @@
 # include <sstream>
 # include <dirent.h>
 # include <sys/stat.h>
+# include <ctime>
 
 # include "Cgi.hpp"
 # include "File.hpp"
@@ -267,7 +268,12 @@ int 	Response::execute()
 
 			if (Req->cookies.count(ext) == 0)
 			{
-				Header["set-cookie"] = ext + "=" + session->set("") + ";";
+				time_t now = time(NULL) + SESSION_TIMEOUT;
+				struct tm *tm = gmtime(&now);
+				char expires[80];
+				strftime(expires, 80, "%a, %d %b %Y %H:%M:%S GMT", tm);
+
+				Header["set-cookie"] = ext + "=" + session->set("") + ";" + " Expires=" + expires + ";";
 			}
 			else
 			{
@@ -278,6 +284,13 @@ int 	Response::execute()
 					tmp.insert(0, "COOKIE=");
 					tmp += ";";
 					params.push_back(tmp);
+				
+					time_t now = time(NULL) + SESSION_TIMEOUT;
+					struct tm *tm = gmtime(&now);
+					char expires[80];
+					strftime(expires, 80, "%a, %d %b %Y %H:%M:%S GMT", tm);
+
+					Header["set-cookie"] = ext + "=" + cookies[ext] + ";" + " Expires=" + expires + ";";
 				}
 			}
 			if (Req->StartLine.method == "POST")

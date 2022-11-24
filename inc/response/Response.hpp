@@ -158,8 +158,7 @@ int 	Response::execute()
 					g_conf[confName][locName]["return"][1]);
 		if (Req->StartLine.method != "GET" && Req->StartLine.method != "POST")
 			throw 400;
-		
-		if (g_conf[Req->configName][Req->locationName].is_exist(ext))
+		if (g_conf[confName][locName].is_exist(ext))
 		{
 			std::map<string, string> ReqHeader = Req->Header;
 			ReqHeader["REMOTE_ADDR"] = Req->ip;
@@ -168,6 +167,7 @@ int 	Response::execute()
 			ReqHeader["SCRIPT_NAME"] = fileName;
 
 			excutor = g_conf[confName][locName][ext][0];
+			std::cerr << "TEST2" << std::endl;
 			contentResult = new Cgi(path, excutor, ReqHeader);
 		}
 		else

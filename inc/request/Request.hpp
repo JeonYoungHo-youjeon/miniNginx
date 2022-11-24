@@ -89,6 +89,9 @@ struct Request
 
 	int read()
 	{
+		std::cout << "[buffer]" << std::endl;
+		std::cout << buffer.str() << std::endl;
+		std::cout << buffer.peek() << std::endl;
 		if (is_empty_buffer())
 		{
 			char rcvData[BUFFER_SIZE];
@@ -353,7 +356,6 @@ struct Request
 	void parse_url()
 	{
 		std::stringstream ss(StartLine.url);
-		std::string param;
 		
 		std::getline(ss, virtualPath, '?');
 		std::getline(ss, Header["QUERY_STRING"]);

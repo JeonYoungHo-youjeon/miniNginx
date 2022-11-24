@@ -124,7 +124,7 @@ void Event::create_server_socket(const ConfigType::iterator it)
 	ServerSocket* socket = new ServerSocket(temp[0], temp[1]);
 
 	sockets.insert(std::pair<FD, Socket*>(socket->get_fd(), socket));
-	kq->add_read_event(socket, socket->get_fd());
+	kq->set_server_event(socket, socket->get_fd());
 
 	logger.add_server(socket->get_fd(), it->first); // REMOVE
 }
@@ -149,7 +149,6 @@ void Event::accept_connection(FD serverFD)
 
 	if (fcntl(clientFD, F_SETFL, O_NONBLOCK) == -1)
 	{
-		// TODO: response 500 Internal Server Error 
 		ClientSocket* socket = (ClientSocket*)sockets[clientFD];
 		State state = socket->set_response(500);
 		kq->set_next_event(socket, state);
@@ -160,7 +159,7 @@ void Event::create_client_socket(FD clientFD, const SockAddr& addr, FD serverFD)
 {
 	const std::string s = sockets[serverFD]->get_ip() + ":" + sockets[serverFD]->get_port();
 	ClientSocket* socket = new ClientSocket(clientFD, addr, s);
-	kq->add_client_io_event(socket, socket->get_fd());
+	kq->set_client_event(socket, socket->get_fd());
 	sockets.insert(std::pair<FD, Socket*>(socket->get_fd(), socket));
 
 	logger.connection_logging(socket, LOG_GREEN); // REMOVE
@@ -197,20 +196,20 @@ void Event::handle_client_read_event(ClientSocket* socket)
 
 	try
 	{
-		if (state == READ_REQUEST)
+		switch (state)
 		{
+		case READ_REQUEST:
 			std::cout << "\t==========[READ_REQUEST]==========" << std::endl;
 			state = req->read();
-		}
-		else if (state == REPEAT_REQUEST)
-		{
+			break;
+		case REPEAT_REQUEST:
 			std::cout << "\t==========[REPEAT_REQUEST]==========" << std::endl;
 			state = req->clear_read();
-		}
-		else if (state == READ_RESPONSE)
-		{
+			break;
+		case READ_RESPONSE:
 			std::cout << "\t==========[READ_RESPONSE]==========" << std::endl;
 			state = res->read();
+			break;
 		}
 
 		if (state == END_REQUEST) {
@@ -264,11 +263,9 @@ void Event::handle_next_event(ClientSocket* socket, State state)
 	Request* req = socket->get_request();
 	Response* res = socket->get_response();
 
-
 	if (state == END_RESPONSE)
 	{
 		std::cout << "\t==========[END_RESPONSE]==========" << std::endl;
-		// state = res->send(socket->get_fd());
 
 		if (req->is_empty_buffer() == false)
 		{
@@ -281,7 +278,7 @@ void Event::handle_next_event(ClientSocket* socket, State state)
 			std::cout << "\t==========[KEEP_ALIVE]==========" << std::endl;
 			socket->reset();
 			socket->update_state(READ_REQUEST);
-			kq->enable_read_event(socket, socket->get_fd());
+			kq->on_read_event(socket, socket->get_fd());
 		}
 		else
 		{
@@ -300,7 +297,8 @@ void Event::handle_next_event(ClientSocket* socket, State state)
 void Event::socket_timeout(const ClientSocket* socket)
 {
 	// TODO: CGI kill
-	if (socket->is_expired() && sockets.count(socket->get_fd())) {
+	if (socket->is_expired() && sockets.count(socket->get_fd()))
+	{
 		logger.disconnection_logging(socket, LOG_YELLOW);
 		add_garbage(socket);
 	}
@@ -340,9 +338,8 @@ void Event::handle_client_event(const KEvent* event, ClientSocket* socket)
 	if (event->flags & EV_EOF)
 	{
 		std::cout << "\t==========[EV_EOF]==========" << std::endl;
-
 		// TODO: I don't know to response anything message
-		// disconnection((ClientSocket*)socket);
+		disconnection((ClientSocket*)socket);
 	}
 	else if (event->filter == EVFILT_READ)
 	{
@@ -359,6 +356,7 @@ void Event::handle_client_event(const KEvent* event, ClientSocket* socket)
 
 void Event::handle_child_process(const KEvent* event)
 {
+	std::cout << "\t==========[EVFILT_PROC]==========" << std::endl;
 	int status;
 	PID pid = wait(&status);
 	if (WIFEXITED(status))
@@ -367,6 +365,7 @@ void Event::handle_child_process(const KEvent* event)
 
 void Event::clear_garbage_sockets()
 {
+	std::cout << "\t==========[clear_garbage_sockets]==========" << std::endl;
 	for (GarbageCollector::const_iterator it = garbageCollector.begin(); it != garbageCollector.end(); ++it)
 	{
 		sockets.erase((*it)->get_fd());

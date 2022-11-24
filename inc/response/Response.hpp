@@ -166,8 +166,9 @@ int 	Response::execute()
 			ReqHeader["REQUEST_METHOD"] = Req->StartLine.method;
 			ReqHeader["PATH_TRANSLATED"] = path;
 			ReqHeader["SCRIPT_NAME"] = fileName;
-			 
-			contentResult = new Cgi(path, ext, ReqHeader);
+
+			excutor = g_conf[confName][locName][ext][0];
+			contentResult = new Cgi(path, excutor, ReqHeader);
 		}
 		else
 			contentResult = new File(path);

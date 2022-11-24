@@ -150,6 +150,7 @@ ClientSocket::ClientSocket(FD clientFD, const SockAddr& addr, const std::string&
 	port = "";
 	type = CLIENT;
 	req = new Request(fd, serverIPPort);
+	req->ip = ip;
 }
 
 ClientSocket::~ClientSocket()

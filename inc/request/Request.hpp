@@ -39,6 +39,7 @@ struct Request
 	std::stringstream			buffer;
 	int 						progress;
 	std::string					tmp;
+	string						ip;
 
 	string virtualPath;
 

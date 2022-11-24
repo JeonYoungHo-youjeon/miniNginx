@@ -267,8 +267,13 @@ int 	Response::execute()
 		
 		if (g_conf[Req->configName][Req->locationName].is_exist(ext))
 		{
-			Header["Content-Type"] = "Text/html";
-			contentResult = new Cgi(path, ext);
+			std::map<string, string> ReqHeader = Req->Header;
+			ReqHeader["REMOTE_ADDR"] = Req->ip;
+			ReqHeader["REQUEST_METHOD"] = Req->StartLine.method;
+			ReqHeader["PATH_TRANSLATED"] = path;
+			ReqHeader["SCRIPT_NAME"] = fileName;
+			 
+			contentResult = new Cgi(path, ext, ReqHeader);
 		}
 		else
 			contentResult = new File(path);

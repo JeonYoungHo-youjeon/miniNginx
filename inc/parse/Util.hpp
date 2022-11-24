@@ -162,7 +162,6 @@ int Util::is_dir(const std::string& path)
 		closedir(dir);
 		return 1;
 	}
-
 	switch (errno)
 	{
 	case ENOTDIR:

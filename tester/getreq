@@ -13,8 +13,6 @@ hello
 trello
 yellow
 0
-ACCEPT: acceptval
-Date: dateval
 
 GET /redirect HTTP/1.1
 Host: localhost

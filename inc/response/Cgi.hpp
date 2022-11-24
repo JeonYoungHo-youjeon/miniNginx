@@ -109,7 +109,9 @@ int     Cgi::set()
             ::close(inPipe[0]) < 0 || ::close(inPipe[1]) < 0 ||
             ::close(outPipe[0]) < 0 || ::close(outPipe[1]) < 0 ||
             execve(excutor.c_str(), argv, environ) < 0)
+		{
 			exit(1);
+		}
     }
     else if (pid)
     {

@@ -162,7 +162,7 @@ int Util::is_dir(const std::string& path)
 		closedir(dir);
 		return 1;
 	}
-	std::cout << "TEST" <<errno << std::endl;
+
 	switch (errno)
 	{
 	case ENOTDIR:

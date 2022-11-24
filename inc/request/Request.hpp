@@ -6,7 +6,6 @@
 # include "../parse/Config.hpp"
 # include "../parse/Util.hpp"
 # include "../response/Cgi.hpp"
-# include "../event/Session.hpp"
 
 using std::string;
 using std::cout;
@@ -40,11 +39,9 @@ struct Request
 	std::stringstream			buffer;
 	int 						progress;
 	std::string					tmp;
+	string						ip;
 
 	string virtualPath;
-
-	std::map<string, string> cookies;
-	Session *session;
 
 	int maxBodySize;
 	int readSize;
@@ -61,13 +58,12 @@ struct Request
 	* @brief : 생성자 초기화, set()을 통한 초기화 등 임의로 다양하게 구현
 	*/
 	Request() {}
-	Request(int fd, const string& configName, Session* ses)
+	Request(int fd, const string& configName)
 	: statusCode(200), configName(configName), clientFd(fd)
 	{
 		this->configName = configName;
 		progress = START_LINE;
 		maxBodySize = MAX_BODY_SIZE;
-		session = ses;
 		// if (g_conf[configName][locationName].is_exist("client_max_body_size"))
 		// 	maxBodySize = Util::stoi(g_conf[configName][locationName]["client_max_body_size"][0]);
 	};
@@ -111,14 +107,9 @@ struct Request
 		parse_url();
 
 		locationName = findLocation(virtualPath);
-		std::cerr << locationName << std::endl;
 		fileName = virtualPath.erase(0, locationName.size());
-		if (fileName.empty() && g_conf[configName][locationName].is_exist("index"))
-			fileName = g_conf[configName][locationName]["index"].front();
-		ext = findExtension(fileName);
-
-		if (Header.count(HEAD[COOKIE]))
-			get_cookie();
+		//if (fileName.empty() && g_conf[configName][locationName].is_exist("index"))
+		//	fileName = g_conf[configName][locationName]["index"].front();
 
 		if (Header.count(HEAD[CONTENT_LENGTH]))
 		{
@@ -127,16 +118,6 @@ struct Request
 		}
 		if (Header.count(HEAD[TRANSFER_ENCODING]))
 			chunkFlag = true;
-	}
-
-	void get_cookie()
-	{
-		vector<string> splited = Util::split(Header[HEAD[COOKIE]], ';');
-		for (std::vector<string>::iterator it = splited.begin(); it != splited.end(); ++it)
-		{
-			vector<string> tmp = Util::split(*it, '=');
-			cookies[tmp[0]] = tmp[1];
-		}
 	}
 
 	int parse()
@@ -275,7 +256,7 @@ struct Request
 		std::getline(ss, key, ':');
 		ss >> val;
 
-		Header[string_to_lower(key)] = val;
+		Header[string_to_metavar(key)] = val;
 	}
 
 	//	TODO : 맘에 안드는 함수
@@ -295,14 +276,6 @@ struct Request
 			}
 		return ret;
 	};
-
-	std::string findExtension(const std::string& url)
-	{
-		std::string::size_type pos = url.rfind('.');
-		if (pos == std::string::npos)
-			return "";
-		return std::string(url.begin() + pos, url.end());
-	}
 
 	/**
 	*  현재 리퀘스트 구조체의 내용 전체를 출력. 빈 변수는 출력하지 않음
@@ -383,12 +356,7 @@ struct Request
 		std::string param;
 		
 		std::getline(ss, virtualPath, '?');
-
-		while (!ss.eof())
-		{
-			std::getline(ss, param, '&');
-			params.push_back(param);
-		}
+		std::getline(ss, Header["QUERY_STRING"]);
 	}
 
 	std::string string_to_lower(std::string s)
@@ -398,6 +366,13 @@ struct Request
 		return s;
 	}
 
+	std::string string_to_metavar(std::string s)
+	{
+		for (int i = 0; i < s.size(); ++i)
+			s[i] = std::toupper(s[i]);
+		std::replace(s.begin(), s.end(), '-', '_');
+		return s;
+	}
 };
 
 #endif //REQUEST_H

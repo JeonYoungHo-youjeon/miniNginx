@@ -54,6 +54,12 @@ using std::endl;
         string path = "./";
         string head = "test";
 
+		time_t now = time(NULL) + 120;
+		struct tm *tm = gmtime(&now);
+		char expires[80];
+		strftime(expires, 80, "%a, %d %b %Y %H:%M:%S GMT", tm);
+		printf("%s", expires);
+
         int fd = open("./test.html", O_RDWR);
         string tmp = get_dirlist_page(path, head); 
         write(fd, tmp.c_str(), tmp.size());

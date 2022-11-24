@@ -248,6 +248,7 @@ int Response::redirect(int code, const string& location)
 
 int Response::send(int clientFd)
 {
+	// TODO: 연속된 요청시 Html 초기화
 	if (!Html)
 		Html = new string(toHtml());
 

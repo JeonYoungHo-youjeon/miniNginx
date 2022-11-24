@@ -25,8 +25,8 @@ public:
 		if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &ENABLE_REUSERADDR, sizeof(ENABLE_REUSERADDR)) == -1)
 			throw EventInitException("setsockopt() error");
 
-		if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &ENABLE_KEEPALIVE, sizeof(ENABLE_KEEPALIVE)) == -1)
-			throw EventInitException("setsockopt() error");
+		// if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &ENABLE_KEEPALIVE, sizeof(ENABLE_KEEPALIVE)) == -1)
+		// 	throw EventInitException("setsockopt() error");
 
 		// TODO: keepalive time 조정
 

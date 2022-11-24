@@ -97,8 +97,8 @@ int     Cgi::set()
     	setenv("REQUEST_METHOD", header["REQUEST_METHOD"].c_str(), 1);			// 입력받은 메소드
     	setenv("PATH_TRANSLATED", header["PATH_TRANSLATED"].c_str(), 1);		// 파일의 절대경로
     	setenv("SCRIPT_NAME", header["SCRIPT_NAME"].c_str(), 1);				// 파일명
-
 	   	setenv("QUERY_STRING", header["QUERY_STRING"].c_str(), 1);				// url의 ? 뒷부분(params)
+
     	setenv("HTTP_COOKIE", header["COOKIE"].c_str(), 1);						// 헤더의 쿠키
     	setenv("CONTENT_LENGTH", header["CONTENT_LENGTH"].c_str(), 1);			// 헤더의 컨텐츠 길이
     	setenv("HTTP_ACCEPT", header["ACCEPT"].c_str(), 1);						// 헤더의 accept

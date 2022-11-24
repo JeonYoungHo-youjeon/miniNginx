@@ -152,7 +152,7 @@ int 	Response::execute()
 			return 	makeHeader();
 		}
 		//	Method Error -> Bad Request
-		if (g_conf[confName][locName].is_exist(ext))
+		if (g_conf[confName][locName].is_exist("return"))
 			return redirect(
 					StartLine.statusCode = Util::stoi(g_conf[confName][locName]["return"][0]),
 					g_conf[confName][locName]["return"][1]);
@@ -395,7 +395,6 @@ int Response::set(const Request& req)
 		}
 
 		//	get Extension
-		cout << path << endl;
 		ext = findExtension(path);
 	}
 	catch (int errNo)

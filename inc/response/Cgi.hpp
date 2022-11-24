@@ -32,6 +32,8 @@ struct Cgi : public Contents
 	}
 	std::map<std::string, std::string> header;	
 	char**		envp;
+	char*		pwd;
+
 	string		excutor;
 	int 		_fdin;
 	int 		_fdout;
@@ -52,7 +54,11 @@ Cgi::Cgi(const std::string& path, const string& excutor, const vector<std::strin
 		strcpy(envp[i], params[i].c_str());
 	}
 	envp[params.size()] = NULL;
+	pwd = getcwd(0, 0);
+	if (!pwd)
+		return ;
 }
+
 Cgi::~Cgi()
 {
 
@@ -64,7 +70,7 @@ int     Cgi::set()
 {
     int inPipe[2];
 	int	outPipe[2];
-	
+
     char* argv[3] = {
 			(char*)excutor.c_str(),
 			(char*)url.c_str(),

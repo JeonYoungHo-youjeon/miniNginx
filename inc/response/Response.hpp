@@ -35,7 +35,8 @@ struct Response
 
 	string* Html;
 
-	string configName;
+	string confName;
+	string locName;
 	string postBody;
 	int contentLength;
 	int statement;
@@ -45,11 +46,13 @@ struct Response
 	 * brief : 파일 경로 관련 변수
 	 */
 	Contents *contentResult;
-	string locationName;
-	string path;
-	string fileName;
-	string ext;
-	string excutor;
+	string	url;
+	string	root;
+	string	upload;
+	string	fileName;
+	string	ext;
+	string	path;
+	string	excutor;
 	vector<string> params;
 
 	Response();
@@ -73,58 +76,16 @@ struct Response
 
 	int set(const std::string& configName, int error_code)
 	{
-		this->configName = configName;
+		this->confName = configName;
 		StartLine.statusCode = error_code;
 		return make_errorpage(error_code);
 	}
 
-	int set(const Request& req)
-	{
-		StartLine.statusCode = 200;
-		Req = &req;
-		postBody = req.bodySS.str();
-		locationName = path = req.locationName;
-
-		//	root 설정
-		if (g_conf[Req->configName][locationName].is_exist("root"))
-			path = g_conf[Req->configName][path]["root"][0];
-		if (g_conf[Req->configName][locationName].is_exist("return"))
-			return redirect(
-					Util::stoi(g_conf[Req->configName][locationName]["return"][0]),
-					g_conf[Req->configName][locationName]["return"][1]
-					);
-		//	upload
-		if (g_conf[configName][locationName].is_exist("upload") && req.StartLine.method == "POST")
-			path = Util::join(path, g_conf[configName][locationName]["upload"][0], '/');
-		fileName = req.fileName;
-
-		path = Util::join(path, fileName, '/');
-		ext = req.ext;
-
-		progress = READY;
-		return statement = execute();
-	}
-
+	int set(const Request& req);
 	int redirect(int code, const string& location);
-
-	/**
-	 * @brief Set & return nextToDo
-	 * @return statement
-	 */
 	int execute();
-
-	/**
-	 * @brief Write & return nextToDo
-	 * @return statement
-	 */
 	int write();
-
-	/**
-	 * @brief Read & return nextToDo
-	 * @return statement
-	 */
 	int read();
-
 	int send(int clientFd);
 
 	/**
@@ -134,100 +95,12 @@ struct Response
 	 * @return read : READ or DONE
 	 */
 
-	int makeHeader()
-	{
-		std::cout << "OK" << std::endl;
-		Header["Date"] = Util::get_date();
-		Header["Server"] = "miniNginx/1.1";
-
-		map<string, string>::iterator it = Header.find("Connection");
-		if (it == Header.end())
-			Header["Connection"] = "keep-alive";
-		it = Header.find("Content-Type");
-		if (it == Header.end())
-			Header["Content-Type"] = g_conf.getContentType(ext);
-		Header["Content-Length"] = Util::to_string(Body.size());
-		{    /* 필요 헤더*/    }
-		std::cerr << Header["Content-Type"] << std::endl;
-		return makeStartLine();
-	}
-
-	int makeStartLine()
-	{
-		StartLine.reasonPhrase = g_conf.getStatusMsg(StartLine.statusCode);
-		StartLine.protocol = "HTTP/1.1";
-		std::cout << "STARTLINE OK" << std::endl;
-		return statement = SEND_RESPONSE;
-	}
-
-	int make_errorpage(int code)
-	{
-		ext = ".html";
-		if (g_conf[configName][locationName].is_exist("error_page"))
-		{
-			for (size_t i = 0; i < g_conf[configName][locationName]["error_page"].size() - 1; ++i)
-				if (Util::to_string(StartLine.statusCode) == g_conf[configName][locationName]["error_page"][i])
-					path = g_conf[configName][locationName]["error_page"].back();
-			return execute();
-		}
-		Body =
-				"<!DOCTYPE html>\n"
-				"<html>\n"
-				"  <h1>\n"
-				"    " + Util::to_string(StartLine.statusCode) + "\n"
-				"  </h1>\n"
-				"</html>\n";
-		return makeHeader();
-	}
-
-
-//TODO : 슬래시 여부에 따른 분기 구현
-//디렉토리일때 슬래쉬 유무 확인해서 슬래쉬 있을때만 index/autoindex 바로 보여주고,
-//슬래쉬 없는데 디렉토리면 301 + 헤더에 location 첨부.
-//해당 디렉토리가 없을때 404
-//해당 디렉토리가 있으나 index/autoindex가 꺼져있으면 403
-//엔진엑스에서는 autoindex 와 index가 같이 있으면 index만 동작함
-
-
-
-	string get_dirlist_page(string path, string head)
-	{
-		string ret;
-		string page;
-
-		DIR *dir;
-		struct dirent *ent;
-		if ((dir = opendir(path.c_str()))) 
-		{
-			while ((ent = readdir(dir))) 
-			{
-				struct stat statbuf;
-				std::string tmp = ent->d_name;
-				std::string checker = path + tmp;
-				stat(checker.c_str(), &statbuf);
-				if (S_ISDIR(statbuf.st_mode))
-					tmp += "/" ;
-
-				page += "<a href=\"";
-				page += tmp;
-				page += "\">";
-				page += tmp;
-				page += "</a>\n" ;
-			}
-			closedir (dir);
-		} 
-	
-		ret =
-			"<html>\n"
-			"<head><title>Index of " + head + " </title></head>\n"
-			"<body>\n"
-			"<h1>Index of " + head + " </h1><hr><pre>\n" +
-			page +
-			"</pre><hr></body>\n"
-			"</html>\n";
-			
-		return ret;
-	}
+	int makeHeader();
+	int makeStartLine();
+	int make_errorpage(int code);
+	std::string findExtension(const std::string& url);
+	std::string findFileName(const std::string& url);
+	int listing(string path, string head);
 };
 
 Response::Response()
@@ -237,31 +110,52 @@ Response::~Response()
 	clear();
 }
 
+int Response::makeHeader()
+{
+	Header["Date"] = Util::get_date();
+	Header["Server"] = "miniNginx/1.1";
+
+	map<string, string>::iterator it = Header.find("Connection");
+	if (StartLine.statusCode / 100 == 2)
+		Header["Connection"] = "keep-alive";
+	else
+		Header["Connection"] = "close";
+	it = Header.find("Content-Type");
+	if (it == Header.end())
+		Header["Content-Type"] = g_conf.getContentType(ext);
+	Header["Content-Length"] = Util::to_string(Body.size());
+	{    /* 필요 헤더*/    }
+	return makeStartLine();
+}
+
+/**
+ * @brief set & return nextToDo
+ * @return statement
+ */
 int 	Response::execute()
 {
 	/**
 	 * @brief try remove file, throw error if catch error 
 	 */
 
-	string test = path + fileName;
-	int i = Util::is_dir(test);
-	std::cerr << test << i << std::endl;
-	std::cerr << path <<" "<< fileName << std::endl;
-	
 	try
 	{
+		if (Req->StartLine.method != "GET"
+		&& Req->StartLine.method != "POST"
+		&& Req->StartLine.method != "DELETE")
+			throw 400;
 		if (Req->StartLine.method == "DELETE")
 		{
 			if (remove(path.c_str()))
 				throw 404;
-			Body = path;
+			Body = url;
 			return 	makeHeader();
 		}
 		//	Method Error -> Bad Request
-		if (g_conf[configName][locationName].is_exist("return"))
+		if (g_conf[confName][locName].is_exist(ext))
 			return redirect(
-					StartLine.statusCode = Util::stoi(g_conf[configName][locationName]["return"][0]),
-					g_conf[configName][locationName]["return"][1]);
+					StartLine.statusCode = Util::stoi(g_conf[confName][locName]["return"][0]),
+					g_conf[confName][locName]["return"][1]);
 		if (Req->StartLine.method != "GET" && Req->StartLine.method != "POST")
 			throw 400;
 		
@@ -288,11 +182,14 @@ int 	Response::execute()
 	}
 	catch (int errNo)	//	예외 발생 시 일단 객체 내에서 처리 -> 수정 O
 	{
-		return make_errorpage(StartLine.statusCode = errNo);
 	}
 	return makeHeader();
 }
 
+/**
+ * @brief Write & return nextToDo
+ * @return statement
+ */
 int 	Response::write()
 {
 	if (postBody.empty())
@@ -320,6 +217,10 @@ int 	Response::write()
 	return WRITE_RESPONSE;
 }
 
+/**
+ * @brief Read & return nextToDo
+ * @return statement
+ */
 int 	Response::read()
 {
 	//	읽고 읽을것이 남아있으면 READ_RESPONSE 반환
@@ -344,7 +245,6 @@ int Response::redirect(int code, const string& location)
 	return makeHeader();
 }
 
-
 int Response::send(int clientFd)
 {
 	if (!Html)
@@ -365,12 +265,144 @@ int Response::send(int clientFd)
 	return SEND_RESPONSE;
 }
 
+std::string Response::findExtension(const std::string& url)
+{
+	std::string::size_type pos = url.rfind('.');
+	if (pos == std::string::npos)
+		return "";
+	return std::string(url.begin() + pos, url.end());
+}
+
+std::string Response::findFileName(const std::string& url)
+{
+	std::string::size_type pos = url.rfind('/');
+	if (pos == std::string::npos)
+		return "";
+	return std::string(url.begin() + pos + 1, url.end());
+}
+
+int Response::make_errorpage(int code)
+{
+	ext = ".html";
+	if (g_conf[confName][locName].is_exist("error_page"))
+	{
+		for (size_t i = 0; i < g_conf[confName][locName]["error_page"].size() - 1; ++i)
+			if (Util::to_string(StartLine.statusCode) == g_conf[confName][locName]["error_page"][i])
+				url = g_conf[confName][locName]["error_page"].back();
+		return execute();
+	}
+	Body =
+			"<!DOCTYPE html>\n"
+			"<html>\n"
+			"  <h1>\n"
+			"    " + Util::to_string(StartLine.statusCode) + "\n"
+															 "  </h1>\n"
+															 "</html>\n";
+	return makeHeader();
+}
+
+int Response::listing(string path, string head)
+{
+	string ret;
+	string page;
+
+	DIR *dir;
+	struct dirent *ent;
+	if ((dir = opendir(path.c_str())))
+	{
+		while ((ent = readdir(dir)))
+		{
+			struct stat statbuf;
+			std::string tmp = ent->d_name;
+			std::string checker = path + tmp;
+			stat(checker.c_str(), &statbuf);
+			if (S_ISDIR(statbuf.st_mode))
+				tmp += "/" ;
+			page += "<a href=\"" + tmp + "\">" + tmp + "</a>\n";
+		}
+		closedir (dir);
+	}
+
+	Body =
+			"<html>\n"
+			"<head><title>Index of " + head + " </title></head>\n"
+											  "<body>\n"
+											  "<h1>Index of " + head + " </h1><hr><pre>\n" +
+			page +
+			"</pre><hr></body>\n"
+			"</html>\n";
+	return makeHeader();
+}
+
+int Response::makeStartLine()
+{
+	StartLine.reasonPhrase = g_conf.getStatusMsg(StartLine.statusCode);
+	StartLine.protocol = "HTTP/1.1";
+	std::cout << "STARTLINE OK" << std::endl;
+	return statement = SEND_RESPONSE;
+}
+
 int Response::clear()
 {
 	//	내부 객체 delete -> REPEAT REQUEST 반환 -> new Req로 연결(Req 삭제위치)
 	delete contentResult;
 	delete Html;
 	return REPEAT_REQUEST;
+}
+
+int Response::set(const Request& req)
+{
+	StartLine.statusCode = 200;
+	Req = &req;
+	url = req.virtualPath;
+	confName = req.configName;
+	locName = req.locationName;
+	postBody = req.bodySS.str();
+	fileName = url;
+	//	root 설정
+	path = getcwd(0, 0);
+	try
+	{
+		//	Redirect Uri
+		if (g_conf[confName][locName].is_exist("return"))
+			return redirect(
+					StartLine.statusCode = Util::stoi(g_conf[confName][locName]["return"][0]),
+					g_conf[confName][locName]["return"][1]);
+		//	Root Directory
+		if (g_conf[confName][locName].is_exist("root"))
+			path = Util::join(path, g_conf[confName][locName]["root"].front(), '/');
+		if (g_conf[confName][locName].is_exist("limit_except"))
+			for (vector<string>::const_iterator it = g_conf[confName][locName]["limit_except"].begin();
+				 it != g_conf[confName][locName]["limit_except"].end(); ++it)
+				if (*it == Req->StartLine.method)
+					throw 500;
+		//	Upload Path
+		if (g_conf[confName][locName].is_exist("upload"))
+			path = Util::join(path, g_conf[confName][locName]["upload"][0], '/');
+		//	Uri Check Dir is or not
+		if (!fileName.empty())
+			path = Util::join(path, fileName, '/');
+		if (Util::is_dir(path))
+		{
+			if (g_conf[confName][locName].is_exist("index"))
+				path = Util::join(path, g_conf[confName][locName]["index"][0], '/');
+			else if (*req.StartLine.url.rbegin() != '/')
+				return redirect(301, req.StartLine.url + '/');
+			else if (g_conf[confName][locName].is_exist("autoindex") && g_conf[confName][locName]["autoindex"][0] == "on")
+				return listing(path, url);
+			else
+				throw 403;
+		}
+
+		//	get Extension
+		cout << path << endl;
+		ext = findExtension(path);
+	}
+	catch (int errNo)
+	{
+		return make_errorpage(StartLine.statusCode = errNo);
+	}
+	return statement = execute();
 }
 
 #endif

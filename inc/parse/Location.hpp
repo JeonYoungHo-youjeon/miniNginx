@@ -15,7 +15,12 @@ public:
 
 	const bool is_exist(const string& key) const;
 	const vector<string>& operator[](const string& key) const;
+	vector<string>& operator[](const string& key)
+	{
+		return mAttr.find(key)->second;
+	};
     string  str(size_t tab_size);
+	string	getVal(const string& key, size_t pos = 0) { return mAttr[key][pos]; }
 
 public:
     map<string, vector<string> > mAttr;

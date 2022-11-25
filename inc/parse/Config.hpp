@@ -142,7 +142,7 @@ const string Config::getContentType(const string& key) const
 {
 	std::map<string, string>::const_iterator it = mime.find(key);
 	if (it == mime.end())
- 		return "text/html";
+ 		return "application/octet-stream";
  	return it->second;
 }
 

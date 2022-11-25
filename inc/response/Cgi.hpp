@@ -134,6 +134,7 @@ int		Cgi::close()
 void		Cgi::kill()
 {
 	::kill(pid, SIGKILL);
+	// pid = 0;
 }
 
 #endif  //  CGI_HPP

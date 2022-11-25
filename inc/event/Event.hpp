@@ -35,7 +35,7 @@ private:
 
 	void handle_server_event(const KEvent* event, const ServerSocket* socket);
 	void handle_client_event(const KEvent* event, ClientSocket* socket);
-	void handle_child_process(const KEvent* event);
+	void handle_child_process(const KEvent* event, ClientSocket* socket);
 	void clear_garbage_sockets();
 	void set_next_event(State state);
 
@@ -80,7 +80,7 @@ void Event::event_loop()
 			else if (socket->get_type() == CLIENT)
 				handle_client_event(event, (ClientSocket*)socket);
 			else if (event->filter == EVFILT_PROC)
-				handle_child_process(event);
+				handle_child_process(event, (ClientSocket*)socket);
 
 			if (!garbageCollector.empty())
 				clear_garbage_sockets();
@@ -327,11 +327,12 @@ void Event::handle_client_event(const KEvent* event, ClientSocket* socket)
 		std::cout << "\t==========[EV_ERROR]==========" << std::endl;
 		system("lsof | grep www/");
 
-		std::cout << event->data << std::endl;
-		std::cout << socket->get_response()->contentResult->inFd << std::endl;
-		std::cout << socket->get_response()->contentResult->outFd << std::endl;
-		std::cout << socket->get_readFD() << std::endl;
-		std::cout << socket->get_writeFD() << std::endl;
+		std::cout << "errno : " << errno << std::endl;
+		std::cout << "event->data : " << event->data << std::endl;
+		std::cout << "inFd : " << socket->get_response()->contentResult->inFd << std::endl;
+		std::cout << "outFd : " << socket->get_response()->contentResult->outFd << std::endl;
+		std::cout << "write : " << socket->get_writeFD() << std::endl;
+		std::cout << "read : " << socket->get_readFD() << std::endl;
 		return; // TODO: response 503 Service Unavailable
 	}
 
@@ -339,6 +340,7 @@ void Event::handle_client_event(const KEvent* event, ClientSocket* socket)
 	{
 		std::cout << "\t==========[EV_EOF]==========" << std::endl;
 		// TODO: I don't know to response anything message
+		handle_child_process(event, socket);
 		// disconnection((ClientSocket*)socket);
 	}
 	else if (event->filter == EVFILT_READ)
@@ -354,13 +356,26 @@ void Event::handle_client_event(const KEvent* event, ClientSocket* socket)
 	}
 }
 
-void Event::handle_child_process(const KEvent* event)
+void Event::handle_child_process(const KEvent* event, ClientSocket* socket)
 {
 	std::cout << "\t==========[EVFILT_PROC]==========" << std::endl;
-	int status;
-	PID pid = wait(&status);
-	if (WIFEXITED(status))
-		std::cout << WEXITSTATUS(status) << std::endl;
+	if (socket->get_PID())
+	{
+		int status;
+		PID pid = waitpid(-1, &status, WNOHANG);
+
+		if (WIFEXITED(status))
+		{
+			// std::cout << "EXITED state : " << WEXITSTATUS(status) << std::endl;
+			// State state = socket->get_response()->makeHeader();
+			// std::cout << "return state : " << state << std::endl;
+			// // kq->set_next_event(socket, state);
+			// socket->update_state(state);
+			// handle_client_read_event(socket);
+			// socket->get_response()->contentResult->kill
+		}
+
+	}
 }
 
 void Event::clear_garbage_sockets()

@@ -225,7 +225,7 @@ int 	Response::read()
 {
 	//	읽고 읽을것이 남아있으면 READ_RESPONSE 반환
 	char buf[BUFFER_SIZE];
-	bzero(buf, BUFFER_SIZE);
+	memset(buf, 0, BUFFER_SIZE);
 	ssize_t	len = ::read(contentResult->outFd, buf, BUFFER_SIZE);
 	std::cout << "=====[Response::read()]=====" << std::endl;
 	std::cout << "read len : " << len << std::endl;
@@ -233,7 +233,8 @@ int 	Response::read()
 	//	< BUFFER_SIZE 밑에 있어서 닿을 수 없던 부분 수정
 	if (len < 0)
 		throw StartLine.statusCode = 500;
-	if (len < BUFFER_SIZE)
+
+	if (len < BUFFER_SIZE && !contentResult->pid)
 		return makeHeader();
 
 	return READ_RESPONSE;

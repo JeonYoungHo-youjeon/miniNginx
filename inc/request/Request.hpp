@@ -254,8 +254,9 @@ struct Request
 		std::string val;
 
 		std::getline(ss, key, ':');
-		ss >> val;
-
+		if (ss.peek() == ' ')
+			ss.get();
+		std::getline(ss, val);
 		Header[string_to_metavar(key)] = val;
 	}
 

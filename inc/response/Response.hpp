@@ -104,6 +104,7 @@ struct Response
 };
 
 Response::Response()
+: Html(0), contentResult(0)
 {}
 Response::~Response()
 {
@@ -164,10 +165,9 @@ int 	Response::execute()
 			ReqHeader["REMOTE_ADDR"] = Req->ip;
 			ReqHeader["REQUEST_METHOD"] = Req->StartLine.method;
 			ReqHeader["PATH_TRANSLATED"] = path;
-			ReqHeader["SCRIPT_NAME"] = fileName;
+			ReqHeader["SCRIPT_NAME"] = Req->virtualPath;
 
 			excutor = g_conf[confName][locName][ext][0];
-			std::cerr << "TEST2" << std::endl;
 			contentResult = new Cgi(path, excutor, ReqHeader);
 		}
 		else
@@ -226,13 +226,16 @@ int 	Response::read()
 {
 	//	읽고 읽을것이 남아있으면 READ_RESPONSE 반환
 	char buf[BUFFER_SIZE];
-	size_t	len = ::read(contentResult->outFd, buf, BUFFER_SIZE);
-
+	memset(buf, 0, BUFFER_SIZE);
+	ssize_t	len = ::read(contentResult->outFd, buf, BUFFER_SIZE);
+	std::cout << "=====[Response::read()]=====" << std::endl;
+	std::cout << "read len : " << len << std::endl;
 	Body += string(buf, len);
 	//	< BUFFER_SIZE 밑에 있어서 닿을 수 없던 부분 수정
 	if (len < 0)
 		throw StartLine.statusCode = 500;
-	if (len < BUFFER_SIZE)
+
+	if (len < BUFFER_SIZE && !contentResult->pid)
 		return makeHeader();
 
 	return READ_RESPONSE;
@@ -252,7 +255,15 @@ int Response::send(int clientFd)
 	if (!Html)
 		Html = new string(toHtml());
 
-	ssize_t bufSize = Html->size();
+	std::cerr << "[" << Html << "]" <<std::endl;
+	string::size_type bufSize;
+	try {
+		bufSize = Html->size();
+	} catch (std::exception& e)
+	{
+		std::cerr << e.what()<< std::endl;
+	}
+	std::cout << bufSize << std::endl;
 	ssize_t	len = ::send(clientFd, Html->c_str(), bufSize, 0);
 	std::cout << "\t==========[SEND SIZE]==========" << std::endl;
 	std::cout << "len : " << len << ", bufSize : " << bufSize << std::endl;
@@ -263,7 +274,10 @@ int Response::send(int clientFd)
 	if (len < 0)
 		throw StartLine.statusCode = 500; // FIXME: 이거 동작X
 	if (Html->empty())
+	{
+		delete Html;Html = 0;
 		return END_RESPONSE;
+	}
 	return SEND_RESPONSE;
 }
 
@@ -290,8 +304,10 @@ int Response::make_errorpage(int code)
 	{
 		for (size_t i = 0; i < g_conf[confName][locName]["error_page"].size() - 1; ++i)
 			if (Util::to_string(StartLine.statusCode) == g_conf[confName][locName]["error_page"][i])
+			{	
 				url = g_conf[confName][locName]["error_page"].back();
-		return execute();
+				return execute();
+			}
 	}
 	Body =
 			"<!DOCTYPE html>\n"
@@ -349,6 +365,8 @@ int Response::clear()
 	//	내부 객체 delete -> REPEAT REQUEST 반환 -> new Req로 연결(Req 삭제위치)
 	delete contentResult;
 	delete Html;
+	contentResult = 0;
+	Html = 0;
 	return REPEAT_REQUEST;
 }
 
@@ -360,7 +378,7 @@ int Response::set(const Request& req)
 	confName = req.configName;
 	locName = req.locationName;
 	postBody = req.bodySS.str();
-	fileName = url;
+	fileName = req.fileName;
 	//	root 설정
 	path = getcwd(0, 0);
 	try

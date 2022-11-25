@@ -156,6 +156,8 @@ void Util::getline(std::string& buffer, std::string& to, const char c = '\n')
 
 int Util::is_dir(const std::string& path)
 {
+	std::cout << "=====[Util::is_dir]=====" << std::endl;
+		std::cout << path << std::endl;
 	DIR *dir;
 	if ((dir = opendir(path.c_str())))
 	{
@@ -167,6 +169,7 @@ int Util::is_dir(const std::string& path)
 	case ENOTDIR:
 		return 0;
 	case ENOENT:
+		std::cout << "throw 404" << std::endl;
 		throw 404;
 	case EACCES:
 		throw 403;

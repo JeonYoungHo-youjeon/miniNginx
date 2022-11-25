@@ -89,9 +89,6 @@ struct Request
 
 	int read()
 	{
-		std::cout << "[buffer]" << std::endl;
-		std::cout << buffer.str() << std::endl;
-		std::cout << buffer.peek() << std::endl;
 		if (is_empty_buffer())
 		{
 			char rcvData[BUFFER_SIZE];
@@ -110,7 +107,8 @@ struct Request
 		parse_url();
 
 		locationName = findLocation(virtualPath);
-		fileName = virtualPath.erase(0, locationName.size());
+		fileName = virtualPath;
+		fileName.erase(0, locationName.size());
 		//if (fileName.empty() && g_conf[configName][locationName].is_exist("index"))
 		//	fileName = g_conf[configName][locationName]["index"].front();
 
@@ -257,8 +255,9 @@ struct Request
 		std::string val;
 
 		std::getline(ss, key, ':');
-		ss >> val;
-
+		if (ss.peek() == ' ')
+			ss.get();
+		std::getline(ss, val);
 		Header[string_to_metavar(key)] = val;
 	}
 

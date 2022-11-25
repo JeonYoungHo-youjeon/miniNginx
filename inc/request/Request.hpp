@@ -107,7 +107,8 @@ struct Request
 		parse_url();
 
 		locationName = findLocation(virtualPath);
-		fileName = virtualPath.erase(0, locationName.size());
+		fileName = virtualPath;
+		fileName.erase(0, locationName.size());
 		//if (fileName.empty() && g_conf[configName][locationName].is_exist("index"))
 		//	fileName = g_conf[configName][locationName]["index"].front();
 

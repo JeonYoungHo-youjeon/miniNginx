@@ -155,10 +155,10 @@ ClientSocket::ClientSocket(FD clientFD, const SockAddr& addr, const std::string&
 
 ClientSocket::~ClientSocket()
 {
-	if (req)
-		delete req;
-	if (res)
-		delete res;
+	delete req;
+	delete res;
+	req = 0;
+	res = 0;
 }
 
 //private

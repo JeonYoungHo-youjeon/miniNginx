@@ -61,7 +61,6 @@ Cgi::Cgi(const std::string& path, const string& excutor, const vector<std::strin
 
 Cgi::~Cgi()
 {
-
 	close();
 	kill();
 }
@@ -96,7 +95,7 @@ int     Cgi::set()
     	setenv("REMOTE_ADDR", header["REMOTE_ADDR"].c_str(), 1);				// 클라이언트의 ip
     	setenv("REQUEST_METHOD", header["REQUEST_METHOD"].c_str(), 1);			// 입력받은 메소드
     	setenv("PATH_TRANSLATED", header["PATH_TRANSLATED"].c_str(), 1);		// 파일의 절대경로
-    	setenv("SCRIPT_NAME", header["SCRIPT_NAME"].c_str(), 1);				// 파일명
+    	setenv("SCRIPT_NAME", header["SCRIPT_NAME"].c_str(), 1);				// 파일의 상대경로와 이름
 	   	setenv("QUERY_STRING", header["QUERY_STRING"].c_str(), 1);				// url의 ? 뒷부분(params)
 
     	setenv("HTTP_COOKIE", header["COOKIE"].c_str(), 1);						// 헤더의 쿠키
@@ -133,8 +132,11 @@ int		Cgi::close()
 
 void		Cgi::kill()
 {
-	::kill(pid, SIGKILL);
-	// pid = 0;
+	std::cout << "PID: " << pid << std::endl;
+	if (pid)
+		::kill(pid, SIGKILL);
+	pid = 0;
+	
 }
 
 #endif  //  CGI_HPP

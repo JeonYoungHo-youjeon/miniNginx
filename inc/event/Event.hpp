@@ -366,13 +366,10 @@ void Event::handle_child_process(const KEvent* event, ClientSocket* socket)
 
 		if (WIFEXITED(status))
 		{
-			// std::cout << "EXITED state : " << WEXITSTATUS(status) << std::endl;
-			// State state = socket->get_response()->makeHeader();
-			// std::cout << "return state : " << state << std::endl;
-			// // kq->set_next_event(socket, state);
-			// socket->update_state(state);
-			// handle_client_read_event(socket);
-			// socket->get_response()->contentResult->kill
+			socket->get_response()->contentResult->kill();
+			std::cerr << "A" << std::endl;
+			handle_client_read_event(socket);
+			std::cerr << "B" << std::endl;
 		}
 
 	}

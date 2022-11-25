@@ -104,6 +104,7 @@ struct Response
 };
 
 Response::Response()
+: Html(0), contentResult(0)
 {}
 Response::~Response()
 {
@@ -303,8 +304,10 @@ int Response::make_errorpage(int code)
 	{
 		for (size_t i = 0; i < g_conf[confName][locName]["error_page"].size() - 1; ++i)
 			if (Util::to_string(StartLine.statusCode) == g_conf[confName][locName]["error_page"][i])
+			{	
 				url = g_conf[confName][locName]["error_page"].back();
-		return execute();
+				return execute();
+			}
 	}
 	Body =
 			"<!DOCTYPE html>\n"

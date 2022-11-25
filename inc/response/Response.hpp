@@ -167,7 +167,6 @@ int 	Response::execute()
 			ReqHeader["SCRIPT_NAME"] = fileName;
 
 			excutor = g_conf[confName][locName][ext][0];
-			std::cerr << "TEST2" << std::endl;
 			contentResult = new Cgi(path, excutor, ReqHeader);
 		}
 		else
@@ -226,8 +225,10 @@ int 	Response::read()
 {
 	//	읽고 읽을것이 남아있으면 READ_RESPONSE 반환
 	char buf[BUFFER_SIZE];
-	size_t	len = ::read(contentResult->outFd, buf, BUFFER_SIZE);
-
+	bzero(buf, BUFFER_SIZE);
+	ssize_t	len = ::read(contentResult->outFd, buf, BUFFER_SIZE);
+	std::cout << "=====[Response::read()]=====" << std::endl;
+	std::cout << "read len : " << len << std::endl;
 	Body += string(buf, len);
 	//	< BUFFER_SIZE 밑에 있어서 닿을 수 없던 부분 수정
 	if (len < 0)

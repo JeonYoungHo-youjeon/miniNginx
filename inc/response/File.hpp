@@ -26,7 +26,11 @@ int	File::set()
 	inFd = ::open(url.c_str(), O_WRONLY);
 
 	if (outFd < 0 || inFd < 0)
+	{
+		std::cout << "=====[File::set()]=====" << std::endl;
+		std::cout << "throw 404" << std::endl;
 		throw 404;
+	}
 	pid = 0;
 	return BODY;
 }

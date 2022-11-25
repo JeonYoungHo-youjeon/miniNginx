@@ -339,7 +339,7 @@ void Event::handle_client_event(const KEvent* event, ClientSocket* socket)
 	{
 		std::cout << "\t==========[EV_EOF]==========" << std::endl;
 		// TODO: I don't know to response anything message
-		disconnection((ClientSocket*)socket);
+		// disconnection((ClientSocket*)socket);
 	}
 	else if (event->filter == EVFILT_READ)
 	{

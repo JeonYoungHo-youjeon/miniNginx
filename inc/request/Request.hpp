@@ -89,9 +89,6 @@ struct Request
 
 	int read()
 	{
-		std::cout << "[buffer]" << std::endl;
-		std::cout << buffer.str() << std::endl;
-		std::cout << buffer.peek() << std::endl;
 		if (is_empty_buffer())
 		{
 			char rcvData[BUFFER_SIZE];

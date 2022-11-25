@@ -370,6 +370,7 @@ int Response::listing(string path, string head)
 			page +
 			"</pre><hr></body>\n"
 			"</html>\n";
+	Header["Content-type"] = "text/html";
 	return makeHeader();
 }
 

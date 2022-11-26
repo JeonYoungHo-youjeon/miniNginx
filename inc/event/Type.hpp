@@ -1,27 +1,21 @@
 #ifndef TYPE_HPP
 # define TYPE_HPP
 
-// Cpp header files
 # include <map>
-# include <vector>
 # include <string>
-# include <cerrno>
 # include <ctime>
-# include <utility>
-
-// System header files
 # include <sys/event.h>
 # include <netinet/in.h>
-# include <arpa/inet.h>
-# include <unistd.h>
-# include <fcntl.h>
 
-// User defined header files
-# include "../parse/Config.hpp"
-# include "../parse/Util.hpp"
-# include "../define.hpp"
-# include "../exception/Exception.hpp"
-# include "../http.hpp"
+# include "../parse/Server.hpp"
+
+void print_log(const std::string title)
+{
+	std::cout << "\t==========[" << title << "]==========" << std::endl;
+}
+
+# define PRINT_LOG(title) print_log(title)
+// # define PRINT_LOG(title)
 
 
 typedef int 							FD;

@@ -22,21 +22,18 @@ struct File : public Contents
 
 int	File::set()
 {
+	outFd = ::open(url.c_str(), O_RDONLY);
+	inFd = ::open(url.c_str(), O_WRONLY);
 
 	{
 		std::ifstream is(url.c_str());
 		if (!is.seekg(0, std::ios::end).tellg())
 			throw 204;
 	}
-	outFd = ::open(url.c_str(), O_RDONLY);
-	inFd = ::open(url.c_str(), O_WRONLY);
 
 	if (outFd < 0 || inFd < 0)
-	{
-		std::cout << "=====[File::set()]=====" << std::endl;
-		std::cout << "throw 404" << std::endl;
 		throw 404;
-	}
+
 	pid = 0;
 	return BODY;
 }

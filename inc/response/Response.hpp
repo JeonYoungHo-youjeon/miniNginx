@@ -64,6 +64,7 @@ struct Response
 	string toHtml()
 	{
 		string ret;
+
 		ret += StartLine.protocol + ' ' + Util::to_string(StartLine.statusCode) + ' ' + StartLine.reasonPhrase + "\r\n";
 		for (std::map<string, string>::iterator it = Header.begin(); it != Header.end(); ++it)
 			ret += it->first + ": " + it->second + "\r\n";
@@ -271,22 +272,12 @@ int Response::redirect(int code, const string& location)
 
 int Response::send(int clientFd)
 {
-	// TODO: 연속된 요청시 Html 초기화
 	if (!Html)
 		Html = new string(toHtml());
 
-	std::cerr << "[" << Html << "]" <<std::endl;
-	string::size_type bufSize;
-	try {
-		bufSize = Html->size();
-	} catch (std::exception& e)
-	{
-		std::cerr << e.what()<< std::endl;
-	}
-	std::cout << bufSize << std::endl;
+	size_t bufSize = Html->size();
+
 	ssize_t	len = ::send(clientFd, Html->c_str(), bufSize, 0);
-	std::cout << "\t==========[SEND SIZE]==========" << std::endl;
-	std::cout << "len : " << len << ", bufSize : " << bufSize << std::endl;
 
 	if (len > 0)
 		Html->erase(0, len);
@@ -378,7 +369,6 @@ int Response::makeStartLine()
 {
 	StartLine.reasonPhrase = g_conf.getStatusMsg(StartLine.statusCode);
 	StartLine.protocol = "HTTP/1.1";
-	std::cout << "STARTLINE OK" << std::endl;
 	return statement = SEND_RESPONSE;
 }
 

@@ -63,9 +63,6 @@ struct Request
 	{
 		this->configName = configName;
 		progress = START_LINE;
-		maxBodySize = MAX_BODY_SIZE;
-		// if (g_conf[configName][locationName].is_exist("client_max_body_size"))
-		// 	maxBodySize = Util::stoi(g_conf[configName][locationName]["client_max_body_size"][0]);
 	};
 
 	Request& operator=(const Request& req)
@@ -97,7 +94,10 @@ struct Request
 			int byte = recv(clientFd, &rcvData[0], BUFFER_SIZE, 0);
 
 			if (byte < 0)
+			{
+				clear_buffer();
 				throw statusCode = 400;
+			}
 			buffer << rcvData;
 		}
 		return parse();
@@ -109,12 +109,22 @@ struct Request
 		locationName = findLocation(virtualPath);
 		fileName = virtualPath;
 		fileName.erase(0, locationName.size());
+		if (g_conf[configName][locationName].is_exist("client_max_body_size"))
+			maxBodySize = Util::stoi(g_conf[configName][locationName]["client_max_body_size"][0]);
+		else
+			maxBodySize = DEFAULT_MAX_BODY_SIZE;
 		//if (fileName.empty() && g_conf[configName][locationName].is_exist("index"))
 		//	fileName = g_conf[configName][locationName]["index"].front();
 
 		if (Header.count(HEAD[CONTENT_LENGTH]))
 		{
 			contentLength = Util::stoi(Header[HEAD[CONTENT_LENGTH]]);
+			std::cout << "MAXBODYSIZE : " << maxBodySize << std::endl;
+			if (contentLength > maxBodySize)
+			{
+				clear_buffer();
+				throw statusCode = 413;
+			}
 			remainReadLength = contentLength;
 		}
 		if (Header.count(HEAD[TRANSFER_ENCODING]))
@@ -187,10 +197,7 @@ struct Request
 					return READ_REQUEST;
 
 
-				if (remainReadLength > MAX_BODY_SIZE)
-					readSize = MAX_BODY_SIZE;
-				else
-					readSize = remainReadLength;
+				readSize = remainReadLength;
 				
 				memset(charBuffer, 0, BUFFER_SIZE);
 				buffer.read(charBuffer, readSize);
@@ -371,6 +378,7 @@ struct Request
 	{
 		for (int i = 0; i < s.size(); ++i)
 			s[i] = std::toupper(s[i]);
+		// TODO: replace function c++ 17
 		std::replace(s.begin(), s.end(), '-', '_');
 		return s;
 	}

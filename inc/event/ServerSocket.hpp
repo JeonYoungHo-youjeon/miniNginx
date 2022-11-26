@@ -2,6 +2,8 @@
 # define SERVERSOCKET_HPP
 
 
+# include <sys/event.h>
+
 # include "Type.hpp"
 # include "Socket.hpp"
 # include "../exception/Exception.hpp"

@@ -2,7 +2,6 @@
 # define EVENT_HPP
 
 
-
 # include "Type.hpp"
 # include "KQueue.hpp"
 # include "ClientSocket.hpp"
@@ -199,29 +198,29 @@ void Event::handle_client_read_event(ClientSocket* socket)
 		switch (state)
 		{
 		case READ_REQUEST:
-			std::cout << "\t==========[READ_REQUEST]==========" << std::endl;
+			PRINT_LOG("READ_REQUEST");
 			state = req->read();
 			break;
 		case REPEAT_REQUEST:
-			std::cout << "\t==========[REPEAT_REQUEST]==========" << std::endl;
+			PRINT_LOG("REPEAT_REQUEST");
 			state = req->clear_read();
 			break;
 		case READ_RESPONSE:
-			std::cout << "\t==========[READ_RESPONSE]==========" << std::endl;
+			PRINT_LOG("READ_RESPONSE");
 			state = res->read();
 			break;
 		}
 
 		if (state == END_REQUEST) {
-			std::cout << "\t==========[END_REQUEST]==========" << std::endl;
-			req->print_request();
+			PRINT_LOG("END_REQUEST");
+			// req->print_request();
 			state = socket->set_response(*req);
 		}
 		
 	}
 	catch (int error_code)
 	{
-		std::cout << "\t==========[CATCH ERROR_CODE : " << error_code << "]==========" << std::endl;
+		PRINT_LOG("CATCH ERROR");
 		state = socket->set_response(error_code);
 	}
 
@@ -241,11 +240,11 @@ void Event::handle_client_write_event(ClientSocket* socket)
 		switch (state)
 		{
 		case WRITE_RESPONSE:
-			std::cout << "\t==========[WRITE_RESPONSE]==========" << std::endl;
+			PRINT_LOG("WRITE_RESPONSE");
 			state = res->write();
 			break;
 		case SEND_RESPONSE:
-			std::cout << "\t==========[SEND_RESPONSE]==========" << std::endl;
+			PRINT_LOG("SEND_RESPONSE");
 			state = res->send(socket->get_fd());
 			break;	
 		}
@@ -265,30 +264,30 @@ void Event::handle_next_event(ClientSocket* socket, State state)
 
 	if (state == END_RESPONSE)
 	{
-		std::cout << "\t==========[END_RESPONSE]==========" << std::endl;
-
+		PRINT_LOG("END_RESPONSE");
 		if (req->is_empty_buffer() == false)
 		{
-			std::cout << "\t==========[IS NOT EMPTY BUFFER]==========" << std::endl;
+			PRINT_LOG("IS NOT EMPTY BUFFER");
 			socket->update_state(REPEAT_REQUEST);
 			handle_client_read_event(socket);
 		}
 		else if (res->Header["Connection"] == "keep-alive")
 		{
-			std::cout << "\t==========[KEEP_ALIVE]==========" << std::endl;
+			PRINT_LOG("KEEP_ALIVE");
 			socket->reset();
 			socket->update_state(READ_REQUEST);
 			kq->on_read_event(socket, socket->get_fd());
 		}
 		else
 		{
-			std::cout << "\t==========[DISCONNECTION]==========" << std::endl;
+			PRINT_LOG("DISCONNECTION");
+			socket->update_state(NOTHING);
 			disconnection(socket);
 		}
 	}
 	else
 	{
-		std::cout << "\t==========[SET NEXT EVENT]==========" << std::endl;
+		PRINT_LOG("SET NEXT EVENT");
 		socket->update_state(state);
 		kq->set_next_event(socket, socket->get_state());
 	}
@@ -317,48 +316,39 @@ void Event::handle_client_event(const KEvent* event, ClientSocket* socket)
 {
 	if (event->filter == EVFILT_TIMER)
 	{
-		std::cout << "\t==========[EVFILT_TIMER]==========" << std::endl;
-
+		PRINT_LOG("EVFILT_TIMER");
 		socket_timeout(socket);	
 	}
 		
 	if (event->flags & EV_ERROR)
 	{
-		std::cout << "\t==========[EV_ERROR]==========" << std::endl;
-		system("lsof | grep www/");
-
+		PRINT_LOG("EV_ERROR");
+		system("lsof | grep webserv");
 		std::cout << "errno : " << errno << std::endl;
-		std::cout << "event->data : " << event->data << std::endl;
-		std::cout << "inFd : " << socket->get_response()->contentResult->inFd << std::endl;
-		std::cout << "outFd : " << socket->get_response()->contentResult->outFd << std::endl;
-		std::cout << "write : " << socket->get_writeFD() << std::endl;
-		std::cout << "read : " << socket->get_readFD() << std::endl;
 		return; // TODO: response 503 Service Unavailable
 	}
 
 	if (event->flags & EV_EOF)
 	{
-		std::cout << "\t==========[EV_EOF]==========" << std::endl;
-		// TODO: I don't know to response anything message
+		PRINT_LOG("EV_EOF");
 		handle_child_process(event, socket);
 		// disconnection((ClientSocket*)socket);
 	}
 	else if (event->filter == EVFILT_READ)
 	{
-		std::cout << "\t==========[EVFILT_READ]==========" << std::endl;
-
+		PRINT_LOG("EVFILT_READ");
 		handle_client_read_event(socket);
 	}
 	else if (event->filter == EVFILT_WRITE)
 	{
-		std::cout << "\t==========[EVFILT_WRITE]==========" << std::endl;
+		PRINT_LOG("EVFILT_WRITE");
 		handle_client_write_event(socket);
 	}
 }
 
 void Event::handle_child_process(const KEvent* event, ClientSocket* socket)
 {
-	std::cout << "\t==========[EVFILT_PROC]==========" << std::endl;
+	PRINT_LOG("EVFILT_PROC");
 	if (socket->get_PID())
 	{
 		int status;
@@ -367,17 +357,14 @@ void Event::handle_child_process(const KEvent* event, ClientSocket* socket)
 		if (WIFEXITED(status))
 		{
 			socket->get_response()->contentResult->kill();
-			std::cerr << "A" << std::endl;
 			handle_client_read_event(socket);
-			std::cerr << "B" << std::endl;
 		}
-
 	}
 }
 
 void Event::clear_garbage_sockets()
 {
-	std::cout << "\t==========[clear_garbage_sockets]==========" << std::endl;
+	PRINT_LOG("CLEAR_GARBASE_SOCKETS");
 	for (GarbageCollector::const_iterator it = garbageCollector.begin(); it != garbageCollector.end(); ++it)
 	{
 		sockets.erase((*it)->get_fd());

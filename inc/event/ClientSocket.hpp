@@ -2,7 +2,11 @@
 # define CLIENTSOCKET_HPP
 
 
+# include <arpa/inet.h>
+
 # include "Type.hpp"
+# include "../request/Request.hpp"
+# include "../response/Response.hpp"
 # include "Socket.hpp"
 
 

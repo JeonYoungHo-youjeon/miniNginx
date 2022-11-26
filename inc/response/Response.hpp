@@ -116,14 +116,34 @@ int Response::makeHeader()
 	Header["Date"] = Util::get_date();
 	Header["Server"] = "miniNginx/1.1";
 
+	if (!excutor.empty())
+	{
+		std::vector<string> header = Util::split(Body, '\n');
+
+		std::string::size_type cgiHeaderEnd = Body.find("\r\n\r\n");
+
+		for (std::vector<string>::iterator it = header.begin(); it != header.end(); ++it)
+		{
+			std::cout << "key1= [" << *it << "]" << std::endl;
+			Util::remove_crlf(*it);
+			std::cout << " key2= [ " << *it << " ] " << std::endl;
+			if ((*it).empty())
+				break ;
+			std::string::size_type colon = (*it).find(": ");
+			std::string key = (*it).substr(0, colon);
+			std::string value = (*it).substr(colon + 2);
+			Header[key] = value;	
+		}
+		Body.erase(0, cgiHeaderEnd + 4);
+	}
 	map<string, string>::iterator it = Header.find("Connection");
 	if (StartLine.statusCode / 100 == 2)
 		Header["Connection"] = "keep-alive";
 	else
 		Header["Connection"] = "close";
-	it = Header.find("Content-Type");
+	it = Header.find("Content-type");
 	if (it == Header.end())
-		Header["Content-Type"] = g_conf.getContentType(ext);
+		Header["Content-type"] = g_conf.getContentType(ext);
 	Header["Content-Length"] = Util::to_string(Body.size());
 	{    /* 필요 헤더*/    }
 	return makeStartLine();
@@ -316,6 +336,7 @@ int Response::make_errorpage(int code)
 			"    " + Util::to_string(StartLine.statusCode) + "\n"
 															 "  </h1>\n"
 															 "</html>\n";
+	Header["Content-type"] = "text/html";
 	return makeHeader();
 }
 
@@ -349,6 +370,7 @@ int Response::listing(string path, string head)
 			page +
 			"</pre><hr></body>\n"
 			"</html>\n";
+	Header["Content-type"] = "text/html";
 	return makeHeader();
 }
 

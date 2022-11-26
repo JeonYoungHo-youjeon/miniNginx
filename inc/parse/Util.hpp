@@ -61,7 +61,9 @@ std::string& Util::strip(std::string& input, const char c)
 	pos = input.find_last_not_of(c);
 	if (pos != std::string::npos)
 		input.erase(pos + 1, input.length());
-
+		
+	if (input.length() == 1 && input[0] == c)
+		input = "";
 	return input;
 }
 

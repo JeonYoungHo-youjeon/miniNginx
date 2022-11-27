@@ -74,12 +74,12 @@ void Event::event_loop()
 			event = &(kq->get_eventList()[i]);
 			socket = (Socket*)event->udata;
 
-			if (socket->get_type() == SERVER)
+			if (event->filter == EVFILT_PROC)
+				handle_child_process(event, (ClientSocket*)socket);
+			else if (socket->get_type() == SERVER)
 				handle_server_event(event, (ServerSocket*)socket);
 			else if (socket->get_type() == CLIENT)
 				handle_client_event(event, (ClientSocket*)socket);
-			else if (event->filter == EVFILT_PROC)
-				handle_child_process(event, (ClientSocket*)socket);
 
 			if (!garbageCollector.empty())
 				clear_garbage_sockets();
@@ -353,7 +353,8 @@ void Event::handle_child_process(const KEvent* event, ClientSocket* socket)
 	{
 		int status;
 		PID pid = waitpid(-1, &status, WNOHANG);
-
+		socket->set_PID(0);
+		std::cout << "waitpid : " << pid << std::endl;
 		if (WIFEXITED(status))
 		{
 			socket->get_response()->contentResult->kill();

@@ -409,12 +409,10 @@ int Response::set(const Request& req)
 				if (*it == Req->StartLine.method)
 					throw 500;
 		//	Upload Path
-		if (g_conf[confName][locName].is_exist("upload"))
-			path = Util::join(path, g_conf[confName][locName]["upload"][0], '/');
 		//	Uri Check Dir is or not
 		if (!fileName.empty())
 			path = Util::join(path, fileName, '/');
-		if (Util::is_dir(path))
+		if (req.StartLine.method == "GET" && Util::is_dir(path))
 		{
 			if (g_conf[confName][locName].is_exist("index"))
 				path = Util::join(path, g_conf[confName][locName]["index"][0], '/');
@@ -424,6 +422,12 @@ int Response::set(const Request& req)
 				return listing(path, url);
 			else
 				throw 403;
+		}
+		else if (g_conf[confName][locName].is_exist("upload") && req.StartLine.method == "POST")
+		{
+			path = Util::join(path, g_conf[confName][locName]["upload"][0], '/');
+			cout << path << endl;
+			cout << req.bodySS.str() << endl;
 		}
 
 		//	get Extension

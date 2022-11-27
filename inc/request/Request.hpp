@@ -246,7 +246,6 @@ struct Request
 				break;
 			}
 		}
-
 		return END_REQUEST;
 	}
 

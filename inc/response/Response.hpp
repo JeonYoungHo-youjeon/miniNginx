@@ -426,7 +426,6 @@ int Response::set(const Request& req)
 		else if (g_conf[confName][locName].is_exist("upload") && req.StartLine.method == "POST")
 		{
 			path = Util::join(path, g_conf[confName][locName]["upload"][0], '/');
-			cout << path << endl;
 			cout << req.bodySS.str() << endl;
 		}
 

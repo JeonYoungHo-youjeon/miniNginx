@@ -113,8 +113,6 @@ struct Request
 			maxBodySize = Util::stoi(g_conf[configName][locationName]["client_max_body_size"][0]);
 		else
 			maxBodySize = DEFAULT_MAX_BODY_SIZE;
-		//if (fileName.empty() && g_conf[configName][locationName].is_exist("index"))
-		//	fileName = g_conf[configName][locationName]["index"].front();
 
 		if (Header.count(HEAD[CONTENT_LENGTH]))
 		{

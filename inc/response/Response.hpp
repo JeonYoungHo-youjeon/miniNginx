@@ -391,6 +391,38 @@ int Response::set(const Request& req)
 	locName = req.locationName;
 	postBody = req.bodySS.str();
 	fileName = req.fileName;
+
+	Header = req.Header;
+
+	/**
+	 * @brief : file 전송 시 바운더리 파싱
+	 */
+	const string boundary = "boundary=";
+	const string crlf = "\r\n\r\n";
+
+	if (Header["CONTENT_TYPE"].find(boundary) != std::string::npos)
+	{
+		string delem = string(
+				Header["CONTENT_TYPE"].begin() + Header["CONTENT_TYPE"].find(boundary) + boundary.size(),
+				Header["CONTENT_TYPE"].end());
+		int start = 0, end;
+		std::pair<std::string, std::string>	HeaderBody;
+
+		HeaderBody.first = string(postBody.begin(), postBody.begin() + postBody.find(crlf));
+		cout << "TEST" << endl;
+		cout << HeaderBody.first << endl;
+		cout << "TEST" << endl;
+		postBody.erase(0, HeaderBody.first.size() + 1);
+		cout << "TEST2" << endl;
+		cout << postBody << endl;
+		cout << "TEST2" << endl;
+		HeaderBody.second = string(postBody.begin(), postBody.begin() + postBody.find(crlf));
+		cout << "Header" << endl;
+		cout << HeaderBody.first << endl;
+		cout << "Body" << endl;
+		cout << HeaderBody.second << endl;
+	}
+
 	//	root 설정
 	path = getcwd(0, 0);
 	try
@@ -408,7 +440,6 @@ int Response::set(const Request& req)
 				 it != g_conf[confName][locName]["limit_except"].end(); ++it)
 				if (*it == Req->StartLine.method)
 					throw 500;
-		//	Upload Path
 		//	Uri Check Dir is or not
 		if (!fileName.empty())
 			path = Util::join(path, fileName, '/');
@@ -423,11 +454,8 @@ int Response::set(const Request& req)
 			else
 				throw 403;
 		}
-		else if (g_conf[confName][locName].is_exist("upload") && req.StartLine.method == "POST")
-		{
+		else if (req.StartLine.method == "POST" && g_conf[confName][locName].is_exist("upload"))
 			path = Util::join(path, g_conf[confName][locName]["upload"][0], '/');
-			cout << req.bodySS.str() << endl;
-		}
 
 		//	get Extension
 		ext = findExtension(path);
@@ -438,5 +466,7 @@ int Response::set(const Request& req)
 	}
 	return statement = execute();
 }
+
+//std::map<std::string, std::string> parseBody(const std::string& dlm, std::string body)
 
 #endif

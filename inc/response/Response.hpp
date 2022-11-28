@@ -399,29 +399,46 @@ int Response::set(const Request& req)
 	 */
 	const string boundary = "boundary=";
 	const string crlf = "\r\n\r\n";
-/*
+
 	if (Header["CONTENT_TYPE"].find(boundary) != std::string::npos)
 	{
 		string delem = string(
 				Header["CONTENT_TYPE"].begin() + Header["CONTENT_TYPE"].find(boundary) + boundary.size(),
 				Header["CONTENT_TYPE"].end());
-		int start = 0, end;
+		delem = "--" + delem;
+		//int start = postBody.begin() + postBody.find(delem) + delem.size(), end;
+		//std::string::iterator	beg = postBody.begin() + postBody.find(crlf) + delem.size(), end;
+		cout << postBody.find(crlf) << endl;
+		std::string::iterator	beg = postBody.begin(), end = beg + postBody.find(crlf);
+
 		std::pair<std::string, std::string>	HeaderBody;
 
-		HeaderBody.first = string(postBody.begin(), postBody.begin() + postBody.find(crlf));
-		cout << "TEST" << endl;
+		HeaderBody.first = string(beg, end);
+		postBody.erase(0, HeaderBody.first.size() + crlf.size());
+		beg = postBody.begin();
+		end = beg + postBody.find(crlf);
+		HeaderBody.second = postBody;
+		cout << delem << endl;
+		while (HeaderBody.first.find(crlf) != string::npos)
+			HeaderBody.first.replace(HeaderBody.first.find(crlf), crlf.size(), "");
+		while (HeaderBody.first.find(delem) != string::npos)
+			HeaderBody.first.replace(HeaderBody.first.find(delem), delem.size(), "");
+
+		while (HeaderBody.second.find(crlf) != string::npos)
+			HeaderBody.second.replace(HeaderBody.second.find(crlf), crlf.size(), "");
+		while (HeaderBody.second.find(delem) != string::npos)
+		{
+			HeaderBody.second.erase(HeaderBody.second.find(delem), delem.size());
+			//HeaderBody.second.replace(HeaderBody.second.find(delem), delem.size(), "");
+			cout << "-=-=-=-" << endl;
+			cout << HeaderBody.second << endl;
+		}
+
+		cout << "==first==" << endl;
 		cout << HeaderBody.first << endl;
-		cout << "TEST" << endl;
-		postBody.erase(0, HeaderBody.first.size() + 1);
-		cout << "TEST2" << endl;
-		cout << postBody << endl;
-		cout << "TEST2" << endl;
-		HeaderBody.second = string(postBody.begin(), postBody.begin() + postBody.find(crlf));
-		cout << "Header" << endl;
-		cout << HeaderBody.first << endl;
-		cout << "Body" << endl;
+		cout << "==second==" << endl;
 		cout << HeaderBody.second << endl;
-	}*/
+	}
 
 	//	root 설정
 	path = getcwd(0, 0);

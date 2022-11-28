@@ -11,11 +11,11 @@
 # include "File.hpp"
 # include "../http.hpp"
 # include "../parse/Util.hpp"
+# include <errno.h>
 
-/*
- *  Http Test
- */
-# include "../http.hpp"
+extern int errno;
+
+//# include "../http.hpp"
 
 extern Config g_conf;
 
@@ -195,15 +195,15 @@ int 	Response::execute()
 			contentResult = new File(path);
 
 		progress = contentResult->set();
-
-		if (Req->StartLine.method == "GET")
+		if (Req->StartLine.method == "GET" && contentResult->checkNull())
 			return statement = READ_RESPONSE;
-
 		if (Req->StartLine.method == "POST")
 			return statement = WRITE_RESPONSE;
 	}
 	catch (int errNo)	//	예외 발생 시 일단 객체 내에서 처리 -> 수정 O
 	{
+		cout << errno << endl;
+		return make_errorpage(errNo);
 	}
 	return makeHeader();
 }
@@ -369,6 +369,7 @@ int Response::makeStartLine()
 {
 	StartLine.reasonPhrase = g_conf.getStatusMsg(StartLine.statusCode);
 	StartLine.protocol = "HTTP/1.1";
+	cout << "OK" << endl;
 	return statement = SEND_RESPONSE;
 }
 
@@ -392,54 +393,6 @@ int Response::set(const Request& req)
 	postBody = req.bodySS.str();
 	fileName = req.fileName;
 
-	Header = req.Header;
-
-	/**
-	 * @brief : file 전송 시 바운더리 파싱
-	 */
-	const string boundary = "boundary=";
-	const string crlf = "\r\n\r\n";
-
-	if (Header["CONTENT_TYPE"].find(boundary) != std::string::npos)
-	{
-		string delem = string(
-				Header["CONTENT_TYPE"].begin() + Header["CONTENT_TYPE"].find(boundary) + boundary.size(),
-				Header["CONTENT_TYPE"].end());
-		delem = "--" + delem;
-		//int start = postBody.begin() + postBody.find(delem) + delem.size(), end;
-		//std::string::iterator	beg = postBody.begin() + postBody.find(crlf) + delem.size(), end;
-		cout << postBody.find(crlf) << endl;
-		std::string::iterator	beg = postBody.begin(), end = beg + postBody.find(crlf);
-
-		std::pair<std::string, std::string>	HeaderBody;
-
-		HeaderBody.first = string(beg, end);
-		postBody.erase(0, HeaderBody.first.size() + crlf.size());
-		beg = postBody.begin();
-		end = beg + postBody.find(crlf);
-		HeaderBody.second = postBody;
-		cout << delem << endl;
-		while (HeaderBody.first.find(crlf) != string::npos)
-			HeaderBody.first.replace(HeaderBody.first.find(crlf), crlf.size(), "");
-		while (HeaderBody.first.find(delem) != string::npos)
-			HeaderBody.first.replace(HeaderBody.first.find(delem), delem.size(), "");
-
-		while (HeaderBody.second.find(crlf) != string::npos)
-			HeaderBody.second.replace(HeaderBody.second.find(crlf), crlf.size(), "");
-		while (HeaderBody.second.find(delem) != string::npos)
-		{
-			HeaderBody.second.erase(HeaderBody.second.find(delem), delem.size());
-			//HeaderBody.second.replace(HeaderBody.second.find(delem), delem.size(), "");
-			cout << "-=-=-=-" << endl;
-			cout << HeaderBody.second << endl;
-		}
-
-		cout << "==first==" << endl;
-		cout << HeaderBody.first << endl;
-		cout << "==second==" << endl;
-		cout << HeaderBody.second << endl;
-	}
-
 	//	root 설정
 	path = getcwd(0, 0);
 	try
@@ -458,6 +411,8 @@ int Response::set(const Request& req)
 				if (*it == Req->StartLine.method)
 					throw 500;
 		//	Uri Check Dir is or not
+		if (req.StartLine.method == "POST" && g_conf[confName][locName].is_exist("upload"))
+			path = Util::join(path, g_conf[confName][locName]["upload"][0], '/');
 		if (!fileName.empty())
 			path = Util::join(path, fileName, '/');
 		if (req.StartLine.method == "GET" && Util::is_dir(path))
@@ -471,8 +426,6 @@ int Response::set(const Request& req)
 			else
 				throw 403;
 		}
-		else if (req.StartLine.method == "POST" && g_conf[confName][locName].is_exist("upload"))
-			path = Util::join(path, g_conf[confName][locName]["upload"][0], '/');
 
 		//	get Extension
 		ext = findExtension(path);
@@ -483,7 +436,44 @@ int Response::set(const Request& req)
 	}
 	return statement = execute();
 }
+/*
+string	fileNameParseFrom(map<string, string>& header, string& postBody)
+{
+	string delem = string(
+			Header["CONTENT_TYPE"].begin() + Header["CONTENT_TYPE"].find(boundary) + boundary.size(),
+			Header["CONTENT_TYPE"].end());
+	delem = "--" + delem;
+	//int start = postBody.begin() + postBody.find(delem) + delem.size(), end;
+	//std::string::iterator	beg = postBody.begin() + postBody.find(crlf) + delem.size(), end;
+	cout << postBody.find(crlf) << endl;
+	std::string::iterator	beg = postBody.begin(), end = beg + postBody.find(crlf);
 
-//std::map<std::string, std::string> parseBody(const std::string& dlm, std::string body)
+	std::pair<std::string, std::string>	HeaderBody;
 
+	HeaderBody.first = string(beg, end);
+	postBody.erase(0, HeaderBody.first.size() + crlf.size());
+	beg = postBody.begin();
+	end = beg + postBody.find(crlf);
+	HeaderBody.second = postBody;
+	cout << delem << endl;
+	while (HeaderBody.first.find(crlf) != string::npos)
+		HeaderBody.first.replace(HeaderBody.first.find(crlf), crlf.size(), "");
+	while (HeaderBody.first.find(delem) != string::npos)
+		HeaderBody.first.replace(HeaderBody.first.find(delem), delem.size(), "");
+
+	while (HeaderBody.second.find(crlf) != string::npos)
+		HeaderBody.second.replace(HeaderBody.second.find(crlf), crlf.size(), "");
+	while (HeaderBody.second.find(delem) != string::npos)
+	{
+		HeaderBody.second.erase(HeaderBody.second.find(delem), delem.size());
+		//HeaderBody.second.replace(HeaderBody.second.find(delem), delem.size(), "");
+		cout << "-=-=-=-" << endl;
+		cout << HeaderBody.second << endl;
+	}
+
+	cout << "==first==" << endl;
+	cout << HeaderBody.first << endl;
+	cout << "==second==" << endl;
+	cout << HeaderBody.second << endl;
+}*/
 #endif

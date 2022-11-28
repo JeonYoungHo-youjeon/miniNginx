@@ -3,6 +3,7 @@
 
 # include "Contents.hpp"
 # include "../exception/Exception.hpp"
+# include <sys/stat.h>
 
 struct File : public Contents
 {
@@ -17,23 +18,17 @@ struct File : public Contents
 	int	set();
 	int	close();
 	void kill() {};
-
+	bool checkNull();
 };
 
 int	File::set()
 {
-	outFd = ::open(url.c_str(), O_RDONLY);
-	inFd = ::open(url.c_str(), O_WRONLY);
+	outFd = ::open(url.c_str(), O_RDONLY | O_CREAT, 777);
+	inFd = ::open(url.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 777);
 
-	{
-		std::ifstream is(url.c_str());
-		if (!is.seekg(0, std::ios::end).tellg())
-			throw 204;
-	}
-
+	cout << inFd << ' ' << outFd << endl;
 	if (outFd < 0 || inFd < 0)
 		throw 404;
-
 	pid = 0;
 	return BODY;
 }
@@ -44,5 +39,12 @@ int	File::close()
 	return true;
 }
 
+bool File::checkNull()
+{
+	std::ifstream is(url.c_str());
+	if (!is.seekg(0, std::ios::end).tellg())
+		throw 204;
+	return true;
+}
 
 #endif

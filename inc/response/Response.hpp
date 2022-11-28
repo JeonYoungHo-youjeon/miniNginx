@@ -399,7 +399,7 @@ int Response::set(const Request& req)
 	 */
 	const string boundary = "boundary=";
 	const string crlf = "\r\n\r\n";
-
+/*
 	if (Header["CONTENT_TYPE"].find(boundary) != std::string::npos)
 	{
 		string delem = string(
@@ -421,7 +421,7 @@ int Response::set(const Request& req)
 		cout << HeaderBody.first << endl;
 		cout << "Body" << endl;
 		cout << HeaderBody.second << endl;
-	}
+	}*/
 
 	//	root 설정
 	path = getcwd(0, 0);

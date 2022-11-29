@@ -203,6 +203,7 @@ int 	Response::execute()
 	catch (int errNo)	//	예외 발생 시 일단 객체 내에서 처리 -> 수정 O
 	{
 		cout << errno << endl;
+		cout << errNo << endl;
 		return make_errorpage(errNo);
 	}
 	return makeHeader();
@@ -252,7 +253,6 @@ int 	Response::read()
 	std::cout << "=====[Response::read()]=====" << std::endl;
 	std::cout << "read len : " << len << std::endl;
 	Body += string(buf, len);
-	//	< BUFFER_SIZE 밑에 있어서 닿을 수 없던 부분 수정
 	if (len < 0)
 		throw StartLine.statusCode = 500;
 
@@ -316,7 +316,7 @@ int Response::make_errorpage(int code)
 		for (size_t i = 0; i < g_conf[confName][locName]["error_page"].size() - 1; ++i)
 			if (Util::to_string(StartLine.statusCode) == g_conf[confName][locName]["error_page"][i])
 			{	
-				url = g_conf[confName][locName]["error_page"].back();
+				url = g_conf[confName][locName]["error_page"][g_conf[confName][locName]["error_page"].size() - 1];
 				return execute();
 			}
 	}
@@ -426,6 +426,7 @@ int Response::set(const Request& req)
 				throw 403;
 		}
 
+		cout << path << endl;
 		//	get Extension
 		ext = findExtension(path);
 	}

@@ -192,8 +192,12 @@ int 	Response::execute()
 			contentResult = new Cgi(path, excutor, ReqHeader);
 		}
 		else
-			contentResult = new File(path);
-
+		{
+			if (Req->StartLine.method == "GET")
+				contentResult = new File(path, O_WRONLY);
+			else
+				contentResult = new File(path, O_WRONLY | O_CREAT | O_TRUNC);
+		}
 		progress = contentResult->set();
 		if (Req->StartLine.method == "GET" && contentResult->checkNull())
 			return statement = READ_RESPONSE;
@@ -204,7 +208,7 @@ int 	Response::execute()
 	{
 		cout << errno << endl;
 		cout << errNo << endl;
-		return make_errorpage(errNo);
+		return make_errorpage(StartLine.statusCode = errNo);
 	}
 	return makeHeader();
 }
@@ -436,44 +440,5 @@ int Response::set(const Request& req)
 	}
 	return statement = execute();
 }
-/*
-string	fileNameParseFrom(map<string, string>& header, string& postBody)
-{
-	string delem = string(
-			Header["CONTENT_TYPE"].begin() + Header["CONTENT_TYPE"].find(boundary) + boundary.size(),
-			Header["CONTENT_TYPE"].end());
-	delem = "--" + delem;
-	//int start = postBody.begin() + postBody.find(delem) + delem.size(), end;
-	//std::string::iterator	beg = postBody.begin() + postBody.find(crlf) + delem.size(), end;
-	cout << postBody.find(crlf) << endl;
-	std::string::iterator	beg = postBody.begin(), end = beg + postBody.find(crlf);
 
-	std::pair<std::string, std::string>	HeaderBody;
-
-	HeaderBody.first = string(beg, end);
-	postBody.erase(0, HeaderBody.first.size() + crlf.size());
-	beg = postBody.begin();
-	end = beg + postBody.find(crlf);
-	HeaderBody.second = postBody;
-	cout << delem << endl;
-	while (HeaderBody.first.find(crlf) != string::npos)
-		HeaderBody.first.replace(HeaderBody.first.find(crlf), crlf.size(), "");
-	while (HeaderBody.first.find(delem) != string::npos)
-		HeaderBody.first.replace(HeaderBody.first.find(delem), delem.size(), "");
-
-	while (HeaderBody.second.find(crlf) != string::npos)
-		HeaderBody.second.replace(HeaderBody.second.find(crlf), crlf.size(), "");
-	while (HeaderBody.second.find(delem) != string::npos)
-	{
-		HeaderBody.second.erase(HeaderBody.second.find(delem), delem.size());
-		//HeaderBody.second.replace(HeaderBody.second.find(delem), delem.size(), "");
-		cout << "-=-=-=-" << endl;
-		cout << HeaderBody.second << endl;
-	}
-
-	cout << "==first==" << endl;
-	cout << HeaderBody.first << endl;
-	cout << "==second==" << endl;
-	cout << HeaderBody.second << endl;
-}*/
 #endif

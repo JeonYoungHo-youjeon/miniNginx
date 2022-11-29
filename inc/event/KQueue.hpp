@@ -166,13 +166,15 @@ void KQueue::set_next_event(ClientSocket* socket, State state)
 	{
 	case READ_REQUEST:
 		PRINT_LOG("NEXT_READ_REQUEST");
-		on_read_event(socket, socket->get_fd());
+		std::cout << "write fd : " << socket->get_writeFD() << std::endl;
+		std::cout << "read fd : " << socket->get_readFD() << std::endl;		on_read_event(socket, socket->get_fd());
 		break;
 	case READ_RESPONSE:
 		PRINT_LOG("NEXT_READ_RESPONSE");
 		if (!socket->get_PID() && res->contentResult->getPid())
 		{
 			socket->set_PID(res->contentResult->getPid());
+			std::cout << "\tUPDATE PID : " << socket->get_PID() << std::endl;
 			add_proc_event(socket, socket->get_PID());
 		}
 		if (!socket->get_readFD() && res->contentResult->outFd)
@@ -188,6 +190,7 @@ void KQueue::set_next_event(ClientSocket* socket, State state)
 		if (!socket->get_PID() && res->contentResult->getPid())
 		{
 			socket->set_PID(res->contentResult->getPid());
+			std::cout << "\tUPDATE PID : " << socket->get_PID() << std::endl;
 			add_proc_event(socket, socket->get_PID());
 		}
 		if (!socket->get_writeFD() && res->contentResult->inFd)

@@ -166,8 +166,7 @@ void KQueue::set_next_event(ClientSocket* socket, State state)
 	{
 	case READ_REQUEST:
 		PRINT_LOG("NEXT_READ_REQUEST");
-		std::cout << "write fd : " << socket->get_writeFD() << std::endl;
-		std::cout << "read fd : " << socket->get_readFD() << std::endl;		on_read_event(socket, socket->get_fd());
+		on_read_event(socket, socket->get_fd());
 		break;
 	case READ_RESPONSE:
 		PRINT_LOG("NEXT_READ_RESPONSE");

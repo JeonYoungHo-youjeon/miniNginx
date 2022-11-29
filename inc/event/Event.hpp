@@ -158,9 +158,6 @@ void Event::accept_connection(FD serverFD)
 	}
 	
 	create_client_socket(clientFD, clientAddr, serverFD);
-	std::cout << "\tclientFD : " << clientFD << std::endl;
-	std::cout << "\tserverFD : " << serverFD << std::endl;
-
 }
 
 void Event::create_client_socket(FD clientFD, const SockAddr& addr, FD serverFD)
@@ -218,7 +215,6 @@ void Event::handle_client_read_event(ClientSocket* socket)
 			break;
 		case READ_RESPONSE:
 			PRINT_LOG("READ_RESPONSE");
-			std::cout << "PID : " << socket->get_PID() << std::endl;
 			state = res->read();
 			break;
 		}
@@ -294,13 +290,13 @@ void Event::handle_next_event(ClientSocket* socket, State state)
 			std::cout << "PID : " << socket->get_PID() << std::endl;
 			disconnection(socket);
 		}
-		// else if (res->Header["Connection"] == "keep-alive")
-		// {
-		// 	PRINT_LOG("KEEP_ALIVE");
-		// 	socket->reset();
-		// 	kq->on_read_event(socket, socket->get_fd());
-		// 	socket->update_state(READ_REQUEST);
-		// }
+		else if (res->Header["Connection"] == "keep-alive")
+		{
+			PRINT_LOG("KEEP_ALIVE");
+			socket->reset();
+			kq->on_read_event(socket, socket->get_fd());
+			socket->update_state(READ_REQUEST);
+		}
 		else
 		{
 			PRINT_LOG("DISCONNECTION");
@@ -365,11 +361,6 @@ void Event::handle_client_event(const KEvent* event, ClientSocket* socket)
 	else if (event->filter == EVFILT_WRITE)
 	{
 		PRINT_LOG("EVFILT_WRITE");
-		std::cout << "write fd : " << socket->get_writeFD() << std::endl;
-		std::cout << "read fd : " << socket->get_readFD() << std::endl;
-		std::cout << "client fd : " << socket->get_fd() << std::endl;
-		std::cout << "state : " << socket->get_state() << std::endl;
-		std::cout << "PID : " << socket->get_PID() << std::endl;
 		handle_client_write_event(socket);
 	}
 }

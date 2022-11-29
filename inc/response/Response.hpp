@@ -397,7 +397,9 @@ int Response::set(const Request& req)
 	fileName = req.fileName;
 
 	//	root 설정
-	path = getcwd(0, 0);
+	char*	tmp = getcwd(0, 0);
+	path = tmp;
+	free(tmp);
 	try
 	{
 		//	Redirect Uri

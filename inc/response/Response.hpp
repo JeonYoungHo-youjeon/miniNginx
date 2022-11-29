@@ -369,7 +369,6 @@ int Response::makeStartLine()
 {
 	StartLine.reasonPhrase = g_conf.getStatusMsg(StartLine.statusCode);
 	StartLine.protocol = "HTTP/1.1";
-	cout << "OK" << endl;
 	return statement = SEND_RESPONSE;
 }
 

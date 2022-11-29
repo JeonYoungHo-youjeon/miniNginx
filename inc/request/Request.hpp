@@ -92,9 +92,10 @@ struct Request
 			memset(rcvData, 0, BUFFER_SIZE);
 
 			int byte = recv(clientFd, &rcvData[0], BUFFER_SIZE, 0);
-
+			std::cout << "byte : " << byte << std::endl;
 			if (byte < 0)
 			{
+				std::cout << "ONE" << std::endl;
 				clear_buffer();
 				throw statusCode = 400;
 			}
@@ -138,6 +139,7 @@ struct Request
 			case START_LINE:
 				if (parse_startline() == false)
 				{
+					std::cout << "TWO" << std::endl;
 					clear_buffer();
 					throw statusCode = 400;
 				}
@@ -215,6 +217,7 @@ struct Request
 				readSize = Util::to_hex(tmp);
 				if (readSize == -1)
 				{
+					std::cout << "THREE" << std::endl;
 					clear_buffer();
 					throw statusCode = 400;
 				}
@@ -303,6 +306,9 @@ struct Request
 	}
 
 	bool parse_startline() {
+		std::cout << "[BUFFER]" << std::endl;
+		std::cout << buffer.str() << std::endl;
+		std::cout << "[ENDBUFFER]" << std::endl;
 		buffer >> StartLine.method >> StartLine.url >> StartLine.protocol;
 
 		if (StartLine.method == "" || StartLine.url == "" || StartLine.protocol == "")

@@ -55,6 +55,8 @@ struct Response
 	string	excutor;
 	vector<string> params;
 
+	bool TEMP;
+
 	Response();
 
 	Response(const Request & req);
@@ -125,9 +127,9 @@ int Response::makeHeader()
 
 		for (std::vector<string>::iterator it = header.begin(); it != header.end(); ++it)
 		{
-			std::cout << "key1= [" << *it << "]" << std::endl;
+			// std::cout << "key1= [" << *it << "]" << std::endl;
 			Util::remove_crlf(*it);
-			std::cout << " key2= [ " << *it << " ] " << std::endl;
+			// std::cout << " key2= [ " << *it << " ] " << std::endl;
 			if ((*it).empty())
 				break ;
 			std::string::size_type colon = (*it).find(": ");
@@ -189,6 +191,7 @@ int 	Response::execute()
 			ReqHeader["SCRIPT_NAME"] = Req->virtualPath;
 
 			excutor = g_conf[confName][locName][ext][0];
+			TEMP = true;
 			contentResult = new Cgi(path, excutor, ReqHeader);
 		}
 		else
@@ -249,14 +252,13 @@ int 	Response::read()
 	char buf[BUFFER_SIZE];
 	memset(buf, 0, BUFFER_SIZE);
 	ssize_t	len = ::read(contentResult->outFd, buf, BUFFER_SIZE);
-	std::cout << "=====[Response::read()]=====" << std::endl;
-	std::cout << "read len : " << len << std::endl;
+
 	Body += string(buf, len);
 	//	< BUFFER_SIZE 밑에 있어서 닿을 수 없던 부분 수정
 	if (len < 0)
 		throw StartLine.statusCode = 500;
 
-	if (len < BUFFER_SIZE && !contentResult->pid)
+	if (len < BUFFER_SIZE && !TEMP)
 		return makeHeader();
 
 	return READ_RESPONSE;
@@ -409,6 +411,7 @@ int Response::set(const Request& req)
 				 it != g_conf[confName][locName]["limit_except"].end(); ++it)
 				if (*it == Req->StartLine.method)
 					throw 500;
+		//	Upload Path
 		//	Uri Check Dir is or not
 		if (req.StartLine.method == "POST" && g_conf[confName][locName].is_exist("upload"))
 			path = Util::join(path, g_conf[confName][locName]["upload"][0], '/');
@@ -424,6 +427,11 @@ int Response::set(const Request& req)
 				return listing(path, url);
 			else
 				throw 403;
+		}
+		else if (g_conf[confName][locName].is_exist("upload") && req.StartLine.method == "POST")
+		{
+			path = Util::join(path, g_conf[confName][locName]["upload"][0], '/');
+			// cout << req.bodySS.str() << endl;
 		}
 
 		//	get Extension

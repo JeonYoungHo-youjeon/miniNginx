@@ -69,6 +69,7 @@ void Event::event_loop()
 	while (true)
 	{
 		nEvent = kq->wait_event();
+
 		for (int i = 0; i < nEvent; ++i)
 		{
 			event = &(kq->get_eventList()[i]);
@@ -141,10 +142,13 @@ void Event::accept_connection(FD serverFD)
 	socklen_t clientAddrLen = sizeof(clientAddr);
 	FD clientFD = accept(serverFD, (struct sockaddr*)&clientAddr, &clientAddrLen);
 
+	std::cout << "ACCEPT" << std::endl;
 	if (clientFD == -1)
+	{
+		std::cout << "cliendFD : -1" << std::endl;
+		std::cout << "errno : " << errno << std::endl;
 		return;
-	
-	create_client_socket(clientFD, clientAddr, serverFD);
+	}
 
 	if (fcntl(clientFD, F_SETFL, O_NONBLOCK) == -1)
 	{
@@ -152,6 +156,11 @@ void Event::accept_connection(FD serverFD)
 		State state = socket->set_response(500);
 		kq->set_next_event(socket, state);
 	}
+	
+	create_client_socket(clientFD, clientAddr, serverFD);
+	std::cout << "\tclientFD : " << clientFD << std::endl;
+	std::cout << "\tserverFD : " << serverFD << std::endl;
+
 }
 
 void Event::create_client_socket(FD clientFD, const SockAddr& addr, FD serverFD)
@@ -207,16 +216,16 @@ void Event::handle_client_read_event(ClientSocket* socket)
 			break;
 		case READ_RESPONSE:
 			PRINT_LOG("READ_RESPONSE");
+			std::cout << "PID : " << socket->get_PID() << std::endl;
 			state = res->read();
 			break;
 		}
 
 		if (state == END_REQUEST) {
 			PRINT_LOG("END_REQUEST");
-			//req->print_request();
+			// req->print_request();
 			state = socket->set_response(*req);
 		}
-		
 	}
 	catch (int error_code)
 	{
@@ -271,13 +280,19 @@ void Event::handle_next_event(ClientSocket* socket, State state)
 			socket->update_state(REPEAT_REQUEST);
 			handle_client_read_event(socket);
 		}
-		else if (res->Header["Connection"] == "keep-alive")
+		else if (socket->get_PID())
 		{
-			PRINT_LOG("KEEP_ALIVE");
-			socket->reset();
-			socket->update_state(READ_REQUEST);
-			kq->on_read_event(socket, socket->get_fd());
+			std::cout << "state : " << socket->get_state() << std::endl;
+			std::cout << "PID : " << socket->get_PID() << std::endl;
+			disconnection(socket);
 		}
+		// else if (res->Header["Connection"] == "keep-alive")
+		// {
+		// 	PRINT_LOG("KEEP_ALIVE");
+		// 	socket->reset();
+		// 	kq->on_read_event(socket, socket->get_fd());
+		// 	socket->update_state(READ_REQUEST);
+		// }
 		else
 		{
 			PRINT_LOG("DISCONNECTION");
@@ -328,11 +343,11 @@ void Event::handle_client_event(const KEvent* event, ClientSocket* socket)
 		return; // TODO: response 503 Service Unavailable
 	}
 
-	if (event->flags & EV_EOF)
+	if (event->flags & EV_EOF && socket->get_PID())
 	{
 		PRINT_LOG("EV_EOF");
-		handle_child_process(event, socket);
-		// disconnection((ClientSocket*)socket);
+		socket->get_response()->TEMP = false;
+		handle_client_read_event(socket);
 	}
 	else if (event->filter == EVFILT_READ)
 	{
@@ -342,6 +357,11 @@ void Event::handle_client_event(const KEvent* event, ClientSocket* socket)
 	else if (event->filter == EVFILT_WRITE)
 	{
 		PRINT_LOG("EVFILT_WRITE");
+		std::cout << "write fd : " << socket->get_writeFD() << std::endl;
+		std::cout << "read fd : " << socket->get_readFD() << std::endl;
+		std::cout << "client fd : " << socket->get_fd() << std::endl;
+		std::cout << "state : " << socket->get_state() << std::endl;
+		std::cout << "PID : " << socket->get_PID() << std::endl;
 		handle_client_write_event(socket);
 	}
 }
@@ -349,17 +369,11 @@ void Event::handle_client_event(const KEvent* event, ClientSocket* socket)
 void Event::handle_child_process(const KEvent* event, ClientSocket* socket)
 {
 	PRINT_LOG("EVFILT_PROC");
-	if (socket->get_PID())
+	if (socket->get_PID() > 0)
 	{
 		int status;
-		PID pid = waitpid(-1, &status, WNOHANG);
-		socket->set_PID(0);
-		std::cout << "waitpid : " << pid << std::endl;
-		if (WIFEXITED(status))
-		{
-			socket->get_response()->contentResult->kill();
-			handle_client_read_event(socket);
-		}
+		PID pid = waitpid(socket->get_PID(), &status, WNOHANG);
+		std::cout << "\twaitpid : " << pid << std::endl;
 	}
 }
 

@@ -270,7 +270,6 @@ struct Request
 		Header[string_to_metavar(key)] = val;
 	}
 
-	//	TODO : 맘에 안드는 함수
 	std::string findLocation(const std::string& path)
 	{
 		std::string ret;

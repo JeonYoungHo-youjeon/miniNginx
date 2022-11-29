@@ -300,7 +300,7 @@ int Response::send(int clientFd)
 		Html->erase(0, len);
 
 	if (len < 0)
-		throw StartLine.statusCode = 500; // FIXME: 이거 동작X
+		throw StartLine.statusCode = 500;
 	if (Html->empty())
 	{
 		delete Html;Html = 0;

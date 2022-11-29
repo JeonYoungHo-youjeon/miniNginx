@@ -55,6 +55,8 @@ struct Response
 	string	excutor;
 	vector<string> params;
 
+	bool TEMP;
+
 	Response();
 
 	Response(const Request & req);
@@ -102,6 +104,7 @@ struct Response
 	std::string findExtension(const std::string& url);
 	std::string findFileName(const std::string& url);
 	int listing(string path, string head);
+	std::string string_to_lower(std::string s);
 };
 
 Response::Response()
@@ -114,8 +117,8 @@ Response::~Response()
 
 int Response::makeHeader()
 {
-	Header["Date"] = Util::get_date();
-	Header["Server"] = "miniNginx/1.1";
+	Header["date"] = Util::get_date();
+	Header["server"] = "miniNginx/1.1";
 
 	if (!excutor.empty())
 	{
@@ -125,30 +128,40 @@ int Response::makeHeader()
 
 		for (std::vector<string>::iterator it = header.begin(); it != header.end(); ++it)
 		{
-			std::cout << "key1= [" << *it << "]" << std::endl;
+			// std::cout << "key1= [" << *it << "]" << std::endl;
 			Util::remove_crlf(*it);
-			std::cout << " key2= [ " << *it << " ] " << std::endl;
+			// std::cout << " key2= [ " << *it << " ] " << std::endl;
 			if ((*it).empty())
 				break ;
 			std::string::size_type colon = (*it).find(": ");
 			std::string key = (*it).substr(0, colon);
 			std::string value = (*it).substr(colon + 2);
+			key = string_to_lower(key);
 			Header[key] = value;	
 		}
 		Body.erase(0, cgiHeaderEnd + 4);
 	}
 	map<string, string>::iterator it = Header.find("Connection");
 	if (StartLine.statusCode / 100 == 2)
-		Header["Connection"] = "keep-alive";
+		Header["connection"] = "keep-alive";
 	else
-		Header["Connection"] = "close";
-	it = Header.find("Content-type");
+		Header["connection"] = "close";
+	it = Header.find("content-type");
 	if (it == Header.end())
-		Header["Content-type"] = g_conf.getContentType(ext);
-	Header["Content-Length"] = Util::to_string(Body.size());
+		Header["content-type"] = g_conf.getContentType(ext);
+	Header["content-Length"] = Util::to_string(Body.size());
 	{    /* 필요 헤더*/    }
 	return makeStartLine();
 }
+
+std::string Response::string_to_lower(std::string s)
+{
+	for (int i = 0; i < s.size(); ++i)
+		s[i] = std::tolower(s[i]);
+	return s;
+}
+
+
 
 /**
  * @brief set & return nextToDo
@@ -189,6 +202,7 @@ int 	Response::execute()
 			ReqHeader["SCRIPT_NAME"] = Req->virtualPath;
 
 			excutor = g_conf[confName][locName][ext][0];
+			TEMP = true;
 			contentResult = new Cgi(path, excutor, ReqHeader);
 		}
 		else
@@ -254,13 +268,12 @@ int 	Response::read()
 	char buf[BUFFER_SIZE];
 	memset(buf, 0, BUFFER_SIZE);
 	ssize_t	len = ::read(contentResult->outFd, buf, BUFFER_SIZE);
-	std::cout << "=====[Response::read()]=====" << std::endl;
-	std::cout << "read len : " << len << std::endl;
+
 	Body += string(buf, len);
 	if (len < 0)
 		throw StartLine.statusCode = 500;
 
-	if (len < BUFFER_SIZE && !contentResult->pid)
+	if (len < BUFFER_SIZE && !TEMP)
 		return makeHeader();
 
 	return READ_RESPONSE;
@@ -331,7 +344,7 @@ int Response::make_errorpage(int code)
 			"    " + Util::to_string(StartLine.statusCode) + "\n"
 															 "  </h1>\n"
 															 "</html>\n";
-	Header["Content-type"] = "text/html";
+	Header["content-type"] = "text/html";
 	return makeHeader();
 }
 
@@ -365,7 +378,7 @@ int Response::listing(string path, string head)
 			page +
 			"</pre><hr></body>\n"
 			"</html>\n";
-	Header["Content-type"] = "text/html";
+	Header["content-type"] = "text/html";
 	return makeHeader();
 }
 
@@ -415,6 +428,7 @@ int Response::set(const Request& req)
 				 it != g_conf[confName][locName]["limit_except"].end(); ++it)
 				if (*it == Req->StartLine.method)
 					throw 500;
+		//	Upload Path
 		//	Uri Check Dir is or not
 		if (req.StartLine.method == "POST" && g_conf[confName][locName].is_exist("upload"))
 			path = Util::join(path, g_conf[confName][locName]["upload"][0], '/');
@@ -430,6 +444,11 @@ int Response::set(const Request& req)
 				return listing(path, url);
 			else
 				throw 403;
+		}
+		else if (g_conf[confName][locName].is_exist("upload") && req.StartLine.method == "POST")
+		{
+			path = Util::join(path, g_conf[confName][locName]["upload"][0], '/');
+			// cout << req.bodySS.str() << endl;
 		}
 
 		cout << path << endl;

@@ -73,6 +73,9 @@
         "concepts": "cpp",
         "variant": "cpp",
         "*.tcc": "cpp",
-        "numbers": "cpp"
+        "numbers": "cpp",
+        "filesystem": "cpp",
+        "version": "cpp",
+        "__undef_macros": "cpp"
     }
 }

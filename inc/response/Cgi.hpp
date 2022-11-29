@@ -62,7 +62,8 @@ Cgi::Cgi(const std::string& path, const string& excutor, const vector<std::strin
 Cgi::~Cgi()
 {
 	close();
-	kill();
+	// TODO : envp delete
+	// kill();
 }
 
 int     Cgi::set()
@@ -96,13 +97,21 @@ int     Cgi::set()
     	setenv("REQUEST_METHOD", header["REQUEST_METHOD"].c_str(), 1);			// 입력받은 메소드
     	setenv("PATH_TRANSLATED", header["PATH_TRANSLATED"].c_str(), 1);		// 파일의 절대경로
     	setenv("SCRIPT_NAME", header["SCRIPT_NAME"].c_str(), 1);				// 파일의 상대경로와 이름
-	   	setenv("QUERY_STRING", header["QUERY_STRING"].c_str(), 1);				// url의 ? 뒷부분(params)
 
-    	setenv("HTTP_COOKIE", header["COOKIE"].c_str(), 1);						// 헤더의 쿠키
-    	setenv("CONTENT_LENGTH", header["CONTENT_LENGTH"].c_str(), 1);			// 헤더의 컨텐츠 길이
-    	setenv("HTTP_ACCEPT", header["ACCEPT"].c_str(), 1);						// 헤더의 accept
-    	setenv("HTTP_ACCEPT_LANGUAGE", header["ACCEPT_LANGUAGE"].c_str(), 1);	// 헤더의 accpet-lang
-    	setenv("HTTP_USER_AGENT", header["USER_AGENT"].c_str(), 1);				// 헤더의 user-agent
+		if (header["QUERY_STRING"] != "")
+		   	setenv("QUERY_STRING", header["QUERY_STRING"].c_str(), 1);				// url의 ? 뒷부분(params)
+		if (header.count("COOKIE"))
+    		setenv("HTTP_COOKIE", header["COOKIE"].c_str(), 1);						// 헤더의 쿠키
+		if (header.count("CONTENT_LENGTH"))
+    		setenv("CONTENT_LENGTH", header["CONTENT_LENGTH"].c_str(), 1);			// 헤더의 컨텐츠 길이
+		if (header.count("ACCEPT"))
+    		setenv("HTTP_ACCEPT", header["ACCEPT"].c_str(), 1);						// 헤더의 accept
+		if (header.count("ACCEPT_LANGUAGE"))
+	    	setenv("HTTP_ACCEPT_LANGUAGE", header["ACCEPT_LANGUAGE"].c_str(), 1);	// 헤더의 accpet-lang	
+		if (header.count("USER_AGENT"))
+ 	   		setenv("HTTP_USER_AGENT", header["USER_AGENT"].c_str(), 1);				// 헤더의 user-agent
+    	
+		
 
 		if (dup2(inPipe[0], 0) < 0 || dup2(outPipe[1], 1) < 0 ||
             ::close(inPipe[0]) < 0 || ::close(inPipe[1]) < 0 ||

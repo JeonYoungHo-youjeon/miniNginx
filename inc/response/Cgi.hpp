@@ -62,7 +62,8 @@ Cgi::Cgi(const std::string& path, const string& excutor, const vector<std::strin
 Cgi::~Cgi()
 {
 	close();
-	kill();
+	// TODO : envp delete
+	// kill();
 }
 
 int     Cgi::set()

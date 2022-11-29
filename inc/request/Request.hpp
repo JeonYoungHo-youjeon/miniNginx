@@ -99,7 +99,7 @@ struct Request
 				clear_buffer();
 				throw statusCode = 400;
 			}
-			buffer << rcvData;
+			buffer.write(rcvData, byte);
 		}
 		return parse();
 	}
@@ -114,8 +114,6 @@ struct Request
 			maxBodySize = Util::stoi(g_conf[configName][locationName]["client_max_body_size"][0]);
 		else
 			maxBodySize = DEFAULT_MAX_BODY_SIZE;
-		//if (fileName.empty() && g_conf[configName][locationName].is_exist("index"))
-		//	fileName = g_conf[configName][locationName]["index"].front();
 
 		if (Header.count(HEAD[CONTENT_LENGTH]))
 		{
@@ -192,20 +190,22 @@ struct Request
 			case LENGTH_BODY:
 				if (contentLength == 0)
 					return END_REQUEST;
-				if (remainReadLength == 0)
+				if (remainReadLength <= 0)
 					return END_REQUEST;
 
 				if (is_empty_buffer() == true)
 					return READ_REQUEST;
 
+				if (remainReadLength > BUFFER_SIZE)
+					readSize = BUFFER_SIZE;
+				else
+					readSize = remainReadLength;
 
-				readSize = remainReadLength;
-				
-				memset(charBuffer, 0, BUFFER_SIZE);
+				memset(charBuffer, 0, readSize);
 				buffer.read(charBuffer, readSize);
-				bodySS << charBuffer;
+				bodySS.write(charBuffer, readSize);
+				remainReadLength = contentLength - bodySS.str().size();
 
-				remainReadLength -= strlen(charBuffer);
 				break;
 			case CHUNK_SIZE:
 				if (is_empty_buffer() == true)
@@ -249,7 +249,6 @@ struct Request
 				break;
 			}
 		}
-
 		return END_REQUEST;
 	}
 

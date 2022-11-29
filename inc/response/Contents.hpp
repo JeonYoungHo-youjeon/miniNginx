@@ -16,6 +16,7 @@ struct Contents
 	virtual int			set() = 0;
 	virtual int			close() = 0;
 	virtual void		kill() = 0;
+	virtual bool 		checkNull(){ return true ;}
 
 	//	Variables
 	std::string url;

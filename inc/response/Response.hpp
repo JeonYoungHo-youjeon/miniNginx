@@ -104,6 +104,7 @@ struct Response
 	std::string findExtension(const std::string& url);
 	std::string findFileName(const std::string& url);
 	int listing(string path, string head);
+	std::string string_to_lower(std::string s);
 };
 
 Response::Response()
@@ -116,8 +117,8 @@ Response::~Response()
 
 int Response::makeHeader()
 {
-	Header["Date"] = Util::get_date();
-	Header["Server"] = "miniNginx/1.1";
+	Header["date"] = Util::get_date();
+	Header["server"] = "miniNginx/1.1";
 
 	if (!excutor.empty())
 	{
@@ -135,22 +136,32 @@ int Response::makeHeader()
 			std::string::size_type colon = (*it).find(": ");
 			std::string key = (*it).substr(0, colon);
 			std::string value = (*it).substr(colon + 2);
+			key = string_to_lower(key);
 			Header[key] = value;	
 		}
 		Body.erase(0, cgiHeaderEnd + 4);
 	}
 	map<string, string>::iterator it = Header.find("Connection");
 	if (StartLine.statusCode / 100 == 2)
-		Header["Connection"] = "keep-alive";
+		Header["connection"] = "keep-alive";
 	else
-		Header["Connection"] = "close";
-	it = Header.find("Content-type");
+		Header["connection"] = "close";
+	it = Header.find("content-type");
 	if (it == Header.end())
-		Header["Content-type"] = g_conf.getContentType(ext);
-	Header["Content-Length"] = Util::to_string(Body.size());
+		Header["content-type"] = g_conf.getContentType(ext);
+	Header["content-Length"] = Util::to_string(Body.size());
 	{    /* 필요 헤더*/    }
 	return makeStartLine();
 }
+
+std::string Response::string_to_lower(std::string s)
+{
+	for (int i = 0; i < s.size(); ++i)
+		s[i] = std::tolower(s[i]);
+	return s;
+}
+
+
 
 /**
  * @brief set & return nextToDo
@@ -329,7 +340,7 @@ int Response::make_errorpage(int code)
 			"    " + Util::to_string(StartLine.statusCode) + "\n"
 															 "  </h1>\n"
 															 "</html>\n";
-	Header["Content-type"] = "text/html";
+	Header["content-type"] = "text/html";
 	return makeHeader();
 }
 
@@ -363,7 +374,7 @@ int Response::listing(string path, string head)
 			page +
 			"</pre><hr></body>\n"
 			"</html>\n";
-	Header["Content-type"] = "text/html";
+	Header["content-type"] = "text/html";
 	return makeHeader();
 }
 

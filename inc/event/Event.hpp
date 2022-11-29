@@ -208,6 +208,8 @@ void Event::handle_client_read_event(ClientSocket* socket)
 		{
 		case READ_REQUEST:
 			PRINT_LOG("READ_REQUEST");
+
+		// system("leaks webserv");
 			state = req->read();
 			break;
 		case REPEAT_REQUEST:
@@ -268,9 +270,15 @@ void Event::handle_client_write_event(ClientSocket* socket)
 
 void Event::handle_next_event(ClientSocket* socket, State state)
 {
+
+	// std::cout << "1\n";
+	// system("leaks webserv");
 	Request* req = socket->get_request();
 	Response* res = socket->get_response();
 
+
+	// std::cout << "2\n";
+	// system("leaks webserv");
 	if (state == END_RESPONSE)
 	{
 		PRINT_LOG("END_RESPONSE");

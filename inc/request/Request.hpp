@@ -139,7 +139,6 @@ struct Request
 			case START_LINE:
 				if (parse_startline() == false)
 				{
-					std::cout << "TWO" << std::endl;
 					clear_buffer();
 					throw statusCode = 400;
 				}

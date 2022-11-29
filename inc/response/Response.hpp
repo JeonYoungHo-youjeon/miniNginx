@@ -328,15 +328,16 @@ std::string Response::findFileName(const std::string& url)
 int Response::make_errorpage(int code)
 {
 	ext = ".html";
-	if (g_conf[confName][locName].is_exist("error_page"))
-	{
+	if (g_conf[confName].is_exist(locName))
+		if (g_conf[confName][locName].is_exist("error_page"))
+		{
 		for (size_t i = 0; i < g_conf[confName][locName]["error_page"].size() - 1; ++i)
 			if (Util::to_string(StartLine.statusCode) == g_conf[confName][locName]["error_page"][i])
 			{	
 				url = g_conf[confName][locName]["error_page"][g_conf[confName][locName]["error_page"].size() - 1];
 				return execute();
 			}
-	}
+		}
 	Body =
 			"<!DOCTYPE html>\n"
 			"<html>\n"

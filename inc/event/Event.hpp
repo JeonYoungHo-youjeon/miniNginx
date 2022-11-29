@@ -218,7 +218,6 @@ void Event::handle_client_read_event(ClientSocket* socket)
 			state = res->read();
 			break;
 		}
-
 		if (state == END_REQUEST) {
 			PRINT_LOG("END_REQUEST");
 			// req->print_request();

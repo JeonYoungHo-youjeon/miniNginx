@@ -125,7 +125,12 @@ int Response::makeHeader()
 		std::vector<string> header = Util::split(Body, '\n');
 
 		std::string::size_type cgiHeaderEnd = Body.find("\r\n\r\n");
-
+		int tmp = 4;
+		if (cgiHeaderEnd == std::string::npos)
+		{
+			cgiHeaderEnd = Body.find("\n\n");
+			tmp = 2;
+		}
 		for (std::vector<string>::iterator it = header.begin(); it != header.end(); ++it)
 		{
 			Util::remove_crlf(*it);
@@ -134,11 +139,11 @@ int Response::makeHeader()
 				break ;
 			std::string::size_type colon = (*it).find(": ");
 			std::string key = (*it).substr(0, colon);
-			std::string value = (*it).substr(colon + 2);
+			std::string value = (*it).substr(colon + tmp/2);
 			key = string_to_lower(key);
 			Header[key] = value;	
 		}
-		Body.erase(0, cgiHeaderEnd + 4);
+		Body.erase(0, cgiHeaderEnd + tmp);
 	}
 	map<string, string>::iterator it = Header.find("connection");
 	if (StartLine.statusCode / 100 == 2)

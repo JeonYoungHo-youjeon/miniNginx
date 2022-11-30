@@ -154,13 +154,17 @@ void KQueue::set_next_event(ClientSocket* socket, State state)
 			socket->set_PID(res->contentResult->getPid());
 			add_proc_event(socket, socket->get_PID());
 		}
-		if (!socket->get_readFD() && res->contentResult->outFd)
+		if (!socket->get_readFD() && res->contentResult->outFd \
+			&& !socket->get_readFD() && res->contentResult->inFd)
 		{
 			socket->set_readFD(res->contentResult->outFd);
+			socket->set_writeFD(res->contentResult->inFd);
 			set_client_event(socket, socket->get_readFD());
+			set_client_event(socket, socket->get_writeFD());
 		}
 
 		on_read_event(socket, socket->get_readFD());
+		off_write_event(socket, socket->get_writeFD());
 		break;
 	case WRITE_RESPONSE:
 		PRINT_LOG("NEXT_WRITE_RESPONSE");
@@ -169,9 +173,12 @@ void KQueue::set_next_event(ClientSocket* socket, State state)
 			socket->set_PID(res->contentResult->getPid());
 			add_proc_event(socket, socket->get_PID());
 		}
-		if (!socket->get_writeFD() && res->contentResult->inFd)
+		if (!socket->get_readFD() && res->contentResult->outFd \
+			&& !socket->get_readFD() && res->contentResult->inFd)
 		{
+			socket->set_readFD(res->contentResult->outFd);
 			socket->set_writeFD(res->contentResult->inFd);
+			set_client_event(socket, socket->get_readFD());
 			set_client_event(socket, socket->get_writeFD());
 		}
 

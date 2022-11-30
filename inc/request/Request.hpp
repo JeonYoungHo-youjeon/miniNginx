@@ -7,10 +7,6 @@
 # include "../parse/Util.hpp"
 # include "../response/Cgi.hpp"
 
-using std::string;
-using std::cout;
-using std::endl;
-
 extern Config g_conf;
 
 struct RequestStartLine
@@ -21,8 +17,8 @@ struct RequestStartLine
 
 	void out()
 	{
-		cout << "[    Start Line    ]" << endl;
-		cout << "[" << method << "] " << "[" << url << "] " << "[" << protocol << "]" << endl;
+		std::cout << "[    Start Line    ]" << std::endl;
+		std::cout << "[" << method << "] " << "[" << url << "] " << "[" << protocol << "]" << std::endl;
 	}
 };
 
@@ -54,9 +50,6 @@ struct Request
 
 	std::vector<string>	params;
 
-	/**
-	* @brief : 생성자 초기화, set()을 통한 초기화 등 임의로 다양하게 구현
-	*/
 	Request() {}
 	Request(int fd, const string& configName)
 	: statusCode(200), configName(configName), clientFd(fd)
@@ -95,7 +88,6 @@ struct Request
 
 			if (byte < 0)
 			{
-				std::cout << "ONE" << std::endl;
 				clear_buffer();
 				throw statusCode = 400;
 			}
@@ -137,6 +129,7 @@ struct Request
 			switch (progress)
 			{
 			case START_LINE:
+				std::cout << "START_LINE" << std::endl;
 				if (parse_startline() == false)
 				{
 					clear_buffer();
@@ -145,6 +138,7 @@ struct Request
 				progress = HEADER;
 				break;
 			case HEADER:
+				std::cout << "HEADER" << std::endl;
 				if (is_empty_buffer() == true)
 					return READ_REQUEST;
 				else if (is_crlf_line() == true)
@@ -160,26 +154,30 @@ struct Request
 
 				break;
 			case CRLF:
+				std::cout << "CRLF" << std::endl;
 				skip_crlf();
 
-				if (StartLine.method == "POST" && is_empty_buffer() == true)
-					return READ_REQUEST;
+				// if (StartLine.method == "POST" && is_empty_buffer() == true)
+				// 	return READ_REQUEST;
+				// else if (StartLine.method != "POST" \
+				// 		&& !Header.count(HEAD[CONTENT_LENGTH]) && !Header.count(HEAD[TRANSFER_ENCODING]))
+				// 	return END_REQUEST;
+				// else if (StartLine.method != "POST" \
+				// 		&& (Header.count(HEAD[CONTENT_LENGTH]) || Header.count(HEAD[TRANSFER_ENCODING])))
+				// {
+				// 	while (is_empty_buffer() == false)
+				// 	{
+				// 		std::getline(buffer, tmp);
+				// 		if (tmp == "\r")
+				// 			break;
+				// 	}
+				// 	return END_REQUEST;
+				// }
+				if (StartLine.method == "GET" || StartLine.method == "DELETE")
+					return END_REQUEST;
 				else if (StartLine.method != "POST" \
 						&& !Header.count(HEAD[CONTENT_LENGTH]) && !Header.count(HEAD[TRANSFER_ENCODING]))
-				{
 					return END_REQUEST;
-				}
-				else if (StartLine.method != "POST" \
-						&& (Header.count(HEAD[CONTENT_LENGTH]) || Header.count(HEAD[TRANSFER_ENCODING])))
-				{
-					while (is_empty_buffer() == false)
-					{
-						std::getline(buffer, tmp);
-						if (tmp == "\r")
-							break;
-					}
-					return END_REQUEST;
-				}
 				else if (chunkFlag)
 					progress = CHUNK_SIZE;
 				else
@@ -187,6 +185,7 @@ struct Request
 				
 				break;
 			case LENGTH_BODY:
+				std::cout << "LENGTH_BODY" << std::endl;
 				if (contentLength == 0)
 					return END_REQUEST;
 				if (remainReadLength <= 0)
@@ -207,6 +206,7 @@ struct Request
 
 				break;
 			case CHUNK_SIZE:
+				std::cout << "CHUNK_SIZE" << std::endl;
 				if (is_empty_buffer() == true)
 					return READ_REQUEST;
 
@@ -216,7 +216,6 @@ struct Request
 				readSize = Util::to_hex(tmp);
 				if (readSize == -1)
 				{
-					std::cout << "THREE" << std::endl;
 					clear_buffer();
 					throw statusCode = 400;
 				}
@@ -286,16 +285,12 @@ struct Request
 		return ret;
 	};
 
-	/**
-	*  현재 리퀘스트 구조체의 내용 전체를 출력. 빈 변수는 출력하지 않음
-	*
-	*/
 	void print_request()
 	{
 		StartLine.out();
 		for (std::map<string, string>::iterator it = Header.begin(); it != Header.end(); ++it)
-			cout << it->first << ": " << it->second << endl;
-		cout << "[Body]" << endl;
+			std::cout << it->first << ": " << it->second << std::endl;
+		std::cout << "[Body]" << std::endl;
 		std::cout << bodySS.str() << std::endl;
 		std::cout << "[Body byte]" << std::endl;
 		for (int i = 0; i < bodySS.str().size(); ++i)
@@ -380,9 +375,11 @@ struct Request
 	std::string string_to_metavar(std::string s)
 	{
 		for (int i = 0; i < s.size(); ++i)
+		{
+			if (s[i] == '-')
+				s[i] = '_';
 			s[i] = std::toupper(s[i]);
-		// TODO: replace function c++ 17
-		std::replace(s.begin(), s.end(), '-', '_');
+		}
 		return s;
 	}
 };

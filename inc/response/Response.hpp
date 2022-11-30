@@ -75,7 +75,7 @@ struct Response
 			ret += Body + "\r\n";
 		return ret;
 	}
-	int clear();
+	void clear();
 
 	int set(const std::string& configName, int error_code)
 	{
@@ -143,7 +143,7 @@ int Response::makeHeader()
 		}
 		Body.erase(0, cgiHeaderEnd + 4);
 	}
-	map<string, string>::iterator it = Header.find("Connection");
+	map<string, string>::iterator it = Header.find("connection");
 	if (StartLine.statusCode / 100 == 2)
 		Header["connection"] = "keep-alive";
 	else
@@ -213,7 +213,7 @@ int 	Response::execute()
 			if (Req->StartLine.method == "GET")
 				contentResult = new File(path, O_WRONLY);
 			else
-				contentResult = new File(path, O_WRONLY | O_CREAT | O_TRUNC);
+				contentResult = new File(path, O_WRONLY | O_TRUNC);
 		}
 		progress = contentResult->set();
 		if (Req->StartLine.method == "GET" && contentResult->checkNull())
@@ -223,8 +223,8 @@ int 	Response::execute()
 	}
 	catch (int errNo)	//	예외 발생 시 일단 객체 내에서 처리 -> 수정 O
 	{
-		cout << errno << endl;
-		cout << errNo << endl;
+		std::cout << errno << std::endl;
+		std::cout << errNo << std::endl;
 		return make_errorpage(StartLine.statusCode = errNo);
 	}
 	return makeHeader();
@@ -391,14 +391,13 @@ int Response::makeStartLine()
 	return statement = SEND_RESPONSE;
 }
 
-int Response::clear()
+void Response::clear()
 {
 	//	내부 객체 delete -> REPEAT REQUEST 반환 -> new Req로 연결(Req 삭제위치)
 	delete contentResult;
 	delete Html;
 	contentResult = 0;
 	Html = 0;
-	return REPEAT_REQUEST;
 }
 
 int Response::set(const Request& req)

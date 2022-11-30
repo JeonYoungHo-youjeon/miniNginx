@@ -234,8 +234,8 @@ void Event::handle_next_event(ClientSocket* socket, State state)
 		// if (req->is_empty_buffer() == false)
 		// {
 		// 	PRINT_LOG("IS NOT EMPTY BUFFER");
-		// 	socket->update_state(REPEAT_REQUEST);
-		// 	handle_client_read_event(socket);
+			// socket->update_state(REPEAT_REQUEST);
+			// handle_client_read_event(socket);
 		// }
 		if (socket->get_PID())
 		{
@@ -244,7 +244,7 @@ void Event::handle_next_event(ClientSocket* socket, State state)
 		else if (res->Header["connection"] == "keep-alive")
 		{
 			PRINT_LOG("KEEP_ALIVE");
-			socket->reset();
+			// socket->reset();
 			kq->on_read_event(socket, socket->get_fd());
 			socket->update_state(READ_REQUEST);
 		}
@@ -294,12 +294,14 @@ void Event::handle_client_event(const KEvent* event, ClientSocket* socket)
 		return;
 	}
 
-	if (event->flags & EV_EOF && socket->get_PID())
+	if (event->flags & EV_EOF)
 	{
 		PRINT_LOG("EV_EOF");
-		socket->get_response()->TEMP = false;
-		// TODO
-		handle_client_read_event(socket);
+		if (socket->get_PID())
+		{
+			socket->get_response()->TEMP = false;
+			handle_client_read_event(socket);
+		}
 	}
 	else if (event->filter == EVFILT_READ)
 	{

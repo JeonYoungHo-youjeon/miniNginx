@@ -89,6 +89,7 @@ struct Request
 			if (byte < 0)
 			{
 				clear_buffer();
+				std::cout << "ONE" << std::endl;
 				throw statusCode = 400;
 			}
 			buffer.write(rcvData, byte);
@@ -114,6 +115,7 @@ struct Request
 			if (contentLength > maxBodySize)
 			{
 				clear_buffer();
+				std::cout << "TWO" << std::endl;
 				throw statusCode = 413;
 			}
 			remainReadLength = contentLength;
@@ -129,16 +131,15 @@ struct Request
 			switch (progress)
 			{
 			case START_LINE:
-				std::cout << "START_LINE" << std::endl;
 				if (parse_startline() == false)
 				{
 					clear_buffer();
+					std::cout << "THREE" << std::endl;
 					throw statusCode = 400;
 				}
 				progress = HEADER;
 				break;
 			case HEADER:
-				std::cout << "HEADER" << std::endl;
 				if (is_empty_buffer() == true)
 					return READ_REQUEST;
 				else if (is_crlf_line() == true)
@@ -154,7 +155,6 @@ struct Request
 
 				break;
 			case CRLF:
-				std::cout << "CRLF" << std::endl;
 				skip_crlf();
 
 				// if (StartLine.method == "POST" && is_empty_buffer() == true)
@@ -185,7 +185,6 @@ struct Request
 				
 				break;
 			case LENGTH_BODY:
-				std::cout << "LENGTH_BODY" << std::endl;
 				if (contentLength == 0)
 					return END_REQUEST;
 				if (remainReadLength <= 0)
@@ -206,7 +205,6 @@ struct Request
 
 				break;
 			case CHUNK_SIZE:
-				std::cout << "CHUNK_SIZE" << std::endl;
 				if (is_empty_buffer() == true)
 					return READ_REQUEST;
 
@@ -216,6 +214,7 @@ struct Request
 				readSize = Util::to_hex(tmp);
 				if (readSize == -1)
 				{
+					std::cout << "FOUR" << std::endl;
 					clear_buffer();
 					throw statusCode = 400;
 				}
@@ -226,7 +225,6 @@ struct Request
 				
 				break;
 			case CHUNK_DATA:
-				std::cout << "CHUNK_DATA" << std::endl;
 				if (is_empty_buffer() == true)
 					return READ_REQUEST;
 

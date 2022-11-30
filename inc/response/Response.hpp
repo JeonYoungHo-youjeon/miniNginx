@@ -140,7 +140,7 @@ int Response::makeHeader()
 		}
 		Body.erase(0, cgiHeaderEnd + 4);
 	}
-	map<string, string>::iterator it = Header.find("Connection");
+	map<string, string>::iterator it = Header.find("connection");
 	if (StartLine.statusCode / 100 == 2)
 		Header["connection"] = "keep-alive";
 	else
@@ -209,7 +209,7 @@ int 	Response::execute()
 			if (Req->StartLine.method == "GET")
 				contentResult = new File(path, O_WRONLY);
 			else
-				contentResult = new File(path, O_WRONLY | O_CREAT | O_TRUNC);
+				contentResult = new File(path, O_WRONLY | O_TRUNC);
 		}
 		progress = contentResult->set();
 		if (Req->StartLine.method == "GET" && contentResult->checkNull())

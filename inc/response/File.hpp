@@ -4,6 +4,7 @@
 # include "Contents.hpp"
 # include "../exception/Exception.hpp"
 # include <sys/stat.h>
+# include <fcntl.h>
 
 struct File : public Contents
 {
@@ -25,8 +26,13 @@ struct File : public Contents
 
 int	File::set()
 {
-	inFd = ::open(url.c_str(), flag, 777);
-	outFd = ::open(url.c_str(), O_RDONLY, 777);
+	inFd = ::open(url.c_str(), flag, 0644);
+	if (inFd == -1)
+	{
+		::creat(url.c_str(), 0777);
+		inFd = ::open(url.c_str(), flag, 0644);
+	}
+	outFd = ::open(url.c_str(), O_RDONLY, 0644);
 
 	if (outFd < 0 || inFd < 0)
 		throw 404;

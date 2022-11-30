@@ -245,6 +245,7 @@ void Event::handle_next_event(ClientSocket* socket, State state)
 		{
 			PRINT_LOG("KEEP_ALIVE");
 			socket->reset();
+			::read(socket->get_fd(), 0, 1000);
 			kq->on_read_event(socket, socket->get_fd());
 			socket->update_state(READ_REQUEST);
 		}

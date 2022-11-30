@@ -35,9 +35,6 @@ int	File::set()
 
 	if (outFd < 0 || inFd < 0)
 		throw 404;
-	std::cout << "filename : " << url.c_str() << std::endl;
-	std::cout << "inFd : " << inFd << std::endl;
-	std::cout << "outFd : " << inFd << std::endl;
 	pid = 0;
 	return BODY;
 }

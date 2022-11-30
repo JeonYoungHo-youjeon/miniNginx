@@ -75,7 +75,7 @@ struct Response
 			ret += Body + "\r\n";
 		return ret;
 	}
-	int clear();
+	void clear();
 
 	int set(const std::string& configName, int error_code)
 	{
@@ -387,14 +387,13 @@ int Response::makeStartLine()
 	return statement = SEND_RESPONSE;
 }
 
-int Response::clear()
+void Response::clear()
 {
 	//	내부 객체 delete -> REPEAT REQUEST 반환 -> new Req로 연결(Req 삭제위치)
 	delete contentResult;
 	delete Html;
 	contentResult = 0;
 	Html = 0;
-	return REPEAT_REQUEST;
 }
 
 int Response::set(const Request& req)

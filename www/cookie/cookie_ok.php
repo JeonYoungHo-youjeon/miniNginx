@@ -2,7 +2,7 @@
     $user_id = $_POST['user_id'];
     $user_pw = $_POST['user_pw'];
 
-    // 아이디 : apple , 비밀번호 : 1234
+    // 아이디 : apple , 비밀번호 : 123
     if($user_id == "apple" && $user_pw == "1234"){
         setcookie('userid', $user_id, time()+60*60*24*30,"/");
         echo "<script>alert('로그인 되었습니다.');location.href='cookie.php';</script>";

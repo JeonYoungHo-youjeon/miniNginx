@@ -135,7 +135,9 @@ void ClientSocket::reset()
 
 	req = new Request(fd, serverIPPort);
 	res = new Response();
-
+	set_readFD(0);
+	set_writeFD(0);
+	set_PID(0);
 	delete tmp_req;
 	delete tmp_res;
 }

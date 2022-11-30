@@ -129,6 +129,7 @@ struct Request
 			switch (progress)
 			{
 			case START_LINE:
+				std::cout << "START_LINE" << std::endl;
 				if (parse_startline() == false)
 				{
 					clear_buffer();
@@ -137,6 +138,7 @@ struct Request
 				progress = HEADER;
 				break;
 			case HEADER:
+				std::cout << "HEADER" << std::endl;
 				if (is_empty_buffer() == true)
 					return READ_REQUEST;
 				else if (is_crlf_line() == true)
@@ -152,26 +154,30 @@ struct Request
 
 				break;
 			case CRLF:
+				std::cout << "CRLF" << std::endl;
 				skip_crlf();
 
-				if (StartLine.method == "POST" && is_empty_buffer() == true)
-					return READ_REQUEST;
+				// if (StartLine.method == "POST" && is_empty_buffer() == true)
+				// 	return READ_REQUEST;
+				// else if (StartLine.method != "POST" \
+				// 		&& !Header.count(HEAD[CONTENT_LENGTH]) && !Header.count(HEAD[TRANSFER_ENCODING]))
+				// 	return END_REQUEST;
+				// else if (StartLine.method != "POST" \
+				// 		&& (Header.count(HEAD[CONTENT_LENGTH]) || Header.count(HEAD[TRANSFER_ENCODING])))
+				// {
+				// 	while (is_empty_buffer() == false)
+				// 	{
+				// 		std::getline(buffer, tmp);
+				// 		if (tmp == "\r")
+				// 			break;
+				// 	}
+				// 	return END_REQUEST;
+				// }
+				if (StartLine.method == "GET" || StartLine.method == "DELETE")
+					return END_REQUEST;
 				else if (StartLine.method != "POST" \
 						&& !Header.count(HEAD[CONTENT_LENGTH]) && !Header.count(HEAD[TRANSFER_ENCODING]))
-				{
 					return END_REQUEST;
-				}
-				else if (StartLine.method != "POST" \
-						&& (Header.count(HEAD[CONTENT_LENGTH]) || Header.count(HEAD[TRANSFER_ENCODING])))
-				{
-					while (is_empty_buffer() == false)
-					{
-						std::getline(buffer, tmp);
-						if (tmp == "\r")
-							break;
-					}
-					return END_REQUEST;
-				}
 				else if (chunkFlag)
 					progress = CHUNK_SIZE;
 				else
@@ -179,6 +185,7 @@ struct Request
 				
 				break;
 			case LENGTH_BODY:
+				std::cout << "LENGTH_BODY" << std::endl;
 				if (contentLength == 0)
 					return END_REQUEST;
 				if (remainReadLength <= 0)
@@ -199,6 +206,7 @@ struct Request
 
 				break;
 			case CHUNK_SIZE:
+				std::cout << "CHUNK_SIZE" << std::endl;
 				if (is_empty_buffer() == true)
 					return READ_REQUEST;
 
@@ -218,6 +226,7 @@ struct Request
 				
 				break;
 			case CHUNK_DATA:
+				std::cout << "CHUNK_DATA" << std::endl;
 				if (is_empty_buffer() == true)
 					return READ_REQUEST;
 

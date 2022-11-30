@@ -180,7 +180,7 @@ void Event::handle_client_read_event(ClientSocket* socket)
 		}
 		if (state == END_REQUEST) {
 			PRINT_LOG("END_REQUEST");
-			// req->print_request();
+			req->print_request();
 			state = socket->set_response(*req);
 		}
 	}

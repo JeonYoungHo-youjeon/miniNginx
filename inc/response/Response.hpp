@@ -142,7 +142,10 @@ int Response::makeHeader()
 	}
 	map<string, string>::iterator it = Header.find("connection");
 	if (StartLine.statusCode / 100 == 2)
+	{
 		Header["connection"] = "keep-alive";
+		Header["Keep-Alive"] = "timeout=" + Util::to_string(TIMEOUT);
+	}
 	else
 		Header["connection"] = "close";
 	it = Header.find("content-type");
@@ -424,7 +427,7 @@ int Response::set(const Request& req)
 			for (vector<string>::const_iterator it = g_conf[confName][locName]["limit_except"].begin();
 				 it != g_conf[confName][locName]["limit_except"].end(); ++it)
 				if (*it == Req->StartLine.method)
-					throw 500;
+					throw 405;
 		//	Upload Path
 		//	Uri Check Dir is or not
 		if (req.StartLine.method == "POST" && g_conf[confName][locName].is_exist("upload"))

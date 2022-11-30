@@ -130,16 +130,18 @@ State ClientSocket::get_state() const
 
 void ClientSocket::reset()
 {
-	Request* tmp_req = req;
-	Response* tmp_res = res;
+	//Request* tmp_req = req;
+	//Response* tmp_res = res;
 
+	delete req;
+	delete res;
 	req = new Request(fd, serverIPPort);
 	res = new Response();
 	set_readFD(0);
 	set_writeFD(0);
 	set_PID(0);
-	delete tmp_req;
-	delete tmp_res;
+	//delete tmp_req;
+	//delete tmp_res;
 }
 
 

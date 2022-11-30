@@ -244,7 +244,7 @@ void Event::handle_next_event(ClientSocket* socket, State state)
 		else if (res->Header["connection"] == "keep-alive")
 		{
 			PRINT_LOG("KEEP_ALIVE");
-			// socket->reset();
+			socket->reset();
 			kq->on_read_event(socket, socket->get_fd());
 			socket->update_state(READ_REQUEST);
 		}

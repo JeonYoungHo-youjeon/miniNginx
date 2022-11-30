@@ -125,6 +125,13 @@ int Response::makeHeader()
 		std::vector<string> header = Util::split(Body, '\n');
 
 		std::string::size_type cgiHeaderEnd = Body.find("\r\n\r\n");
+		int tmp = 4;
+		if (cgiHeaderEnd == 0)
+		{
+			cgiHeaderEnd = Body.find("\n\n");
+			tmp = 2;
+		}
+		
 
 		for (std::vector<string>::iterator it = header.begin(); it != header.end(); ++it)
 		{
@@ -138,7 +145,7 @@ int Response::makeHeader()
 			key = string_to_lower(key);
 			Header[key] = value;	
 		}
-		Body.erase(0, cgiHeaderEnd + 4);
+		Body.erase(0, cgiHeaderEnd + tmp);
 	}
 	map<string, string>::iterator it = Header.find("connection");
 	if (StartLine.statusCode / 100 == 2)

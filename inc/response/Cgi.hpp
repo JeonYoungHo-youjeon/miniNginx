@@ -3,7 +3,6 @@
 
 # include "Contents.hpp"
 # include "../parse/Config.hpp"
-# include "../exception/Exception.hpp"
 # include "../define.hpp"
 
 # include <unistd.h>
@@ -62,7 +61,6 @@ Cgi::Cgi(const std::string& path, const string& excutor, const vector<std::strin
 Cgi::~Cgi()
 {
 	close();
-	// TODO : envp delete
 	// kill();
 }
 

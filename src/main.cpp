@@ -5,25 +5,33 @@
 #include <stdexcept>
 #include <ctime>
 
-using namespace std;
 Config	g_conf("config/default.conf");
 
 int main(int argc, char** argv)
 {
 	if (argc == 2)
+	{
 		try
 		{
 			g_conf = Config(argv[1]);
 		}
-	catch(std::exception& e)
+		catch (std::exception& e)
+		{
+			std::cerr << "Error: Config" << std::endl;
+			return 1;
+		}
+	}
+	try
 	{
-		cerr << "Error" << e.what() << endl;
+		Event event;
+
+		event.event_loop();
+	}
+	catch (std::exception& e)
+	{
+		std::cerr << "Error: Event" << std::endl;
 		return 1;
 	}
-	Event event;
 	
-	srand((unsigned)time(NULL) * getpid());
-	event.event_loop();
-	// system("leaks miniNginx");
     return 0;
 }

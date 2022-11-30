@@ -2,7 +2,6 @@
 # define FILE_HPP
 
 # include "Contents.hpp"
-# include "../exception/Exception.hpp"
 # include <sys/stat.h>
 
 struct File : public Contents

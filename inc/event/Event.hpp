@@ -48,19 +48,10 @@ private:
 	Logger logger; // REMOVE
 };
 
-// Event implementation
 
-/**
- * @brief connection, read, write, disconnection 등의 event 발생을 감시하며,
- * 			event 발생시 알려주는 infinite loop
- * 
- * @param None
- * 
- * @return None
-*/
 void Event::event_loop()
 {
-	logger.info(); // REMOVE
+	logger.info();
 
 	int nEvent;
 	const Socket* socket;
@@ -68,33 +59,33 @@ void Event::event_loop()
 
 	while (true)
 	{
-		nEvent = kq->wait_event();
-
-		for (int i = 0; i < nEvent; ++i)
+		try
 		{
-			event = &(kq->get_eventList()[i]);
-			socket = (Socket*)event->udata;
+			nEvent = kq->wait_event();
 
-			if (event->filter == EVFILT_PROC)
-				handle_child_process(event, (ClientSocket*)socket);
-			else if (socket->get_type() == SERVER)
-				handle_server_event(event, (ServerSocket*)socket);
-			else if (socket->get_type() == CLIENT)
-				handle_client_event(event, (ClientSocket*)socket);
+			for (int i = 0; i < nEvent; ++i)
+			{
+				event = &(kq->get_eventList()[i]);
+				socket = (Socket*)event->udata;
 
-			if (!garbageCollector.empty())
-				clear_garbage_sockets();
+				if (event->filter == EVFILT_PROC)
+					handle_child_process(event, (ClientSocket*)socket);
+				else if (socket->get_type() == SERVER)
+					handle_server_event(event, (ServerSocket*)socket);
+				else if (socket->get_type() == CLIENT)
+					handle_client_event(event, (ClientSocket*)socket);
+
+				if (!garbageCollector.empty())
+					clear_garbage_sockets();
+			}
+		}
+		catch (std::exception &e)
+		{
+			std::cerr << "\t===== LOOP_ERROR =====" << std::endl;
 		}
 	}
 }
 
-/**
- * @brief config 설정에 따라 서버의 소켓과 multiplexing을 위한 kqueue를 초기화하는 생성자
- * 
- * @param None
- * 
- * @return None
-*/
 Event::Event()
 	: kq(new KQueue())
 {
@@ -104,13 +95,6 @@ Event::Event()
 		create_server_socket(it);
 }
 
-/**
- * @brief 동적 할당받은 객체를 지워주는 소멸자
- * 
- * @param None
- * 
- * @return None
-*/
 Event::~Event()
 {
 	delete kq;
@@ -129,13 +113,6 @@ void Event::create_server_socket(const ConfigType::iterator it)
 	logger.add_server(socket->get_fd(), it->first); // REMOVE
 }
 
-/**
- * @brief 클라이언트의 연결을 받아 등록시키는 함수
- * 
- * @param serverFD(int) 클라이언트가 연결을 시도한 서버의 fd
- * 
- * @return None
-*/
 void Event::accept_connection(FD serverFD)
 {
 	SockAddr clientAddr;
@@ -144,8 +121,8 @@ void Event::accept_connection(FD serverFD)
 
 	if (clientFD == -1)
 	{
-		// std::cout << "cliendFD : -1" << std::endl;
-		// std::cout << "errno : " << errno << std::endl;
+		std::cout << "cliendFD : -1" << std::endl;
+		std::cout << "errno : " << errno << std::endl;
 		return;
 	}
 
@@ -169,26 +146,12 @@ void Event::create_client_socket(FD clientFD, const SockAddr& addr, FD serverFD)
 	logger.connection_logging(socket, LOG_GREEN); // REMOVE
 }
 
-/**
- * @brief 클라이언트와의 연결을 끊는 함수
- * 
- * @param client(Client*) 연결을 끊을 클라이언트
- * 
- * @return None
-*/
 void Event::disconnection(const ClientSocket* socket)
 {	
 	logger.disconnection_logging(socket, LOG_YELLOW);
 	add_garbage(socket);
 }
 
-/**
- * @brief read event 발생 시 클라이언트의 메시지를 수신하는 함수
- * 
- * @param client(Client*) read event를 발생시킨 client
- * 
- * @return None
-*/
 void Event::handle_client_read_event(ClientSocket* socket)
 {
 	if (socket->is_expired())
@@ -204,8 +167,6 @@ void Event::handle_client_read_event(ClientSocket* socket)
 		{
 		case READ_REQUEST:
 			PRINT_LOG("READ_REQUEST");
-
-		// system("leaks webserv");
 			state = req->read();
 			break;
 		case REPEAT_REQUEST:
@@ -276,14 +237,11 @@ void Event::handle_next_event(ClientSocket* socket, State state)
 		// 	socket->update_state(REPEAT_REQUEST);
 		// 	handle_client_read_event(socket);
 		// }
-
 		if (socket->get_PID())
 		{
-			std::cout << "state : " << socket->get_state() << std::endl;
-			std::cout << "PID : " << socket->get_PID() << std::endl;
 			disconnection(socket);
 		}
-		else if (res->Header["Connection"] == "keep-alive")
+		else if (res->Header["connection"] == "keep-alive")
 		{
 			PRINT_LOG("KEEP_ALIVE");
 			socket->reset();
@@ -316,9 +274,8 @@ void Event::socket_timeout(const ClientSocket* socket)
 
 void Event::handle_server_event(const KEvent* event, const ServerSocket* socket)
 {
-	// 서버를 종료시키면 모든 client 500 response
 	if (event->flags & EV_ERROR)
-		return; // TODO: response 500 Internal Server Error
+		return;
 
 	accept_connection(socket->get_fd());
 }
@@ -341,6 +298,7 @@ void Event::handle_client_event(const KEvent* event, ClientSocket* socket)
 	{
 		PRINT_LOG("EV_EOF");
 		socket->get_response()->TEMP = false;
+		// TODO
 		handle_client_read_event(socket);
 	}
 	else if (event->filter == EVFILT_READ)
@@ -362,7 +320,6 @@ void Event::handle_child_process(const KEvent* event, ClientSocket* socket)
 	{
 		int status;
 		PID pid = waitpid(socket->get_PID(), &status, WNOHANG);
-		std::cout << "\twaitpid : " << pid << std::endl;
 	}
 }
 

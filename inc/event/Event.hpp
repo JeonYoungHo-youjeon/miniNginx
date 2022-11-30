@@ -75,7 +75,7 @@ void Event::event_loop()
 				else if (socket->get_type() == CLIENT)
 					handle_client_event(event, (ClientSocket*)socket);
 			}
-			if (garbageCollector.size() > 3)
+			if (!garbageCollector.empty())
 				clear_garbage_sockets();
 		}
 		catch (std::exception &e)
@@ -348,20 +348,15 @@ void Event::clear_garbage_sockets()
 		std::cout << garbageCollector[i]->get_fd() << " ";
 	}
 	std::cout << std::endl;
-	// for (GarbageCollector::iterator it = garbageCollector.begin(); it != garbageCollector.end(); ++it)
-	// {
-	// 	std::cout << "fd : " << (*it)->get_fd() << std::endl;
-	// 	sockets.erase((*it)->get_fd());
-	// 	delete (*it);
-	// }
-	while (!garbageCollector.empty())
+
+	for (GarbageCollector::iterator it = garbageCollector.begin(); it != garbageCollector.end(); ++it)
 	{
-		std::cout << garbageCollector.back()->get_fd() << std::endl;
-		delete garbageCollector.back();
-		std::cout << "============" << std::endl;
-		garbageCollector.pop_back();
+		std::cout << "fd : " << (*it)->get_fd() << std::endl;
+		sockets.erase((*it)->get_fd());
+		delete (*it);
 	}
-	//garbageCollector.clear();
+
+	garbageCollector.clear();
 }
 
 

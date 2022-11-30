@@ -101,15 +101,15 @@ int     Cgi::set()
 		if (header["QUERY_STRING"] != "")
 		   	setenv("QUERY_STRING", header["QUERY_STRING"].c_str(), 1);				// url의 ? 뒷부분(params)
 		if (header.count("COOKIE"))
-    		setenv("HTTP_COOKIE", header["COOKIE"].c_str(), 1);						// 헤더의 쿠키
+    		setenv("HTTP_COOKIE", Util::remove_crlf(header["COOKIE"]).c_str(), 1);						// 헤더의 쿠키
 		if (header.count("CONTENT_LENGTH"))
-    		setenv("CONTENT_LENGTH", header["CONTENT_LENGTH"].c_str(), 1);			// 헤더의 컨텐츠 길이
+    		setenv("CONTENT_LENGTH", Util::remove_crlf(header["CONTENT_LENGTH"]).c_str(), 1);			// 헤더의 컨텐츠 길이
 		if (header.count("ACCEPT"))
-    		setenv("HTTP_ACCEPT", header["ACCEPT"].c_str(), 1);						// 헤더의 accept
+    		setenv("HTTP_ACCEPT", Util::remove_crlf(header["ACCEPT"]).c_str(), 1);						// 헤더의 accept
 		if (header.count("ACCEPT_LANGUAGE"))
-	    	setenv("HTTP_ACCEPT_LANGUAGE", header["ACCEPT_LANGUAGE"].c_str(), 1);	// 헤더의 accpet-lang	
+	    	setenv("HTTP_ACCEPT_LANGUAGE", Util::remove_crlf(header["ACCEPT_LANGUAGE"]).c_str(), 1);	// 헤더의 accpet-lang	
 		if (header.count("USER_AGENT"))
- 	   		setenv("HTTP_USER_AGENT", header["USER_AGENT"].c_str(), 1);				// 헤더의 user-agent
+ 	   		setenv("HTTP_USER_AGENT", Util::remove_crlf(header["USER_AGENT"]).c_str(), 1);				// 헤더의 user-agent
     	
 		
 

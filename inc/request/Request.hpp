@@ -89,7 +89,6 @@ struct Request
 			if (byte < 0)
 			{
 				clear_buffer();
-				std::cout << "ONE" << std::endl;
 				throw statusCode = 400;
 			}
 			buffer.write(rcvData, byte);
@@ -115,7 +114,6 @@ struct Request
 			if (contentLength > maxBodySize)
 			{
 				clear_buffer();
-				std::cout << "TWO" << std::endl;
 				throw statusCode = 413;
 			}
 			remainReadLength = contentLength;
@@ -134,7 +132,6 @@ struct Request
 				if (parse_startline() == false)
 				{
 					clear_buffer();
-					std::cout << "THREE" << std::endl;
 					throw statusCode = 400;
 				}
 				progress = HEADER;

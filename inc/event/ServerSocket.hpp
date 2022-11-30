@@ -28,6 +28,7 @@ public:
 		if (fcntl(fd, F_SETFL, O_NONBLOCK) == -1)
 			throw std::runtime_error("fcntl");
 
+
 		memset(&addr, 0, sizeof(addr));
 		addr.sin_family = AF_INET;
 		addr.sin_addr.s_addr = inet_addr(ip_.c_str());

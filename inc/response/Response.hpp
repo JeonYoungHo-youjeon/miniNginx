@@ -145,14 +145,17 @@ int Response::makeHeader()
 		}
 		Body.erase(0, cgiHeaderEnd + tmp);
 	}
+
 	map<string, string>::iterator it = Header.find("connection");
-	if (StartLine.statusCode / 100 == 2 && Header["connection"] == "keep-alive")
-	{
-		Header["connection"] = "keep-alive";
-		Header["Keep-Alive"] = "timeout=" + Util::to_string(TIMEOUT);
-	}
-	else
-		Header["connection"] = "close";
+	Header["connection"] = "close";
+
+	// if (StartLine.statusCode / 100 == 2 && Header["connection"] == "keep-alive")
+	// {
+	// 	Header["connection"] = "keep-alive";
+	// 	Header["Keep-Alive"] = "timeout=" + Util::to_string(TIMEOUT);
+	// }
+	// else
+	// 	Header["connection"] = "close";
 	it = Header.find("content-type");
 	if (it == Header.end())
 		Header["content-type"] = g_conf.getContentType(ext);

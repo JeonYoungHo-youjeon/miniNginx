@@ -75,7 +75,7 @@ void Event::event_loop()
 				else if (socket->get_type() == CLIENT)
 					handle_client_event(event, (ClientSocket*)socket);
 			}
-			if (!garbageCollector.empty())
+			if (garbageCollector.size() > 3)
 				clear_garbage_sockets();
 		}
 		catch (std::exception &e)
@@ -116,7 +116,11 @@ void Event::accept_connection(FD serverFD)
 {
 	SockAddr clientAddr;
 	socklen_t clientAddrLen = sizeof(clientAddr);
+
+	memset(&clientAddr, 0, sizeof(clientAddr));
 	FD clientFD = accept(serverFD, (struct sockaddr*)&clientAddr, &clientAddrLen);
+	std::cout << "Created client FD : " << clientFD << std::endl;
+	std::cout << "client ADDR : " << inet_ntoa(clientAddr.sin_addr) << "." << ntohs(clientAddr.sin_port) << std::endl;
 
 	if (clientFD == -1)
 	{
@@ -147,8 +151,21 @@ void Event::create_client_socket(FD clientFD, const SockAddr& addr, FD serverFD)
 
 void Event::disconnection(const ClientSocket* socket)
 {	
+	std::cout << "disconnection fd: " << socket->get_fd() << std::endl;
 	logger.disconnection_logging(socket, LOG_YELLOW);
-	add_garbage(socket);
+
+	bool flag = true;
+	for (auto it = garbageCollector.begin(); it != garbageCollector.end(); ++it)
+	{
+		if ((*it)->get_fd() == socket->get_fd())
+		{
+			flag = false;
+			break;
+		}
+	}
+	if (flag)
+		add_garbage(socket);
+	// add_garbage(socket);
 }
 
 void Event::handle_client_read_event(ClientSocket* socket)
@@ -230,16 +247,7 @@ void Event::handle_next_event(ClientSocket* socket, State state)
 	if (state == END_RESPONSE)
 	{
 		PRINT_LOG("END_RESPONSE");
-		// if (req->is_empty_buffer() == false)
-		// {
-		// 	PRINT_LOG("IS NOT EMPTY BUFFER");
-			// socket->update_state(REPEAT_REQUEST);
-			// handle_client_read_event(socket);
-		// }
-		// if (socket->get_PID())
-		// {
-		// 	disconnection(socket);
-		// }
+
 		if (res->Header["connection"] == "keep-alive")
 		{
 			PRINT_LOG("KEEP_ALIVE");
@@ -299,6 +307,7 @@ void Event::handle_client_event(const KEvent* event, ClientSocket* socket)
 	if (event->flags & EV_EOF)
 	{
 		PRINT_LOG("EV_EOF");
+
 		std::cout << "client FD : " << socket->get_fd() << std::endl;
 		if (socket->get_PID())
 		{
@@ -333,12 +342,26 @@ void Event::handle_child_process(const KEvent* event, ClientSocket* socket)
 void Event::clear_garbage_sockets()
 {
 	PRINT_LOG("CLEAR_GARBAGE_SOCKETS");
-	for (GarbageCollector::iterator it = garbageCollector.begin(); it != garbageCollector.end(); ++it)
+	std::cout << "size : " << garbageCollector.size() << std::endl;
+	for (int i = 0; i < garbageCollector.size(); ++i)
 	{
-		sockets.erase((*it)->get_fd());
-		delete (*it);
+		std::cout << garbageCollector[i]->get_fd() << " ";
 	}
-	garbageCollector.clear();
+	std::cout << std::endl;
+	// for (GarbageCollector::iterator it = garbageCollector.begin(); it != garbageCollector.end(); ++it)
+	// {
+	// 	std::cout << "fd : " << (*it)->get_fd() << std::endl;
+	// 	sockets.erase((*it)->get_fd());
+	// 	delete (*it);
+	// }
+	while (!garbageCollector.empty())
+	{
+		std::cout << garbageCollector.back()->get_fd() << std::endl;
+		delete garbageCollector.back();
+		std::cout << "============" << std::endl;
+		garbageCollector.pop_back();
+	}
+	//garbageCollector.clear();
 }
 
 

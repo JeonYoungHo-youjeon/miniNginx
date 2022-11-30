@@ -252,6 +252,7 @@ int 	Response::write()
 	if (len == postBody.size())
 	{
 		postBody.erase(0, len);
+		close(contentResult->inFd);
 		return READ_RESPONSE;
 	}
 
@@ -273,10 +274,11 @@ int 	Response::read()
 	char buf[BUFFER_SIZE];
 	memset(buf, 0, BUFFER_SIZE);
 	ssize_t	len = ::read(contentResult->outFd, buf, BUFFER_SIZE);
-
+	std::cout << len << std::endl;
 	Body += string(buf, len);
 	if (len < 0)
 		throw StartLine.statusCode = 500;
+
 
 	if (len < BUFFER_SIZE && !TEMP)
 		return makeHeader();

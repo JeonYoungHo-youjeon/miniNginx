@@ -28,7 +28,6 @@ int	File::set()
 	inFd = ::open(url.c_str(), flag, 777);
 	outFd = ::open(url.c_str(), O_RDONLY, 777);
 
-	cout << inFd << ' ' << outFd << endl;
 	if (outFd < 0 || inFd < 0)
 		throw 404;
 	pid = 0;

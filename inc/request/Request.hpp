@@ -92,7 +92,7 @@ struct Request
 			memset(rcvData, 0, BUFFER_SIZE);
 
 			int byte = recv(clientFd, &rcvData[0], BUFFER_SIZE, 0);
-			std::cout << "byte : " << byte << std::endl;
+
 			if (byte < 0)
 			{
 				std::cout << "ONE" << std::endl;
@@ -118,7 +118,7 @@ struct Request
 		if (Header.count(HEAD[CONTENT_LENGTH]))
 		{
 			contentLength = Util::stoi(Header[HEAD[CONTENT_LENGTH]]);
-			std::cout << "MAXBODYSIZE : " << maxBodySize << std::endl;
+
 			if (contentLength > maxBodySize)
 			{
 				clear_buffer();
@@ -304,11 +304,9 @@ struct Request
 	}
 
 	bool parse_startline() {
-		std::cout << "[BUFFER]" << std::endl;
-		// for (char c : buffer.str())
-		// 	std::cout << static_cast<int>(c) << " ";
-		std::cout << buffer.str() << std::endl;
-		std::cout << "[ENDBUFFER]" << std::endl;
+		// std::cout << "[BUFFER]" << std::endl;
+		// std::cout << buffer.str() << std::endl;
+		// std::cout << "[ENDBUFFER]" << std::endl;
 		buffer >> StartLine.method >> StartLine.url >> StartLine.protocol;
 
 		if (StartLine.method == "" || StartLine.url == "" || StartLine.protocol == "")

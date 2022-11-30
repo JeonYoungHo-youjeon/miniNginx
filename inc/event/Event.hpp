@@ -142,11 +142,10 @@ void Event::accept_connection(FD serverFD)
 	socklen_t clientAddrLen = sizeof(clientAddr);
 	FD clientFD = accept(serverFD, (struct sockaddr*)&clientAddr, &clientAddrLen);
 
-	std::cout << "ACCEPT" << std::endl;
 	if (clientFD == -1)
 	{
-		std::cout << "cliendFD : -1" << std::endl;
-		std::cout << "errno : " << errno << std::endl;
+		// std::cout << "cliendFD : -1" << std::endl;
+		// std::cout << "errno : " << errno << std::endl;
 		return;
 	}
 
@@ -265,25 +264,20 @@ void Event::handle_client_write_event(ClientSocket* socket)
 
 void Event::handle_next_event(ClientSocket* socket, State state)
 {
-
-	// std::cout << "1\n";
-	// system("leaks webserv");
 	Request* req = socket->get_request();
 	Response* res = socket->get_response();
 
-
-	// std::cout << "2\n";
-	// system("leaks webserv");
 	if (state == END_RESPONSE)
 	{
 		PRINT_LOG("END_RESPONSE");
-		if (req->is_empty_buffer() == false)
-		{
-			PRINT_LOG("IS NOT EMPTY BUFFER");
-			socket->update_state(REPEAT_REQUEST);
-			handle_client_read_event(socket);
-		}
-		else if (socket->get_PID())
+		// if (req->is_empty_buffer() == false)
+		// {
+		// 	PRINT_LOG("IS NOT EMPTY BUFFER");
+		// 	socket->update_state(REPEAT_REQUEST);
+		// 	handle_client_read_event(socket);
+		// }
+
+		if (socket->get_PID())
 		{
 			std::cout << "state : " << socket->get_state() << std::endl;
 			std::cout << "PID : " << socket->get_PID() << std::endl;
@@ -305,7 +299,7 @@ void Event::handle_next_event(ClientSocket* socket, State state)
 	}
 	else
 	{
-		PRINT_LOG("SET NEXT EVENT");
+		PRINT_LOG("SET_NEXT_EVENT");
 		socket->update_state(state);
 		kq->set_next_event(socket, socket->get_state());
 	}
@@ -313,7 +307,6 @@ void Event::handle_next_event(ClientSocket* socket, State state)
 
 void Event::socket_timeout(const ClientSocket* socket)
 {
-	// TODO: CGI kill
 	if (socket->is_expired() && sockets.count(socket->get_fd()))
 	{
 		logger.disconnection_logging(socket, LOG_YELLOW);
@@ -341,9 +334,7 @@ void Event::handle_client_event(const KEvent* event, ClientSocket* socket)
 	if (event->flags & EV_ERROR)
 	{
 		PRINT_LOG("EV_ERROR");
-		system("lsof | grep webserv");
-		std::cout << "errno : " << errno << std::endl;
-		return; // TODO: response 503 Service Unavailable
+		return;
 	}
 
 	if (event->flags & EV_EOF && socket->get_PID())

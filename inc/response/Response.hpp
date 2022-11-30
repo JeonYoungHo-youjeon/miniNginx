@@ -128,9 +128,8 @@ int Response::makeHeader()
 
 		for (std::vector<string>::iterator it = header.begin(); it != header.end(); ++it)
 		{
-			// std::cout << "key1= [" << *it << "]" << std::endl;
 			Util::remove_crlf(*it);
-			// std::cout << " key2= [ " << *it << " ] " << std::endl;
+
 			if ((*it).empty())
 				break ;
 			std::string::size_type colon = (*it).find(": ");
@@ -237,9 +236,7 @@ int 	Response::write()
 		return READ_RESPONSE;
 
 	//	쓰고 쓸 것이 남아있으면 WRITE_RESPONSE 반환
-	std::cout << "=========[RESPONSE WRTIE]==========" << std::endl;
 	ssize_t	len = ::write(contentResult->inFd, postBody.c_str(), postBody.size());
-	std::cout << "len : " << len << std::endl;
 
 	if (len < 0)
 		throw StartLine.statusCode = 500;
@@ -446,8 +443,6 @@ int Response::set(const Request& req)
 			else
 				throw 403;
 		}
-
-		cout << path << endl;
 		//	get Extension
 		ext = findExtension(path);
 	}

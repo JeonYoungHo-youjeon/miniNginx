@@ -209,7 +209,7 @@ int 	Response::execute()
 			if (Req->StartLine.method == "GET")
 				contentResult = new File(path, O_WRONLY);
 			else
-				contentResult = new File(path, O_WRONLY | O_CREAT | O_TRUNC);
+				contentResult = new File(path, O_WRONLY | O_TRUNC);
 		}
 		progress = contentResult->set();
 		if (Req->StartLine.method == "GET" && contentResult->checkNull())

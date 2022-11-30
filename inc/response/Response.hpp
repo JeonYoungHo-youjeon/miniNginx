@@ -146,7 +146,7 @@ int Response::makeHeader()
 		Body.erase(0, cgiHeaderEnd + tmp);
 	}
 	map<string, string>::iterator it = Header.find("connection");
-	if (StartLine.statusCode / 100 == 2)
+	if (StartLine.statusCode / 100 == 2 && Header["connection"] == "keep-alive")
 	{
 		Header["connection"] = "keep-alive";
 		Header["Keep-Alive"] = "timeout=" + Util::to_string(TIMEOUT);
@@ -227,8 +227,6 @@ int 	Response::execute()
 	}
 	catch (int errNo)	//	예외 발생 시 일단 객체 내에서 처리 -> 수정 O
 	{
-		std::cout << errno << std::endl;
-		std::cout << errNo << std::endl;
 		return make_errorpage(StartLine.statusCode = errNo);
 	}
 	return makeHeader();

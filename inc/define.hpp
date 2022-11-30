@@ -52,6 +52,6 @@ enum eProg
 static const time_t		TIMEOUT = 60;
 static const int		MAX_EVENT = 1024; // TODO: I don't know optimal MAX_EVENT yet.
 const int				BUFFER_SIZE = 8192;
-const int				DEFAULT_MAX_BODY_SIZE = 104857600; // 1MB
+const int				DEFAULT_MAX_BODY_SIZE = 1048576; // 1MB
 
 #endif	//	DEFINE_HPP

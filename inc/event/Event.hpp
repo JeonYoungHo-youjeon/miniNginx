@@ -74,10 +74,9 @@ void Event::event_loop()
 					handle_server_event(event, (ServerSocket*)socket);
 				else if (socket->get_type() == CLIENT)
 					handle_client_event(event, (ClientSocket*)socket);
-
-				if (!garbageCollector.empty())
-					clear_garbage_sockets();
 			}
+			if (!garbageCollector.empty())
+				clear_garbage_sockets();
 		}
 		catch (std::exception &e)
 		{
@@ -275,7 +274,10 @@ void Event::socket_timeout(const ClientSocket* socket)
 void Event::handle_server_event(const KEvent* event, const ServerSocket* socket)
 {
 	if (event->flags & EV_ERROR)
+	{
+		std::cout << "SERVER Socket Error" << std::endl;
 		return;
+	}
 
 	accept_connection(socket->get_fd());
 }
@@ -297,11 +299,14 @@ void Event::handle_client_event(const KEvent* event, ClientSocket* socket)
 	if (event->flags & EV_EOF)
 	{
 		PRINT_LOG("EV_EOF");
+		std::cout << "client FD : " << socket->get_fd() << std::endl;
 		if (socket->get_PID())
 		{
 			socket->get_response()->TEMP = false;
 			handle_client_read_event(socket);
 		}
+		else
+			disconnection(socket);
 	}
 	else if (event->filter == EVFILT_READ)
 	{
@@ -327,11 +332,11 @@ void Event::handle_child_process(const KEvent* event, ClientSocket* socket)
 
 void Event::clear_garbage_sockets()
 {
-	PRINT_LOG("CLEAR_GARBASE_SOCKETS");
-	for (GarbageCollector::const_iterator it = garbageCollector.begin(); it != garbageCollector.end(); ++it)
+	PRINT_LOG("CLEAR_GARBAGE_SOCKETS");
+	for (GarbageCollector::iterator it = garbageCollector.begin(); it != garbageCollector.end(); ++it)
 	{
 		sockets.erase((*it)->get_fd());
-		delete (*it);	
+		delete (*it);
 	}
 	garbageCollector.clear();
 }

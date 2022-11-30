@@ -169,7 +169,6 @@ int Util::is_dir(const std::string& path)
 	case ENOTDIR:
 		return 0;
 	case ENOENT:
-		std::cout << "throw 404" << std::endl;
 		throw 404;
 	case EACCES:
 		throw 403;

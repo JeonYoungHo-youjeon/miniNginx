@@ -1,6 +1,6 @@
 <?php
-    $cookieName = "apple";
-    $cookieValue = "김사과";
+    $cookieName = "user";
+    $cookieValue = "youjeon";
     setcookie($cookieName, $cookieValue, time()+60*60, "/"); // "apple"이라는 이름으로 "김사과"라는 값을 가지고 60초간 쿠키가 지속됩니다.
 ?>
 <!doctype html>

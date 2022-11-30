@@ -237,15 +237,14 @@ void Event::handle_next_event(ClientSocket* socket, State state)
 			// socket->update_state(REPEAT_REQUEST);
 			// handle_client_read_event(socket);
 		// }
-		if (socket->get_PID())
-		{
-			disconnection(socket);
-		}
-		else if (res->Header["connection"] == "keep-alive")
+		// if (socket->get_PID())
+		// {
+		// 	disconnection(socket);
+		// }
+		if (res->Header["connection"] == "keep-alive")
 		{
 			PRINT_LOG("KEEP_ALIVE");
 			socket->reset();
-			::read(socket->get_fd(), 0, 1000);
 			kq->on_read_event(socket, socket->get_fd());
 			socket->update_state(READ_REQUEST);
 		}

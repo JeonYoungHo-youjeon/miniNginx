@@ -123,14 +123,12 @@ int Response::makeHeader()
 	if (!excutor.empty())
 	{
 		std::vector<string> header = Util::split(Body, '\n');
-		std::cout << "header size" << header.size() <<std::endl;
 
 		std::string::size_type cgiHeaderEnd = Body.find("\r\n\r\n");
 
 		for (std::vector<string>::iterator it = header.begin(); it != header.end(); ++it)
 		{
 			Util::remove_crlf(*it);
-			std::cout << "remove crlf" <<std::endl;
 
 			if ((*it).empty())
 				break ;
@@ -139,7 +137,6 @@ int Response::makeHeader()
 			std::string value = (*it).substr(colon + 2);
 			key = string_to_lower(key);
 			Header[key] = value;	
-		// std::cout << "header size" << header.size() <<std::endl;
 		}
 		Body.erase(0, cgiHeaderEnd + 4);
 	}
@@ -202,7 +199,6 @@ int 	Response::execute()
 			ReqHeader["REQUEST_METHOD"] = Req->StartLine.method;
 			ReqHeader["PATH_TRANSLATED"] = path;
 			ReqHeader["SCRIPT_NAME"] = Req->virtualPath;
-			std::cout << "CONTENT_LENGTH["<<ReqHeader["CONTENT_LENGTH"] << "]" <<std::endl;
 
 			excutor = g_conf[confName][locName][ext][0];
 			TEMP = true;

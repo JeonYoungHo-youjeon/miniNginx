@@ -139,7 +139,7 @@ int		Cgi::close()
 
 void		Cgi::kill()
 {
-	std::cout << "PID: " << pid << std::endl;
+	// std::cout << "PID: " << pid << std::endl;
 	if (pid)
 		::kill(pid, SIGKILL);
 	pid = 0;

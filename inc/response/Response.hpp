@@ -55,7 +55,7 @@ struct Response
 	string	excutor;
 	vector<string> params;
 
-	bool TEMP;
+	bool cgiFlag;
 
 	Response();
 
@@ -211,7 +211,7 @@ int 	Response::execute()
 			ReqHeader["SCRIPT_NAME"] = Req->virtualPath;
 
 			excutor = g_conf[confName][locName][ext][0];
-			TEMP = true;
+			cgiFlag = true;
 			contentResult = new Cgi(path, excutor, ReqHeader);
 		}
 		else
@@ -279,7 +279,7 @@ int 	Response::read()
 		throw StartLine.statusCode = 500;
 
 
-	if (len < BUFFER_SIZE && !TEMP)
+	if (len < BUFFER_SIZE && !cgiFlag)
 		return makeHeader();
 
 	return READ_RESPONSE;
@@ -302,17 +302,26 @@ int Response::send(int clientFd)
 
 	ssize_t	len = ::send(clientFd, Html->c_str(), bufSize, 0);
 
+
 	if (len > 0)
 		Html->erase(0, len);
 
 	if (len < 0)
-		throw StartLine.statusCode = 500;
+	{
+		Header["connection"] = "close";
+		return END_RESPONSE;
+	}
+		// throw StartLine.statusCode = 500;
 		
 	if (Html->empty())
 	{
 		delete Html;Html = 0;
 		return END_RESPONSE;
 	}
+
+	if (!len && !Html->empty())
+		throw 500;
+	
 	return SEND_RESPONSE;
 }
 

@@ -296,7 +296,7 @@ void Event::handle_client_event(const KEvent* event, ClientSocket* socket)
 
 		if (socket->get_PID())
 		{
-			socket->get_response()->TEMP = false;
+			socket->get_response()->cgiFlag = false;
 			handle_client_read_event(socket);
 		}
 		else

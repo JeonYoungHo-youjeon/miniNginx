@@ -18,6 +18,11 @@ public:
 	void on_write_event(const Socket* socket, FD fd);
 	void off_read_event(const Socket* socket, FD fd);
 	void off_write_event(const Socket* socket, FD fd);
+	// void delete_event(const Socket* socket, FD fd)
+	// {
+	// 	update_event(fd, EVFILT_READ, EV_DELETE, 0, 0, (void*)socket);
+	// 	update_event(fd, EVFILT_WRITE, EV_DELETE, 0, 0, (void*)socket);
+	// }
 
 	KQueue();
 	~KQueue();
@@ -58,7 +63,11 @@ const ChangeList& KQueue::get_changeList() const
 
 int KQueue::wait_event()
 {
-	int nEvent = kevent(kq, &changeList[0], changeList.size(), eventList, MAX_EVENT, NULL);
+	// TODO:
+	struct timespec tmout;
+	tmout.tv_nsec = 0;
+	tmout.tv_sec = 1;
+	int nEvent = kevent(kq, &changeList[0], changeList.size(), eventList, MAX_EVENT, &tmout);
 	
 	if (nEvent == -1)
 		throw std::runtime_error("kevent");

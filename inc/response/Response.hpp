@@ -308,6 +308,7 @@ int Response::send(int clientFd)
 
 	if (len < 0)
 		throw StartLine.statusCode = 500;
+		
 	if (Html->empty())
 	{
 		delete Html;Html = 0;

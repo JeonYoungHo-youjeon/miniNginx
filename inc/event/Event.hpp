@@ -135,6 +135,7 @@ void Event::accept_connection(FD serverFD)
 		ClientSocket* socket = (ClientSocket*)sockets[clientFD];
 		State state = socket->set_response(500);
 		kq->set_next_event(socket, state);
+		return;
 	}
 	
 	create_client_socket(clientFD, clientAddr, serverFD);
@@ -145,16 +146,13 @@ void Event::create_client_socket(FD clientFD, const SockAddr& addr, FD serverFD)
 	const std::string s = sockets[serverFD]->get_ip() + ":" + sockets[serverFD]->get_port();
 	ClientSocket* socket = new ClientSocket(clientFD, addr, s);
 	kq->set_client_event(socket, socket->get_fd());
-	sockets.insert(std::pair<FD, Socket*>(socket->get_fd(), socket));
+	sockets[socket->get_fd()] = socket;
 
 	logger.connection_logging(socket, LOG_GREEN); // REMOVE
 }
 
 void Event::disconnection(const ClientSocket* socket)
 {	
-	std::cout << "disconnection fd: " << socket->get_fd() << std::endl;
-	logger.disconnection_logging(socket, LOG_YELLOW);
-
 	add_garbage(socket);
 }
 
@@ -249,7 +247,8 @@ void Event::handle_next_event(ClientSocket* socket, State state)
 		{
 			PRINT_LOG("DISCONNECTION");
 			socket->update_state(NOTHING);
-			disconnection(socket);
+			kq->off_write_event(socket, socket->get_fd());
+			// disconnection(socket);
 		}
 	}
 	else
@@ -264,7 +263,6 @@ void Event::socket_timeout(const ClientSocket* socket)
 {
 	if (socket->is_expired() && sockets.count(socket->get_fd()))
 	{
-		logger.disconnection_logging(socket, LOG_YELLOW);
 		add_garbage(socket);
 	}
 }
@@ -342,10 +340,13 @@ void Event::clear_garbage_sockets()
 	for (GarbageCollector::iterator it = garbageCollector.begin(); it != garbageCollector.end(); ++it)
 	{
 		std::cout << "fd : " << it->first << std::endl;
+		std::cout << "disconnection fd: " << it->second->get_fd() << std::endl;
+		logger.disconnection_logging((const ClientSocket*)it->second, LOG_YELLOW);
 
+		// kq->delete_event((const Socket*)it->second, it->first);
+		delete sockets[it->first];
 		sockets.erase(it->first);
-		delete it->second;
-		it->second = 0;
+		sockets[it->first] = 0;
 	}
 
 	garbageCollector.clear();
@@ -354,7 +355,7 @@ void Event::clear_garbage_sockets()
 
 void Event::add_garbage(const Socket* socket)
 {
-	if (garbageCollector.count(socket->get_fd()) == 0)
+	if (garbageCollector[socket->get_fd()] == 0)
 		garbageCollector[socket->get_fd()] = socket;
 }
 

@@ -68,14 +68,14 @@ struct Request
 		return *this;
 	}
 
-	int clear_read()
-	{
-		progress = START_LINE;
-		Header.clear();
-		bodySS.str("");
+	// int clear_read()
+	// {
+	// 	progress = START_LINE;
+	// 	Header.clear();
+	// 	bodySS.str("");
 
-		return read();
-	}
+	// 	return read();
+	// }
 
 	int read()
 	{

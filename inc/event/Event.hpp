@@ -171,10 +171,10 @@ void Event::handle_client_read_event(ClientSocket* socket)
 			PRINT_LOG("READ_REQUEST");
 			state = req->read();
 			break;
-		case REPEAT_REQUEST:
-			PRINT_LOG("REPEAT_REQUEST");
-			state = req->clear_read();
-			break;
+		// case REPEAT_REQUEST:
+		// 	PRINT_LOG("REPEAT_REQUEST");
+		// 	state = req->clear_read();
+		// 	break;
 		case READ_RESPONSE:
 			PRINT_LOG("READ_RESPONSE");
 			state = res->read();
@@ -294,7 +294,6 @@ void Event::handle_client_event(const KEvent* event, ClientSocket* socket)
 	{
 		PRINT_LOG("EV_EOF");
 
-		std::cout << "client FD : " << socket->get_fd() << std::endl;
 		if (socket->get_PID())
 		{
 			socket->get_response()->TEMP = false;

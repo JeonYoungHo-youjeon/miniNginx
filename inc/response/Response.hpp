@@ -28,7 +28,7 @@ struct ResponseStartLine
 
 struct Response
 {
-	const Request *Req;
+	Request *Req;
 	ResponseStartLine StartLine;
 	map<string, string> Header;
 	string Body;
@@ -145,18 +145,21 @@ int Response::makeHeader()
 		}
 		Body.erase(0, cgiHeaderEnd + tmp);
 	}
+	if (StartLine.statusCode / 100 == 2 && Req->Header["connection"] != "close")
+		Header["connection"] = "keep-alive";
+	else
+		Header["connection"] = "close";	
 
-	map<string, string>::iterator it = Header.find("connection");
-	Header["connection"] = "close";
-
-
+	map<string, string>::iterator it;
 	if (!(StartLine.statusCode == 204 || StartLine.statusCode == 304))
 	{
-		Header["content-Length"] = Util::to_string(Body.size());
+		Header["content-length"] = Util::to_string(Body.size());
 		it = Header.find("content-type");
 		if (it == Header.end())
 			Header["content-type"] = g_conf.getContentType(ext);
 	}
+	else
+		Header["connection"] = "close";
 	return makeStartLine();
 }
 
@@ -410,7 +413,7 @@ void Response::clear()
 int Response::set(const Request& req)
 {
 	StartLine.statusCode = 200;
-	Req = &req;
+	Req = const_cast<Request*>(&req);
 	url = req.virtualPath;
 	confName = req.configName;
 	locName = req.locationName;

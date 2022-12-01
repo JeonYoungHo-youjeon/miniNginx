@@ -3,7 +3,6 @@
 
 # include "Contents.hpp"
 # include "../parse/Config.hpp"
-# include "../exception/Exception.hpp"
 # include "../define.hpp"
 
 # include <unistd.h>
@@ -40,30 +39,12 @@ struct Cgi : public Contents
 };
 
 Cgi::Cgi(const std::string& path, const string& excutor, std::map<std::string, std::string> header)
-: Contents(path), excutor(excutor), header(header)
+: Contents(path), header(header), excutor(excutor)
 {}
-
-
-Cgi::Cgi(const std::string& path, const string& excutor, const vector<std::string>& params)
-: Contents(path), excutor(excutor), envp(NULL)
-{
-	envp = new char* [params.size() + 1];
-	for (size_t i = 0; i < params.size(); ++i)
-	{
-		envp[i] = new char[params[i].size() + 1];
-		strcpy(envp[i], params[i].c_str());
-	}
-	envp[params.size()] = NULL;
-	pwd = getcwd(0, 0);
-	if (!pwd)
-		return ;
-}
 
 Cgi::~Cgi()
 {
 	close();
-	// TODO : envp delete
-	// kill();
 }
 
 int     Cgi::set()
@@ -77,7 +58,7 @@ int     Cgi::set()
 			0
 	};
 
-	if (pipe(inPipe) < 0 || pipe(outPipe))
+	if (pipe(inPipe) < 0 || pipe(outPipe) < 0)
 		throw 500;
     
 	pid = fork();
@@ -100,16 +81,17 @@ int     Cgi::set()
 
 		if (header["QUERY_STRING"] != "")
 		   	setenv("QUERY_STRING", header["QUERY_STRING"].c_str(), 1);				// url의 ? 뒷부분(params)
-		if (header.count("COOKIE"))
-    		setenv("HTTP_COOKIE", header["COOKIE"].c_str(), 1);						// 헤더의 쿠키
-		if (header.count("CONTENT_LENGTH"))
-    		setenv("CONTENT_LENGTH", header["CONTENT_LENGTH"].c_str(), 1);			// 헤더의 컨텐츠 길이
-		if (header.count("ACCEPT"))
-    		setenv("HTTP_ACCEPT", header["ACCEPT"].c_str(), 1);						// 헤더의 accept
-		if (header.count("ACCEPT_LANGUAGE"))
-	    	setenv("HTTP_ACCEPT_LANGUAGE", header["ACCEPT_LANGUAGE"].c_str(), 1);	// 헤더의 accpet-lang	
-		if (header.count("USER_AGENT"))
- 	   		setenv("HTTP_USER_AGENT", header["USER_AGENT"].c_str(), 1);				// 헤더의 user-agent
+
+		if (header.count("cookie"))
+    		setenv("HTTP_COOKIE", Util::remove_crlf(header["cookie"]).c_str(), 1);						// 헤더의 쿠키
+		if (header.count("content-length"))
+    		setenv("CONTENT_LENGTH", Util::remove_crlf(header["content-length"]).c_str(), 1);			// 헤더의 컨텐츠 길이
+		if (header.count("accept"))
+    		setenv("HTTP_ACCEPT", Util::remove_crlf(header["accept"]).c_str(), 1);						// 헤더의 accept
+		if (header.count("accept-language"))
+	    	setenv("HTTP_ACCEPT_LANGUAGE", Util::remove_crlf(header["accept-language"]).c_str(), 1);	// 헤더의 accpet-lang	
+		if (header.count("user-agent"))
+ 	   		setenv("HTTP_USER_AGENT", Util::remove_crlf(header["user-agent"]).c_str(), 1);				// 헤더의 user-agent
     	
 		
 
@@ -126,6 +108,12 @@ int     Cgi::set()
         if (::close(inPipe[0]) < 0 || ::close(outPipe[1]) < 0)
             throw 500;
         inFd = inPipe[1];
+		if (header["REQUEST_METHOD"] == "GET")
+		{
+			::close(inFd);
+		}
+		
+		
         outFd = outPipe[0];
         fcntl(inFd, F_SETFL, O_NONBLOCK);
     }
@@ -141,7 +129,6 @@ int		Cgi::close()
 
 void		Cgi::kill()
 {
-	std::cout << "PID: " << pid << std::endl;
 	if (pid)
 		::kill(pid, SIGKILL);
 	pid = 0;

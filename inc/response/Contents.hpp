@@ -11,7 +11,7 @@ struct Contents
 	: url(url), pid(0) {};
     virtual ~Contents(){};
 
-	const int 			getPid() const ;
+	int 			getPid() const ;
 	void 				setPid(int pid);
 	virtual int			set() = 0;
 	virtual int			close() = 0;
@@ -25,7 +25,7 @@ struct Contents
 	pid_t 		pid;
 };      //  Contents
 
-const int	Contents::getPid() const
+int	Contents::getPid() const
 {
 	return pid;
 }

@@ -2,13 +2,13 @@
 # define FILE_HPP
 
 # include "Contents.hpp"
-# include "../exception/Exception.hpp"
 # include <sys/stat.h>
+# include <fcntl.h>
 
 struct File : public Contents
 {
-	File(const std::string& url) : Contents(url) {};
-	File(const std::string& path, const std::vector<std::string>& param)
+	File(const std::string& url, int flag) : Contents(url), flag(flag) {};
+	File(const std::string& path)
 	: Contents(path) {};
 	~File()
 	{
@@ -19,14 +19,20 @@ struct File : public Contents
 	int	close();
 	void kill() {};
 	bool checkNull();
+
+	int	flag;
 };
 
 int	File::set()
 {
-	outFd = ::open(url.c_str(), O_RDONLY | O_CREAT, 777);
-	inFd = ::open(url.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 777);
+	inFd = ::open(url.c_str(), flag, 0644);
+	if (inFd == -1)
+	{
+		::creat(url.c_str(), 0777);
+		inFd = ::open(url.c_str(), flag, 0644);
+	}
+	outFd = ::open(url.c_str(), O_RDONLY, 0644);
 
-	cout << inFd << ' ' << outFd << endl;
 	if (outFd < 0 || inFd < 0)
 		throw 404;
 	pid = 0;

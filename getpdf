@@ -1,3 +1,0 @@
-GET /sample.pdf HTTP/1.1
-host: localhost
-

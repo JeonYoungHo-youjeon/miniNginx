@@ -28,7 +28,7 @@ struct ResponseStartLine
 
 struct Response
 {
-	const Request *Req;
+	Request *Req;
 	ResponseStartLine StartLine;
 	map<string, string> Header;
 	string Body;
@@ -55,7 +55,7 @@ struct Response
 	string	excutor;
 	vector<string> params;
 
-	bool TEMP;
+	bool cgiFlag;
 
 	Response();
 
@@ -75,7 +75,7 @@ struct Response
 			ret += Body + "\r\n";
 		return ret;
 	}
-	int clear();
+	void clear();
 
 	int set(const std::string& configName, int error_code)
 	{
@@ -125,38 +125,47 @@ int Response::makeHeader()
 		std::vector<string> header = Util::split(Body, '\n');
 
 		std::string::size_type cgiHeaderEnd = Body.find("\r\n\r\n");
-
+		int tmp = 4;
+		if (cgiHeaderEnd == std::string::npos)
+		{
+			cgiHeaderEnd = Body.find("\n\n");
+			tmp = 2;
+		}
 		for (std::vector<string>::iterator it = header.begin(); it != header.end(); ++it)
 		{
-			// std::cout << "key1= [" << *it << "]" << std::endl;
 			Util::remove_crlf(*it);
-			// std::cout << " key2= [ " << *it << " ] " << std::endl;
+
 			if ((*it).empty())
 				break ;
 			std::string::size_type colon = (*it).find(": ");
 			std::string key = (*it).substr(0, colon);
-			std::string value = (*it).substr(colon + 2);
+			std::string value = (*it).substr(colon + tmp/2);
 			key = string_to_lower(key);
 			Header[key] = value;	
 		}
-		Body.erase(0, cgiHeaderEnd + 4);
+		Body.erase(0, cgiHeaderEnd + tmp);
 	}
-	map<string, string>::iterator it = Header.find("Connection");
-	if (StartLine.statusCode / 100 == 2)
+	if (StartLine.statusCode / 100 == 2 && Req->Header["connection"] != "close")
 		Header["connection"] = "keep-alive";
 	else
+		Header["connection"] = "close";	
+
+	map<string, string>::iterator it;
+	if (!(StartLine.statusCode == 204 || StartLine.statusCode == 304))
+	{
+		Header["content-length"] = Util::to_string(Body.size());
+		it = Header.find("content-type");
+		if (it == Header.end())
+			Header["content-type"] = g_conf.getContentType(ext);
+	}
+	else
 		Header["connection"] = "close";
-	it = Header.find("content-type");
-	if (it == Header.end())
-		Header["content-type"] = g_conf.getContentType(ext);
-	Header["content-Length"] = Util::to_string(Body.size());
-	{    /* 필요 헤더*/    }
 	return makeStartLine();
 }
 
 std::string Response::string_to_lower(std::string s)
 {
-	for (int i = 0; i < s.size(); ++i)
+	for (size_t i = 0; i < s.size(); ++i)
 		s[i] = std::tolower(s[i]);
 	return s;
 }
@@ -186,6 +195,7 @@ int 	Response::execute()
 			Body = url;
 			return 	makeHeader();
 		}
+
 		//	Method Error -> Bad Request
 		if (g_conf[confName][locName].is_exist("return"))
 			return redirect(
@@ -202,12 +212,16 @@ int 	Response::execute()
 			ReqHeader["SCRIPT_NAME"] = Req->virtualPath;
 
 			excutor = g_conf[confName][locName][ext][0];
-			TEMP = true;
+			cgiFlag = true;
 			contentResult = new Cgi(path, excutor, ReqHeader);
 		}
 		else
-			contentResult = new File(path);
-
+		{
+			if (Req->StartLine.method == "GET")
+				contentResult = new File(path, O_WRONLY);
+			else
+				contentResult = new File(path, O_WRONLY | O_TRUNC);
+		}
 		progress = contentResult->set();
 		if (Req->StartLine.method == "GET" && contentResult->checkNull())
 			return statement = READ_RESPONSE;
@@ -216,8 +230,7 @@ int 	Response::execute()
 	}
 	catch (int errNo)	//	예외 발생 시 일단 객체 내에서 처리 -> 수정 O
 	{
-		cout << errno << endl;
-		return make_errorpage(errNo);
+		return make_errorpage(StartLine.statusCode = errNo);
 	}
 	return makeHeader();
 }
@@ -232,9 +245,7 @@ int 	Response::write()
 		return READ_RESPONSE;
 
 	//	쓰고 쓸 것이 남아있으면 WRITE_RESPONSE 반환
-	std::cout << "=========[RESPONSE WRTIE]==========" << std::endl;
-	ssize_t	len = ::write(contentResult->inFd, postBody.c_str(), postBody.size());
-	std::cout << "len : " << len << std::endl;
+	size_t	len = ::write(contentResult->inFd, postBody.c_str(), postBody.size());
 
 	if (len < 0)
 		throw StartLine.statusCode = 500;
@@ -242,7 +253,8 @@ int 	Response::write()
 	if (len == postBody.size())
 	{
 		postBody.erase(0, len);
-		return makeHeader();
+		close(contentResult->inFd);
+		return READ_RESPONSE;
 	}
 
 	postBody.erase(0, len);
@@ -263,13 +275,12 @@ int 	Response::read()
 	char buf[BUFFER_SIZE];
 	memset(buf, 0, BUFFER_SIZE);
 	ssize_t	len = ::read(contentResult->outFd, buf, BUFFER_SIZE);
-
 	Body += string(buf, len);
-	//	< BUFFER_SIZE 밑에 있어서 닿을 수 없던 부분 수정
+
 	if (len < 0)
 		throw StartLine.statusCode = 500;
 
-	if (len < BUFFER_SIZE && !TEMP)
+	if (len < BUFFER_SIZE && !cgiFlag)
 		return makeHeader();
 
 	return READ_RESPONSE;
@@ -277,7 +288,7 @@ int 	Response::read()
 
 int Response::redirect(int code, const string& location)
 {
-	Header["Location"] = location;
+	Header["location"] = location;
 	StartLine.statusCode = code;
 	StartLine.reasonPhrase = g_conf.getStatusMsg(code);
 	return makeHeader();
@@ -296,12 +307,20 @@ int Response::send(int clientFd)
 		Html->erase(0, len);
 
 	if (len < 0)
-		throw StartLine.statusCode = 500; // FIXME: 이거 동작X
+	{
+		Header["connection"] = "close";
+		return END_RESPONSE;
+	}
+		
 	if (Html->empty())
 	{
 		delete Html;Html = 0;
 		return END_RESPONSE;
 	}
+
+	if (!len && !Html->empty())
+		throw 500;
+	
 	return SEND_RESPONSE;
 }
 
@@ -323,16 +342,21 @@ std::string Response::findFileName(const std::string& url)
 
 int Response::make_errorpage(int code)
 {
-	ext = ".html";
-	if (g_conf[confName][locName].is_exist("error_page"))
+	if (code == 204 || code == 304)
 	{
+		return makeHeader();
+	}
+	ext = ".html";
+	if (g_conf[confName].is_exist(locName))
+		if (g_conf[confName][locName].is_exist("error_page"))
+		{
 		for (size_t i = 0; i < g_conf[confName][locName]["error_page"].size() - 1; ++i)
 			if (Util::to_string(StartLine.statusCode) == g_conf[confName][locName]["error_page"][i])
 			{	
-				url = g_conf[confName][locName]["error_page"].back();
+				url = g_conf[confName][locName]["error_page"][g_conf[confName][locName]["error_page"].size() - 1];
 				return execute();
 			}
-	}
+		}
 	Body =
 			"<!DOCTYPE html>\n"
 			"<html>\n"
@@ -385,28 +409,30 @@ int Response::makeStartLine()
 	return statement = SEND_RESPONSE;
 }
 
-int Response::clear()
+void Response::clear()
 {
 	//	내부 객체 delete -> REPEAT REQUEST 반환 -> new Req로 연결(Req 삭제위치)
 	delete contentResult;
 	delete Html;
 	contentResult = 0;
 	Html = 0;
-	return REPEAT_REQUEST;
 }
 
 int Response::set(const Request& req)
 {
 	StartLine.statusCode = 200;
-	Req = &req;
+	Req = const_cast<Request*>(&req);
 	url = req.virtualPath;
 	confName = req.configName;
 	locName = req.locationName;
 	postBody = req.bodySS.str();
 	fileName = req.fileName;
+	cgiFlag = false;
 
 	//	root 설정
-	path = getcwd(0, 0);
+	char*	tmp = getcwd(0, 0);
+	path = tmp;
+	free(tmp);
 	try
 	{
 		//	Redirect Uri
@@ -421,7 +447,7 @@ int Response::set(const Request& req)
 			for (vector<string>::const_iterator it = g_conf[confName][locName]["limit_except"].begin();
 				 it != g_conf[confName][locName]["limit_except"].end(); ++it)
 				if (*it == Req->StartLine.method)
-					throw 500;
+					throw 405;
 		//	Upload Path
 		//	Uri Check Dir is or not
 		if (req.StartLine.method == "POST" && g_conf[confName][locName].is_exist("upload"))
@@ -438,13 +464,8 @@ int Response::set(const Request& req)
 				return listing(path, url);
 			else
 				throw 403;
+			Util::is_dir(path);
 		}
-		else if (g_conf[confName][locName].is_exist("upload") && req.StartLine.method == "POST")
-		{
-			path = Util::join(path, g_conf[confName][locName]["upload"][0], '/');
-			// cout << req.bodySS.str() << endl;
-		}
-
 		//	get Extension
 		ext = findExtension(path);
 	}
@@ -454,44 +475,5 @@ int Response::set(const Request& req)
 	}
 	return statement = execute();
 }
-/*
-string	fileNameParseFrom(map<string, string>& header, string& postBody)
-{
-	string delem = string(
-			Header["CONTENT_TYPE"].begin() + Header["CONTENT_TYPE"].find(boundary) + boundary.size(),
-			Header["CONTENT_TYPE"].end());
-	delem = "--" + delem;
-	//int start = postBody.begin() + postBody.find(delem) + delem.size(), end;
-	//std::string::iterator	beg = postBody.begin() + postBody.find(crlf) + delem.size(), end;
-	cout << postBody.find(crlf) << endl;
-	std::string::iterator	beg = postBody.begin(), end = beg + postBody.find(crlf);
 
-	std::pair<std::string, std::string>	HeaderBody;
-
-	HeaderBody.first = string(beg, end);
-	postBody.erase(0, HeaderBody.first.size() + crlf.size());
-	beg = postBody.begin();
-	end = beg + postBody.find(crlf);
-	HeaderBody.second = postBody;
-	cout << delem << endl;
-	while (HeaderBody.first.find(crlf) != string::npos)
-		HeaderBody.first.replace(HeaderBody.first.find(crlf), crlf.size(), "");
-	while (HeaderBody.first.find(delem) != string::npos)
-		HeaderBody.first.replace(HeaderBody.first.find(delem), delem.size(), "");
-
-	while (HeaderBody.second.find(crlf) != string::npos)
-		HeaderBody.second.replace(HeaderBody.second.find(crlf), crlf.size(), "");
-	while (HeaderBody.second.find(delem) != string::npos)
-	{
-		HeaderBody.second.erase(HeaderBody.second.find(delem), delem.size());
-		//HeaderBody.second.replace(HeaderBody.second.find(delem), delem.size(), "");
-		cout << "-=-=-=-" << endl;
-		cout << HeaderBody.second << endl;
-	}
-
-	cout << "==first==" << endl;
-	cout << HeaderBody.first << endl;
-	cout << "==second==" << endl;
-	cout << HeaderBody.second << endl;
-}*/
 #endif

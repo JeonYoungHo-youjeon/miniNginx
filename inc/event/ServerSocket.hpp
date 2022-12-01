@@ -6,7 +6,6 @@
 
 # include "Type.hpp"
 # include "Socket.hpp"
-# include "../exception/Exception.hpp"
 
 
 class ServerSocket
@@ -21,19 +20,14 @@ public:
 
 		fd = socket(PF_INET, SOCK_STREAM, 0);
 		if (fd == -1)
-			throw EventInitException("socket() error");
-		
+			throw std::runtime_error("socket");
 
 		if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &ENABLE_REUSERADDR, sizeof(ENABLE_REUSERADDR)) == -1)
-			throw EventInitException("setsockopt() error");
-
-		// if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &ENABLE_KEEPALIVE, sizeof(ENABLE_KEEPALIVE)) == -1)
-		// 	throw EventInitException("setsockopt() error");
-
-		// TODO: keepalive time 조정
+			throw std::runtime_error("setsocketopt");
 
 		if (fcntl(fd, F_SETFL, O_NONBLOCK) == -1)
-			throw EventInitException("fcntl() error");
+			throw std::runtime_error("fcntl");
+
 
 		memset(&addr, 0, sizeof(addr));
 		addr.sin_family = AF_INET;
@@ -41,12 +35,14 @@ public:
 		addr.sin_port = htons(std::atoi(port_.c_str()));
 
 		if (bind(fd, (struct sockaddr*)&addr, sizeof(addr)) == -1)
-			throw EventInitException("bind() error");
+			throw std::runtime_error("bind");
 
 		if (listen(fd, SOMAXCONN) == -1)
-			throw EventInitException("listen() error");
+			throw std::runtime_error("listen");
 	}
-	ServerSocket(const ServerSocket& other) {};
+	ServerSocket(const ServerSocket& other) {
+		(void)other;
+	};
 	// ServerSocket operator=(const ServerSocket& rhs);
 	~ServerSocket() {};
 private:

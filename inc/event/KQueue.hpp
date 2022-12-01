@@ -59,37 +59,16 @@ const ChangeList& KQueue::get_changeList() const
 int KQueue::wait_event()
 {
 	int nEvent = kevent(kq, &changeList[0], changeList.size(), eventList, MAX_EVENT, NULL);
-
-	// TODO: error 발생 시 500 Inerneal Server Error를 던져야 하는 상황 확인
-	// switch (errno)
-	// {
-	// case EACCES:
-	// 	throw EventInitException("kevent() error [errno : EACCES]");
-	// case EFAULT:
-	// 	throw EventInitException("kevent() error [errno : EFAULT]");
-	// case EBADF:
-	// 	throw EventInitException("kevent() error [errno : EBADF]");
-	// case EINTR:
-	// 	throw EventInitException("kevent() error [errno : EINTR]");
-	// case EINVAL:
-	// 	throw EventInitException("kevent() error [errno : EINVAL]");
-	// case ENOENT:
-	// 	throw EventInitException("kevent() error [errno : ENOENT]");
-	// case ENOMEM:
-	// 	throw EventInitException("kevent() error [errno : ENOMEM]");
-	// case ESRCH:
-	// 	throw EventInitException("kevent() error [errno : ESRCH]");
-	// default:
-	// 	changeList.clear();
-	// 	return nEvent;
-	// }
+	
+	if (nEvent == -1)
+		throw std::runtime_error("kevent");
 	changeList.clear();
 	return nEvent;
 }
 
 void KQueue::set_server_event(const Socket* socket, FD fd)
 {
-	add_read_event(socket, fd);
+	update_event(fd, EVFILT_READ, EV_ADD, 0, 0, (void*)socket);
 }
 
 void KQueue::set_client_event(const Socket* socket, FD fd)
@@ -166,36 +145,40 @@ void KQueue::set_next_event(ClientSocket* socket, State state)
 	{
 	case READ_REQUEST:
 		PRINT_LOG("NEXT_READ_REQUEST");
-		std::cout << "write fd : " << socket->get_writeFD() << std::endl;
-		std::cout << "read fd : " << socket->get_readFD() << std::endl;		on_read_event(socket, socket->get_fd());
+		on_read_event(socket, socket->get_fd());
 		break;
 	case READ_RESPONSE:
 		PRINT_LOG("NEXT_READ_RESPONSE");
 		if (!socket->get_PID() && res->contentResult->getPid())
 		{
 			socket->set_PID(res->contentResult->getPid());
-			std::cout << "\tUPDATE PID : " << socket->get_PID() << std::endl;
 			add_proc_event(socket, socket->get_PID());
 		}
-		if (!socket->get_readFD() && res->contentResult->outFd)
+		if (!socket->get_readFD() && res->contentResult->outFd \
+			&& !socket->get_readFD() && res->contentResult->inFd)
 		{
 			socket->set_readFD(res->contentResult->outFd);
+			socket->set_writeFD(res->contentResult->inFd);
 			set_client_event(socket, socket->get_readFD());
+			set_client_event(socket, socket->get_writeFD());
 		}
 
 		on_read_event(socket, socket->get_readFD());
+		off_write_event(socket, socket->get_writeFD());
 		break;
 	case WRITE_RESPONSE:
 		PRINT_LOG("NEXT_WRITE_RESPONSE");
 		if (!socket->get_PID() && res->contentResult->getPid())
 		{
 			socket->set_PID(res->contentResult->getPid());
-			std::cout << "\tUPDATE PID : " << socket->get_PID() << std::endl;
 			add_proc_event(socket, socket->get_PID());
 		}
-		if (!socket->get_writeFD() && res->contentResult->inFd)
+		if (!socket->get_readFD() && res->contentResult->outFd \
+			&& !socket->get_readFD() && res->contentResult->inFd)
 		{
+			socket->set_readFD(res->contentResult->outFd);
 			socket->set_writeFD(res->contentResult->inFd);
+			set_client_event(socket, socket->get_readFD());
 			set_client_event(socket, socket->get_writeFD());
 		}
 
@@ -223,15 +206,9 @@ void KQueue::init_kqueue()
 {
 	kq = kqueue();
 
-	switch (errno)
-	{
-	case ENOMEM:
-		throw EventInitException("kqueue() error [errno : ENOMEM]");
-	case EMFILE:
-		throw EventInitException("kqueue() error [errno : EMFILE]");
-	default:
-		break;
-	}
+	if (kq == -1)
+		throw std::runtime_error("kqueue");
+
 }
 
 void KQueue::update_event(uintptr_t ident, int16_t filter, uint16_t flags, \
@@ -250,11 +227,14 @@ void KQueue::add_timeout(const Socket* socket)
 
 // private
 KQueue::KQueue(const KQueue& other)
-{}
+{
+	(void)other;
+}
 
 // private
 KQueue KQueue::operator=(const KQueue& rhs)
 {
+	(void)rhs;
 	return *this;
 }
 

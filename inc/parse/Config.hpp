@@ -17,7 +17,7 @@ public:
 	Config(const char* filepath) ;
 	const std::map<std::string, Server>& getServers() const ;
 	string	str(size_t tab_size);
-	const bool is_exist(const string& key) const;
+	bool is_exist(const string& key) const;
 	const Server& operator[](const string& key) const;
 	const string getContentType(const string& key) const;
 	const string& getStatusMsg(int key) const;
@@ -84,9 +84,11 @@ Config::Config(const char* filepath)
 				std::cerr << "'server' Directive Error" << std::endl;
 
 			Server	tmp(value);
-
 			if (mServers.find(tmp.id()) != mServers.end())
-				std::cerr << "Parse Map Collision" << std::endl;
+			{
+				std::cerr << "Config Redefined Error" << std::endl;
+				::exit(1);
+			}
 			else
 				mServers[tmp.id()] = tmp;
 			key.clear();
@@ -106,7 +108,7 @@ void	Config::preprocess(std::ifstream& ifs)
     mStringBuf = Util::remover(mStringBuf, '\t');
 }
 
-const bool Config::is_exist(const string& key) const
+bool Config::is_exist(const string& key) const
 {
 	return mServers.find(key) != mServers.end();
 }

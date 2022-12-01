@@ -107,7 +107,7 @@ void Event::create_server_socket(const ConfigType::iterator it)
 	std::vector<std::string> temp = Util::split(it->first, ':');
 	ServerSocket* socket = new ServerSocket(temp[0], temp[1]);
 
-	sockets.insert(std::pair<FD, Socket*>(socket->get_fd(), socket));
+	sockets[socket->get_fd()] = socket;
 	kq->set_server_event(socket, socket->get_fd());
 
 	logger.add_server(socket->get_fd(), it->first); // REMOVE
@@ -120,8 +120,6 @@ void Event::accept_connection(FD serverFD)
 
 	memset(&clientAddr, 0, sizeof(clientAddr));
 	FD clientFD = accept(serverFD, (struct sockaddr*)&clientAddr, &clientAddrLen);
-	std::cout << "Created client FD : " << clientFD << std::endl;
-	std::cout << "client ADDR : " << inet_ntoa(clientAddr.sin_addr) << "." << ntohs(clientAddr.sin_port) << std::endl;
 
 	if (clientFD == -1)
 	{
@@ -248,7 +246,7 @@ void Event::handle_next_event(ClientSocket* socket, State state)
 			PRINT_LOG("DISCONNECTION");
 			socket->update_state(NOTHING);
 			kq->off_write_event(socket, socket->get_fd());
-			// disconnection(socket);
+			disconnection(socket);
 		}
 	}
 	else
@@ -330,20 +328,12 @@ void Event::handle_child_process(const KEvent* event, ClientSocket* socket)
 void Event::clear_garbage_sockets()
 {
 	PRINT_LOG("CLEAR_GARBAGE_SOCKETS");
-	std::cout << "size : " << garbageCollector.size() << std::endl;
-	for (auto pr : garbageCollector)
-	{
-		std::cout << pr.first << " ";
-	}
-	std::cout << std::endl;
 
 	for (GarbageCollector::iterator it = garbageCollector.begin(); it != garbageCollector.end(); ++it)
 	{
-		std::cout << "fd : " << it->first << std::endl;
-		std::cout << "disconnection fd: " << it->second->get_fd() << std::endl;
 		logger.disconnection_logging((const ClientSocket*)it->second, LOG_YELLOW);
 
-		// kq->delete_event((const Socket*)it->second, it->first);
+		garbageCollector[it->first] = 0;
 		delete sockets[it->first];
 		sockets.erase(it->first);
 		sockets[it->first] = 0;

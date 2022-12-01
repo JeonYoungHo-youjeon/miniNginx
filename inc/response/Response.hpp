@@ -149,18 +149,14 @@ int Response::makeHeader()
 	map<string, string>::iterator it = Header.find("connection");
 	Header["connection"] = "close";
 
-	// if (StartLine.statusCode / 100 == 2 && Header["connection"] == "keep-alive")
-	// {
-	// 	Header["connection"] = "keep-alive";
-	// 	Header["Keep-Alive"] = "timeout=" + Util::to_string(TIMEOUT);
-	// }
-	// else
-	// 	Header["connection"] = "close";
-	it = Header.find("content-type");
-	if (it == Header.end())
-		Header["content-type"] = g_conf.getContentType(ext);
-	Header["content-Length"] = Util::to_string(Body.size());
-	{    /* 필요 헤더*/    }
+
+	if (!(StartLine.statusCode == 204 || StartLine.statusCode == 304))
+	{
+		Header["content-Length"] = Util::to_string(Body.size());
+		it = Header.find("content-type");
+		if (it == Header.end())
+			Header["content-type"] = g_conf.getContentType(ext);
+	}
 	return makeStartLine();
 }
 
@@ -335,6 +331,10 @@ std::string Response::findFileName(const std::string& url)
 
 int Response::make_errorpage(int code)
 {
+	if (code == 204 || code == 304)
+	{
+		return makeHeader();
+	}
 	ext = ".html";
 	if (g_conf[confName].is_exist(locName))
 		if (g_conf[confName][locName].is_exist("error_page"))

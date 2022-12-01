@@ -272,7 +272,7 @@ void Event::handle_server_event(const KEvent* event, const ServerSocket* socket)
 		std::cout << "SERVER Socket Error" << std::endl;
 		return;
 	}
-
+	
 	accept_connection(socket->get_fd());
 }
 

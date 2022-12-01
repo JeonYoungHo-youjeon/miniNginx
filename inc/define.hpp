@@ -3,6 +3,7 @@
 
 enum eType
 {
+	EMPTY,
 	SERVER,
 	CLIENT
 };

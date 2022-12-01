@@ -1,6 +1,7 @@
 #ifndef EVENT_HPP
 # define EVENT_HPP
 
+# include <map>
 
 # include "Type.hpp"
 # include "KQueue.hpp"
@@ -14,7 +15,7 @@ class Event
 {
 public:
 	typedef std::map<FD, Socket*>	SocketMap;
-	typedef std::vector<const Socket*>	GarbageCollector;
+	typedef std::map<int, const Socket*>	GarbageCollector;
 public:
 	void event_loop();
 	
@@ -154,18 +155,7 @@ void Event::disconnection(const ClientSocket* socket)
 	std::cout << "disconnection fd: " << socket->get_fd() << std::endl;
 	logger.disconnection_logging(socket, LOG_YELLOW);
 
-	bool flag = true;
-	for (auto it = garbageCollector.begin(); it != garbageCollector.end(); ++it)
-	{
-		if ((*it)->get_fd() == socket->get_fd())
-		{
-			flag = false;
-			break;
-		}
-	}
-	if (flag)
-		add_garbage(socket);
-	// add_garbage(socket);
+	add_garbage(socket);
 }
 
 void Event::handle_client_read_event(ClientSocket* socket)
@@ -343,17 +333,19 @@ void Event::clear_garbage_sockets()
 {
 	PRINT_LOG("CLEAR_GARBAGE_SOCKETS");
 	std::cout << "size : " << garbageCollector.size() << std::endl;
-	for (int i = 0; i < garbageCollector.size(); ++i)
+	for (auto pr : garbageCollector)
 	{
-		std::cout << garbageCollector[i]->get_fd() << " ";
+		std::cout << pr.first << " ";
 	}
 	std::cout << std::endl;
 
 	for (GarbageCollector::iterator it = garbageCollector.begin(); it != garbageCollector.end(); ++it)
 	{
-		std::cout << "fd : " << (*it)->get_fd() << std::endl;
-		sockets.erase((*it)->get_fd());
-		delete (*it);
+		std::cout << "fd : " << it->first << std::endl;
+
+		sockets.erase(it->first);
+		delete it->second;
+		it->second = 0;
 	}
 
 	garbageCollector.clear();
@@ -362,7 +354,8 @@ void Event::clear_garbage_sockets()
 
 void Event::add_garbage(const Socket* socket)
 {
-	garbageCollector.push_back(socket);
+	if (garbageCollector.count(socket->get_fd()) == 0)
+		garbageCollector[socket->get_fd()] = socket;
 }
 
 // private

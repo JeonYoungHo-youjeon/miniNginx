@@ -22,10 +22,10 @@ enum eState
 
 static const std::string HEAD[] =
 {
-	"TRANSFER_ENCODING",
-	"CONTENT_LENGTH",
-	"CONNECTION",
-	"COOKIE"
+	"transfer-encoding",
+	"content-length",
+	"connection",
+	"cookie"
 };
 
 enum eHeader

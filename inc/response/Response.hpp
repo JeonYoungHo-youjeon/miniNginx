@@ -165,7 +165,7 @@ int Response::makeHeader()
 
 std::string Response::string_to_lower(std::string s)
 {
-	for (int i = 0; i < s.size(); ++i)
+	for (size_t i = 0; i < s.size(); ++i)
 		s[i] = std::tolower(s[i]);
 	return s;
 }
@@ -195,6 +195,7 @@ int 	Response::execute()
 			Body = url;
 			return 	makeHeader();
 		}
+
 		//	Method Error -> Bad Request
 		if (g_conf[confName][locName].is_exist("return"))
 			return redirect(
@@ -244,7 +245,7 @@ int 	Response::write()
 		return READ_RESPONSE;
 
 	//	쓰고 쓸 것이 남아있으면 WRITE_RESPONSE 반환
-	ssize_t	len = ::write(contentResult->inFd, postBody.c_str(), postBody.size());
+	size_t	len = ::write(contentResult->inFd, postBody.c_str(), postBody.size());
 
 	if (len < 0)
 		throw StartLine.statusCode = 500;
@@ -275,9 +276,9 @@ int 	Response::read()
 	memset(buf, 0, BUFFER_SIZE);
 	ssize_t	len = ::read(contentResult->outFd, buf, BUFFER_SIZE);
 	Body += string(buf, len);
+
 	if (len < 0)
 		throw StartLine.statusCode = 500;
-
 
 	if (len < BUFFER_SIZE && !cgiFlag)
 		return makeHeader();
@@ -287,7 +288,7 @@ int 	Response::read()
 
 int Response::redirect(int code, const string& location)
 {
-	Header["Location"] = location;
+	Header["location"] = location;
 	StartLine.statusCode = code;
 	StartLine.reasonPhrase = g_conf.getStatusMsg(code);
 	return makeHeader();
@@ -302,7 +303,6 @@ int Response::send(int clientFd)
 
 	ssize_t	len = ::send(clientFd, Html->c_str(), bufSize, 0);
 
-
 	if (len > 0)
 		Html->erase(0, len);
 
@@ -311,7 +311,6 @@ int Response::send(int clientFd)
 		Header["connection"] = "close";
 		return END_RESPONSE;
 	}
-		// throw StartLine.statusCode = 500;
 		
 	if (Html->empty())
 	{
@@ -428,6 +427,7 @@ int Response::set(const Request& req)
 	locName = req.locationName;
 	postBody = req.bodySS.str();
 	fileName = req.fileName;
+	cgiFlag = false;
 
 	//	root 설정
 	char*	tmp = getcwd(0, 0);
@@ -464,6 +464,7 @@ int Response::set(const Request& req)
 				return listing(path, url);
 			else
 				throw 403;
+			Util::is_dir(path);
 		}
 		//	get Extension
 		ext = findExtension(path);

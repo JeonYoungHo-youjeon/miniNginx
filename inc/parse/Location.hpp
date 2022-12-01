@@ -13,7 +13,7 @@ public:
     Location() {}
     Location(vector<string>::iterator begin, vector<string>::iterator end);
 
-	const bool is_exist(const string& key) const;
+	bool is_exist(const string& key) const;
 	const vector<string>& operator[](const string& key) const;
 	vector<string>& operator[](const string& key)
 	{
@@ -48,7 +48,10 @@ Location::Location(vector<string>::iterator begin, vector<string>::iterator end)
 			{
 				vector<string>  tmp = Util::split(buffer, ' ');
 				if (mAttr.find(tmp[0]) != mAttr.end())
+				{
 					std::cerr << "Map Colision [" << tmp[0] << "]"<< std::endl;
+					exit(1);
+				}
 				else
 					mAttr[tmp[0]] = vector<string>(tmp.begin() + 1, tmp.end());
 				buffer.clear();
@@ -60,7 +63,7 @@ Location::Location(vector<string>::iterator begin, vector<string>::iterator end)
 	}
 }
 
-const bool Location::is_exist(const string& key) const
+bool Location::is_exist(const string& key) const
 {
 	return mAttr.find(key) != mAttr.end();
 }

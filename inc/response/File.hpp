@@ -8,7 +8,7 @@
 struct File : public Contents
 {
 	File(const std::string& url, int flag) : Contents(url), flag(flag) {};
-	File(const std::string& path, const std::vector<std::string>& param)
+	File(const std::string& path)
 	: Contents(path) {};
 	~File()
 	{

@@ -14,8 +14,8 @@ void print_log(const std::string title)
 	std::cout << "\t==========[" << title << "]==========" << std::endl;
 }
 
-# define PRINT_LOG(title) print_log(title)
-// # define PRINT_LOG(title)
+// # define PRINT_LOG(title) print_log(title)
+# define PRINT_LOG(title)
 
 
 typedef int 							FD;

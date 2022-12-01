@@ -193,11 +193,14 @@ const std::string Logger::print_date()
 
 // private
 Logger::Logger(const Logger& logger)
-{}
+{
+	(void)logger;
+}
 
 // private
 Logger& Logger::operator=(const Logger& logger)
 {
+	(void)logger;
 	return *this;
 }
 

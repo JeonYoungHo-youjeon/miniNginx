@@ -14,7 +14,7 @@ class ClientSocket
 	: public Socket
 {
 public:
-	bool is_expired() const;
+	bool is_expired();
 	void update_lastEventTime();
 	void update_state(State s);
 	State set_response(const Request& req);
@@ -54,9 +54,13 @@ private:
 
 // ClientSocket implementation
 
-bool ClientSocket::is_expired() const
+bool ClientSocket::is_expired()
 {
-	return (get_current_time() - lastEventTime >= TIMEOUT) ? true : false;
+	bool expired = (get_current_time() - lastEventTime >= TIMEOUT);
+	if (expired)
+		return true;
+	lastEventTime = get_current_time();
+	return false;
 }
 
 void ClientSocket::update_lastEventTime()
@@ -130,9 +134,6 @@ State ClientSocket::get_state() const
 
 void ClientSocket::reset()
 {
-	//Request* tmp_req = req;
-	//Response* tmp_res = res;
-
 	delete req;
 	delete res;
 	req = new Request(fd, serverIPPort);
@@ -140,8 +141,6 @@ void ClientSocket::reset()
 	set_readFD(0);
 	set_writeFD(0);
 	set_PID(0);
-	//delete tmp_req;
-	//delete tmp_res;
 }
 
 
@@ -151,7 +150,7 @@ ClientSocket::ClientSocket()
 
 ClientSocket::ClientSocket(FD clientFD, const SockAddr& addr, const std::string& serverIPPort_)
 	: lastEventTime(get_current_time()), serverIPPort(serverIPPort_), 
-		readFD(0), writeFD(0), childPID(0), state(READ_REQUEST), req(0), res(new Response())
+		req(0), res(new Response()), readFD(0), writeFD(0), childPID(0), state(READ_REQUEST)
 {
 	fd = clientFD;
 	ip = inet_ntoa(addr.sin_addr);
@@ -171,11 +170,14 @@ ClientSocket::~ClientSocket()
 
 //private
 ClientSocket::ClientSocket(const ClientSocket& other)
-{}
+{
+	(void)other;
+}
 
 //private
 ClientSocket ClientSocket::operator=(const ClientSocket& rhs)
 {
+	(void)rhs;
 	return *this;
 }
 

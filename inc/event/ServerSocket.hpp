@@ -40,7 +40,9 @@ public:
 		if (listen(fd, SOMAXCONN) == -1)
 			throw std::runtime_error("listen");
 	}
-	ServerSocket(const ServerSocket& other) {};
+	ServerSocket(const ServerSocket& other) {
+		(void)other;
+	};
 	// ServerSocket operator=(const ServerSocket& rhs);
 	~ServerSocket() {};
 private:

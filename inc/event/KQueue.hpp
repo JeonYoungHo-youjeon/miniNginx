@@ -227,11 +227,14 @@ void KQueue::add_timeout(const Socket* socket)
 
 // private
 KQueue::KQueue(const KQueue& other)
-{}
+{
+	(void)other;
+}
 
 // private
 KQueue KQueue::operator=(const KQueue& rhs)
 {
+	(void)rhs;
 	return *this;
 }
 

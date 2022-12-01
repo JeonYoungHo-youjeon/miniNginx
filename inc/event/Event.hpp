@@ -30,7 +30,7 @@ private:
 	void handle_client_read_event(ClientSocket* socket);
 	void handle_client_write_event(ClientSocket* socket);
 	void handle_next_event(ClientSocket* socket, State state);
-	void socket_timeout(const ClientSocket* socket);
+	void socket_timeout(ClientSocket* socket);
 	void add_garbage(const Socket* socket);
 
 	void handle_server_event(const KEvent* event, const ServerSocket* socket);
@@ -52,7 +52,7 @@ private:
 
 void Event::event_loop()
 {
-	logger.info();
+	// logger.info();
 
 	int nEvent;
 	const Socket* socket;
@@ -110,7 +110,7 @@ void Event::create_server_socket(const ConfigType::iterator it)
 	sockets[socket->get_fd()] = socket;
 	kq->set_server_event(socket, socket->get_fd());
 
-	logger.add_server(socket->get_fd(), it->first); // REMOVE
+	// logger.add_server(socket->get_fd(), it->first);
 }
 
 void Event::accept_connection(FD serverFD)
@@ -122,11 +122,7 @@ void Event::accept_connection(FD serverFD)
 	FD clientFD = accept(serverFD, (struct sockaddr*)&clientAddr, &clientAddrLen);
 
 	if (clientFD == -1)
-	{
-		std::cout << "cliendFD : -1" << std::endl;
-		std::cout << "errno : " << errno << std::endl;
 		return;
-	}
 
 	if (fcntl(clientFD, F_SETFL, O_NONBLOCK) == -1)
 	{
@@ -146,7 +142,7 @@ void Event::create_client_socket(FD clientFD, const SockAddr& addr, FD serverFD)
 	kq->set_client_event(socket, socket->get_fd());
 	sockets[socket->get_fd()] = socket;
 
-	logger.connection_logging(socket, LOG_GREEN); // REMOVE
+	// logger.connection_logging(socket, LOG_GREEN);
 }
 
 void Event::disconnection(const ClientSocket* socket)
@@ -171,10 +167,6 @@ void Event::handle_client_read_event(ClientSocket* socket)
 			PRINT_LOG("READ_REQUEST");
 			state = req->read();
 			break;
-		// case REPEAT_REQUEST:
-		// 	PRINT_LOG("REPEAT_REQUEST");
-		// 	state = req->clear_read();
-		// 	break;
 		case READ_RESPONSE:
 			PRINT_LOG("READ_RESPONSE");
 			state = res->read();
@@ -227,7 +219,6 @@ void Event::handle_client_write_event(ClientSocket* socket)
 
 void Event::handle_next_event(ClientSocket* socket, State state)
 {
-	Request* req = socket->get_request();
 	Response* res = socket->get_response();
 
 	if (state == END_RESPONSE)
@@ -245,7 +236,6 @@ void Event::handle_next_event(ClientSocket* socket, State state)
 		{
 			PRINT_LOG("DISCONNECTION");
 			socket->update_state(NOTHING);
-			kq->off_write_event(socket, socket->get_fd());
 			disconnection(socket);
 		}
 	}
@@ -257,7 +247,7 @@ void Event::handle_next_event(ClientSocket* socket, State state)
 	}
 }
 
-void Event::socket_timeout(const ClientSocket* socket)
+void Event::socket_timeout(ClientSocket* socket)
 {
 	if (socket->is_expired() && sockets.count(socket->get_fd()))
 	{
@@ -268,10 +258,7 @@ void Event::socket_timeout(const ClientSocket* socket)
 void Event::handle_server_event(const KEvent* event, const ServerSocket* socket)
 {
 	if (event->flags & EV_ERROR)
-	{
-		std::cout << "SERVER Socket Error" << std::endl;
 		return;
-	}
 	
 	accept_connection(socket->get_fd());
 }
@@ -317,10 +304,11 @@ void Event::handle_client_event(const KEvent* event, ClientSocket* socket)
 void Event::handle_child_process(const KEvent* event, ClientSocket* socket)
 {
 	PRINT_LOG("EVFILT_PROC");
+	(void)event;
 	if (socket->get_PID() > 0)
 	{
 		int status;
-		PID pid = waitpid(socket->get_PID(), &status, WNOHANG);
+		waitpid(socket->get_PID(), &status, WNOHANG);
 	}
 }
 
@@ -330,7 +318,7 @@ void Event::clear_garbage_sockets()
 
 	for (GarbageCollector::iterator it = garbageCollector.begin(); it != garbageCollector.end(); ++it)
 	{
-		logger.disconnection_logging((const ClientSocket*)it->second, LOG_YELLOW);
+		// logger.disconnection_logging((const ClientSocket*)it->second, LOG_YELLOW);
 
 		garbageCollector[it->first] = 0;
 		delete sockets[it->first];
@@ -351,11 +339,14 @@ void Event::add_garbage(const Socket* socket)
 // private
 Event& Event::operator=(const Event& event)
 {
+	(void)event;
 	return *this;
 }
 
 // private
 Event::Event(const Event& event)
-{}
+{
+	(void)event;
+}
 
 #endif

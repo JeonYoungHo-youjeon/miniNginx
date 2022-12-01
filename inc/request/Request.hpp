@@ -44,7 +44,6 @@ struct Request
 	int contentLength;
 	int remainReadLength;
 	bool chunkFlag;
-	int statusCode;
 	int clientFd;
 	char charBuffer[BUFFER_SIZE];
 
@@ -52,7 +51,7 @@ struct Request
 
 	Request() {}
 	Request(int fd, const string& configName)
-	: statusCode(200), configName(configName), clientFd(fd)
+	: configName(configName), clientFd(fd)
 	{
 		this->configName = configName;
 		progress = START_LINE;
@@ -79,20 +78,22 @@ struct Request
 
 	int read()
 	{
-		if (is_empty_buffer())
+		char rcvData[BUFFER_SIZE];
+		memset(rcvData, 0, BUFFER_SIZE);
+
+		int byte = recv(clientFd, &rcvData[0], BUFFER_SIZE, 0);
+
+		if (byte <= 0)
 		{
-			char rcvData[BUFFER_SIZE];
-			memset(rcvData, 0, BUFFER_SIZE);
-
-			int byte = recv(clientFd, &rcvData[0], BUFFER_SIZE, 0);
-
-			if (byte < 0)
-			{
-				clear_buffer();
-				throw statusCode = 400;
-			}
-			buffer.write(rcvData, byte);
+			clear_buffer();
+			throw 400;
 		}
+		// buffer.write(rcvData, byte);
+			buffer << rcvData;
+
+		if (buffer.str().find('\n') == std::string::npos)
+			return READ_REQUEST;
+
 		return parse();
 	}
 	void set_header()
@@ -114,7 +115,7 @@ struct Request
 			if (contentLength > maxBodySize)
 			{
 				clear_buffer();
-				throw statusCode = 413;
+				throw 413;
 			}
 			remainReadLength = contentLength;
 		}
@@ -132,7 +133,7 @@ struct Request
 				if (parse_startline() == false)
 				{
 					clear_buffer();
-					throw statusCode = 400;
+					throw 400;
 				}
 				progress = HEADER;
 				break;
@@ -154,22 +155,6 @@ struct Request
 			case CRLF:
 				skip_crlf();
 
-				// if (StartLine.method == "POST" && is_empty_buffer() == true)
-				// 	return READ_REQUEST;
-				// else if (StartLine.method != "POST" \
-				// 		&& !Header.count(HEAD[CONTENT_LENGTH]) && !Header.count(HEAD[TRANSFER_ENCODING]))
-				// 	return END_REQUEST;
-				// else if (StartLine.method != "POST" \
-				// 		&& (Header.count(HEAD[CONTENT_LENGTH]) || Header.count(HEAD[TRANSFER_ENCODING])))
-				// {
-				// 	while (is_empty_buffer() == false)
-				// 	{
-				// 		std::getline(buffer, tmp);
-				// 		if (tmp == "\r")
-				// 			break;
-				// 	}
-				// 	return END_REQUEST;
-				// }
 				if (StartLine.method == "GET" || StartLine.method == "DELETE")
 					return END_REQUEST;
 				else if (StartLine.method != "POST" \
@@ -184,6 +169,7 @@ struct Request
 			case LENGTH_BODY:
 				if (contentLength == 0)
 					return END_REQUEST;
+
 				if (remainReadLength <= 0)
 					return END_REQUEST;
 
@@ -195,11 +181,13 @@ struct Request
 				else
 					readSize = remainReadLength;
 
-				memset(charBuffer, 0, readSize);
+				memset(charBuffer, 0, BUFFER_SIZE);
 				buffer.read(charBuffer, readSize);
-				bodySS.write(charBuffer, readSize);
-				remainReadLength = contentLength - bodySS.str().size();
 
+
+				bodySS << charBuffer;
+
+				remainReadLength = contentLength - bodySS.str().size();
 				break;
 			case CHUNK_SIZE:
 				if (is_empty_buffer() == true)
@@ -211,9 +199,8 @@ struct Request
 				readSize = Util::to_hex(tmp);
 				if (readSize == -1)
 				{
-					std::cout << "FOUR" << std::endl;
 					clear_buffer();
-					throw statusCode = 400;
+					throw 400;
 				}
 				else if (readSize == 0)
 					return END_REQUEST;
@@ -260,7 +247,7 @@ struct Request
 		if (ss.peek() == ' ')
 			ss.get();
 		std::getline(ss, val);
-		Header[string_to_metavar(key)] = val;
+		Header[string_to_lower(key)] = val;
 	}
 
 	std::string findLocation(const std::string& path)
@@ -288,15 +275,12 @@ struct Request
 		std::cout << "[Body]" << std::endl;
 		std::cout << bodySS.str() << std::endl;
 		std::cout << "[Body byte]" << std::endl;
-		for (int i = 0; i < bodySS.str().size(); ++i)
+		for (size_t i = 0; i < bodySS.str().size(); ++i)
 			std::cout << (int)bodySS.str()[i] << " ";
 		std::cout << std::endl;
 	}
 
 	bool parse_startline() {
-		// std::cout << "[BUFFER]" << std::endl;
-		// std::cout << buffer.str() << std::endl;
-		// std::cout << "[ENDBUFFER]" << std::endl;
 		buffer >> StartLine.method >> StartLine.url >> StartLine.protocol;
 
 		if (StartLine.method == "" || StartLine.url == "" || StartLine.protocol == "")
@@ -362,19 +346,8 @@ struct Request
 
 	std::string string_to_lower(std::string s)
 	{
-		for (int i = 0; i < s.size(); ++i)
+		for (size_t i = 0; i < s.size(); ++i)
 			s[i] = std::tolower(s[i]);
-		return s;
-	}
-
-	std::string string_to_metavar(std::string s)
-	{
-		for (int i = 0; i < s.size(); ++i)
-		{
-			if (s[i] == '-')
-				s[i] = '_';
-			s[i] = std::toupper(s[i]);
-		}
 		return s;
 	}
 };

@@ -109,7 +109,7 @@ std::string Util::join(const std::string& str1, const std::string& str2, const c
 
 int Util::to_hex(const std::string& str)
 {
-	int idx = 0;
+	size_t idx = 0;
 
 	while (idx < str.size())
 	{
